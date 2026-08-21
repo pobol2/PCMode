@@ -1,0 +1,441 @@
+<shells:ConfigurationPageShell
+    x:Class="PCMode.Tray.Features.Television.TelevisionPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shells="clr-namespace:PCMode.Tray.Controls.PageShells"
+    xmlns:components="clr-namespace:PCMode.Tray.Controls.Components"
+
+    PageTitle="Television"
+    PageDescription="Choose a television, map its HDMI inputs, and create picture profiles for your modes."
+
+    HeaderSummaryText="{Binding StatusMessage}"
+
+    SelectorTitle="Televisions"
+    SelectorDescription="Configured televisions"
+
+    EditorEyebrow="TELEVISION"
+    EditorTitle="{Binding SelectedTelevision, TargetNullValue=No television selected}"
+
+    CreateRequested="OnCreateTelevisionClick"
+
+    CanUseActions="{Binding HasSelectedTelevision}"
+
+    PrimaryActionLabel="Make default"
+    CanUsePrimaryAction="{Binding CanSetSelectedAsDefault}"
+    PrimaryActionRequested="OnSetDefaultClick"
+
+    SelectorItemsSource="{Binding TelevisionItems}">
+
+    <shells:ConfigurationPageShell.SelectorItemTemplate>
+        <DataTemplate>
+            <components:ConfigurationSelectorItem
+                Title="{Binding Name}"
+                BadgeText="{Binding PowerState}"
+                IsBadgeVisible="True" />
+        </DataTemplate>
+    </shells:ConfigurationPageShell.SelectorItemTemplate>
+
+    <shells:ConfigurationPageShell.ActionsMenu>
+        <ContextMenu Style="{StaticResource EditorContextMenuStyle}"
+                     Opened="OnActionsMenuOpened">
+            <MenuItem Header="Rename"
+                      Style="{StaticResource EditorMenuItemStyle}"
+                      Click="OnRenameClick" />
+            <MenuItem Header="Duplicate"
+                      Style="{StaticResource EditorMenuItemStyle}"
+                      Click="OnDuplicateClick" />
+            <MenuItem x:Name="EnableTelevisionMenuItem"
+                      Header="Enable"
+                      Style="{StaticResource EditorMenuItemStyle}"
+                      Click="OnToggleEnabledClick" />
+            <MenuItem x:Name="DisableTelevisionMenuItem"
+                      Header="Disable"
+                      Style="{StaticResource EditorMenuItemStyle}"
+                      Click="OnToggleEnabledClick" />
+            <MenuItem Header="Delete"
+                      Style="{StaticResource EditorMenuItemStyle}"
+                      Click="OnDeleteClick" />
+        </ContextMenu>
+    </shells:ConfigurationPageShell.ActionsMenu>
+
+    <shells:ConfigurationPageShell.EditorContent>
+        <Grid>
+            <TextBlock Text="Select a television or create one to begin."
+                       FontStyle="Italic">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedTelevision}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <StackPanel Visibility="{Binding SelectedTelevision, Converter={StaticResource StringToVisibility}}">
+
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="Status" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="{Binding PowerStateText, TargetNullValue=Waiting for status…}"
+                                   Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,4,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="7,3"
+                            Margin="16,0,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelectedDefault}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="Default TV" FontSize="10" FontWeight="SemiBold" />
+                    </Border>
+                </Grid>
+
+                <Expander IsExpanded="False">
+                    <Expander.Header>
+                        <TextBlock Text="Connection setup" Style="{StaticResource SectionTitleStyle}" Margin="0" />
+                    </Expander.Header>
+
+                    <StackPanel Margin="0,12,0,0">
+                        <TextBlock Text="These settings normally only need to be configured once for this television."
+                                   Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,0,0,12"
+                                   TextWrapping="Wrap" />
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="280" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Network address" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalContentAlignment="Center"
+                                     ToolTip="IP address or hostname on your network" />
+                            <TextBlock Grid.Column="2"
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource MutedTextStyle}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="The TV's IP address or hostname." />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="280" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="MAC address" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding MacAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalContentAlignment="Center"
+                                     ToolTip="Format: AA:BB:CC:DD:EE:FF" />
+                            <TextBlock Grid.Column="2"
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource MutedTextStyle}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Used to turn the TV on with Wake-on-LAN." />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170" />
+                                <ColumnDefinition Width="280" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Fallback display layout" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding SafeDisplayTarget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     VerticalContentAlignment="Center"
+                                     ToolTip="Optional" />
+                            <TextBlock Grid.Column="2"
+                                       Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource MutedTextStyle}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="Optional. Switch back to this layout before turning the TV off." />
+                        </Grid>
+
+                        <Button Content="Pair with TV"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                HorizontalAlignment="Left"
+                                IsEnabled="{Binding Enabled}"
+                                Click="OnPairClick" />
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </Grid>
+    </shells:ConfigurationPageShell.EditorContent>
+
+    <shells:ConfigurationPageShell.SecondaryEditorContent>
+        <StackPanel Visibility="{Binding SelectedTelevision, Converter={StaticResource StringToVisibility}}">
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <Expander IsExpanded="False">
+                        <Expander.Header>
+                            <TextBlock Text="Inputs" Style="{StaticResource SectionTitleStyle}" Margin="0" />
+                        </Expander.Header>
+
+                        <StackPanel Margin="0,12,0,0">
+                            <TextBlock Text="Give each HDMI port a friendly name once. Modes and the rest of PCMode use that name instead of asking for the HDMI number again."
+                                       Style="{StaticResource MutedTextStyle}"
+                                       Margin="0,0,0,12"
+                                       TextWrapping="Wrap" />
+
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="1*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Name" Style="{StaticResource MutedTextStyle}" FontSize="10" />
+                                <TextBlock Grid.Column="1" Text="HDMI port" Style="{StaticResource MutedTextStyle}" FontSize="10" Margin="8,0,0,0" />
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding Inputs}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="1*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     VerticalContentAlignment="Center"
+                                                     ToolTip="Logical name (e.g., PC, Console)" />
+
+                                            <ComboBox Grid.Column="1"
+                                                      Margin="8,0,0,0"
+                                                      ItemsSource="{Binding HdmiChoices}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedValuePath="Value"
+                                                      SelectedValue="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      VerticalContentAlignment="Center"
+                                                      ToolTip="HDMI port used by this source" />
+
+                                            <Button Grid.Column="2"
+                                                    Content="Remove"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Padding="8,2"
+                                                    FontSize="11"
+                                                    Margin="8,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnRemoveInputClick" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Content="Add input"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,4,0,12"
+                                    Click="OnAddInputClick" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,14,0,0">
+                <StackPanel>
+                    <Expander IsExpanded="False">
+                        <Expander.Header>
+                            <TextBlock Text="Picture profiles" Style="{StaticResource SectionTitleStyle}" Margin="0" />
+                        </Expander.Header>
+
+                        <StackPanel Margin="0,12,0,0">
+                            <TextBlock Text="Create named picture profiles for your modes. Picture mode is verified by the TV. Advanced HDMI options are applied before the display switch; advanced picture settings are applied afterward."
+                                       Style="{StaticResource MutedTextStyle}"
+                                       Margin="0,0,0,12"
+                                       TextWrapping="Wrap" />
+
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Profile name" Style="{StaticResource MutedTextStyle}" FontSize="10" />
+                                <TextBlock Grid.Column="1" Text="Picture mode" Style="{StaticResource MutedTextStyle}" FontSize="10" Margin="8,0,0,0" />
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding Profiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource SurfaceBrush}"
+                                                CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             VerticalContentAlignment="Center"
+                                                             ToolTip="Profile name, for example Gaming or Movie" />
+                                                    <ComboBox Grid.Column="1" Margin="8,0,0,0"
+                                                              ItemsSource="{Binding PictureModeChoices}"
+                                                              DisplayMemberPath="Label"
+                                                              SelectedValuePath="Value"
+                                                              SelectedValue="{Binding PictureMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              VerticalContentAlignment="Center" />
+                                                    <Button Grid.Column="2" Content="Remove"
+                                                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                            Padding="8,2" FontSize="11"
+                                                            Margin="8,0,0,0" VerticalAlignment="Center"
+                                                            Click="OnRemoveProfileClick" />
+                                                </Grid>
+
+                                                <Grid Margin="0,8,0,0"
+                                                      Visibility="{Binding HasMultipleInputs, Converter={StaticResource BooleanToVisibility}}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="Input" VerticalAlignment="Center"
+                                                               Style="{StaticResource MutedTextStyle}" FontSize="11" />
+                                                    <ComboBox Grid.Column="1"
+                                                              ItemsSource="{Binding InputChoices}"
+                                                              SelectedItem="{Binding Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              VerticalContentAlignment="Center"
+                                                              ToolTip="Which of this television's inputs this profile's HDMI-specific options target" />
+                                                </Grid>
+
+                                                <Expander IsExpanded="False" Margin="0,10,0,0">
+                                                    <Expander.Header>
+                                                        <TextBlock Text="Advanced options" Style="{StaticResource MutedTextStyle}" />
+                                                    </Expander.Header>
+                                                    <StackPanel Margin="0,10,0,0">
+                                                        <TextBlock Text="HDMI signal options" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Validated options that can renegotiate the HDMI link. PCMode writes these before switching the Windows display layout."
+                                                                   Style="{StaticResource MutedTextStyle}" FontSize="11"
+                                                                   Margin="0,3,0,8" TextWrapping="Wrap" />
+                                                        <Grid Margin="0,0,0,4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="220" />
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="Option" Style="{StaticResource MutedTextStyle}" FontSize="10" />
+                                                            <TextBlock Grid.Column="1" Text="Value" Style="{StaticResource MutedTextStyle}" FontSize="10" Margin="6,0,0,0" />
+                                                        </Grid>
+                                                        <ItemsControl ItemsSource="{Binding Signal}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Grid Margin="0,0,0,4">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="220" />
+                                                                            <ColumnDefinition Width="160" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ComboBox ItemsSource="{Binding SignalKeyChoices}"
+                                                                                  DisplayMemberPath="Label"
+                                                                                  SelectedValuePath="Value"
+                                                                                  SelectedValue="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <ComboBox Grid.Column="1" Margin="6,0,0,0"
+                                                                                  ItemsSource="{Binding SignalValueChoices}"
+                                                                                  DisplayMemberPath="Label"
+                                                                                  SelectedValuePath="Value"
+                                                                                  SelectedValue="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                                        <Button Grid.Column="2" Content="Remove"
+                                                                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                                                Padding="6,1" FontSize="10"
+                                                                                Margin="6,0,0,0" Click="OnRemoveSignalClick" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <Button Content="Add HDMI option" Style="{StaticResource SecondaryButtonStyle}"
+                                                                HorizontalAlignment="Left" Margin="0,4,0,14"
+                                                                Click="OnAddSignalClick" />
+
+                                                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,14" />
+
+                                                        <TextBlock Text="Advanced picture settings" FontWeight="SemiBold" />
+                                                        <TextBlock Text="Written after the picture mode. LG exposes different setting names by model and firmware, so these remain editable key/value fields."
+                                                                   Style="{StaticResource MutedTextStyle}" FontSize="11"
+                                                                   Margin="0,3,0,8" TextWrapping="Wrap" />
+                                                        <Grid Margin="0,0,0,4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="220" />
+                                                                <ColumnDefinition Width="160" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="Setting" Style="{StaticResource MutedTextStyle}" FontSize="10" />
+                                                            <TextBlock Grid.Column="1" Text="Value" Style="{StaticResource MutedTextStyle}" FontSize="10" Margin="6,0,0,0" />
+                                                        </Grid>
+                                                        <ItemsControl ItemsSource="{Binding Settings}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Grid Margin="0,0,0,4">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="220" />
+                                                                            <ColumnDefinition Width="160" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBox Text="{Binding Key, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                 ToolTip="webOS picture setting name" />
+                                                                        <TextBox Grid.Column="1" Margin="6,0,0,0"
+                                                                                 Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                 ToolTip="Value sent to the TV" />
+                                                                        <Button Grid.Column="2" Content="Remove"
+                                                                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                                                Padding="6,1" FontSize="10"
+                                                                                Margin="6,0,0,0" Click="OnRemoveSettingClick" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <Button Content="Add picture setting" Style="{StaticResource SecondaryButtonStyle}"
+                                                                HorizontalAlignment="Left" Margin="0,4,0,0"
+                                                                Click="OnAddSettingClick" />
+                                                    </StackPanel>
+                                                </Expander>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Content="Add profile"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,4,0,0"
+                                    Click="OnAddProfileClick" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </shells:ConfigurationPageShell.SecondaryEditorContent>
+
+</shells:ConfigurationPageShell>

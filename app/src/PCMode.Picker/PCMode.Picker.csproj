@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The radial picker's behaviour, with no rendering in it.
+
+    Plain net10.0 rather than net10.0-windows, and that is the point rather
+    than an economy: geometry, hit testing, easing, the selection state machine
+    and the controller mapping are all decidable from numbers, and a project
+    that cannot reference WPF cannot quietly grow a dependency on a window
+    handle, a dispatcher or a screen. That is what makes the picker's behaviour
+    testable without a display.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PCMode.Picker</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 128 128"
+    width="128"
+    height="128">
+
+  <defs>
+    <!-- Center -->
+    <linearGradient id="center" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1585cf"/>
+      <stop offset="100%" stop-color="#0766b9"/>
+    </linearGradient>
+
+    <!-- Top -->
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#31E3FF"/>
+      <stop offset="100%" stop-color="#1099E9"/>
+    </linearGradient>
+
+    <!-- Left -->
+    <linearGradient id="left" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#B05CFF"/>
+      <stop offset="100%" stop-color="#6F2BD9"/>
+    </linearGradient>
+
+    <!-- Right -->
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FF2D63"/>
+      <stop offset="100%" stop-color="#E5003A"/>
+    </linearGradient>
+
+    <!-- Bottom -->
+    <linearGradient id="bottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4B5563"/>
+      <stop offset="100%" stop-color="#171A1F"/>
+    </linearGradient>
+  </defs>
+
+  <!--
+    Four connected wedges.
+    The boundaries meet exactly along the diagonals.
+  -->
+
+  <!-- Top wedge -->
+  <path
+      d="M 20.11 20.11
+         A 62 62 0 0 1 107.89 20.11
+         L 79.6 48.4
+         A 22 22 0 0 0 48.4 48.4
+         Z"
+      fill="url(#top)"
+      stroke="#050505"
+      stroke-width="2"/>
+
+  <!-- Right wedge -->
+  <path
+      d="M 100.77 27.23
+         A 52 52 0 0 1 100.77 100.77
+         L 79.6 79.6
+         A 22 22 0 0 0 79.6 48.4
+         Z"
+      fill="url(#right)"
+      stroke="#050505"
+      stroke-width="0.5"/>
+
+  <!-- Bottom wedge -->
+  <path
+      d="M 100.77 100.77
+         A 52 52 0 0 1 27.23 100.77
+         L 48.4 79.6
+         A 22 22 0 0 0 79.6 79.6
+         Z"
+      fill="url(#bottom)"
+      stroke="#050505"
+      stroke-width="0.5"/>
+
+  <!-- Left wedge -->
+  <path
+      d="M 27.23 100.77
+         A 52 52 0 0 1 27.23 27.23
+         L 48.4 48.4
+         A 22 22 0 0 0 48.4 79.6
+         Z"
+      fill="url(#left)"
+      stroke="#050505"
+      stroke-width="0.5"/>
+
+  <!-- Center circle -->
+  <circle
+      cx="64"
+      cy="64"
+      r="22"
+      fill="url(#center)"
+      stroke="#050505"
+      stroke-width="0.5"/>
+
+  <!-- Top highlight -->
+  <path
+      d="M 35 25
+         A 50 50 0 0 1 93 25"
+      fill="none"
+      stroke="#B8F7FF"
+      stroke-width="3"
+      stroke-linecap="round"
+      opacity="0.85"/>
+
+</svg>
+

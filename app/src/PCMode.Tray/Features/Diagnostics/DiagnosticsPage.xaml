@@ -1,0 +1,160 @@
+<shells:ListPageShell
+    x:Class="PCMode.Tray.Features.Diagnostics.DiagnosticsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shells="clr-namespace:PCMode.Tray.Controls.PageShells"
+    xmlns:components="clr-namespace:PCMode.Tray.Controls.Components"
+
+    PageTitle="Diagnostics"
+    PageDescription="Test a target and inspect PCMode's runtime, providers, and support information.">
+
+    <shells:ListPageShell.HeaderActionContent>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock
+                Text="{Binding StatusMessage}"
+                Foreground="{DynamicResource MutedForegroundBrush}"
+                VerticalAlignment="Center"
+                Margin="0,0,12,0" />
+            <Button
+                Content="Open logs"
+                Click="OnOpenLogFolderClick"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Margin="0,0,8,0" />
+            <Button
+                Content="Refresh"
+                Click="OnRefreshClick"
+                Style="{StaticResource SecondaryButtonStyle}" />
+        </StackPanel>
+    </shells:ListPageShell.HeaderActionContent>
+
+    <StackPanel>
+
+        <components:PageSection Title="Dry run" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock
+                    Text="Test a target without changing anything on the machine."
+                    Foreground="{DynamicResource MutedForegroundBrush}"
+                    Margin="0,0,0,8" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox
+                        Grid.Column="0"
+                        ItemsSource="{Binding Targets}"
+                        DisplayMemberPath="DisplayPath"
+                        SelectedValuePath="Key"
+                        SelectedValue="{Binding SelectedDryRunTargetKey, Mode=TwoWay}"
+                        Margin="0,0,8,0" />
+                    <Button
+                        Grid.Column="1"
+                        Content="Dry run"
+                        Click="OnDryRunClick"
+                        IsEnabled="{Binding CanDryRun}"
+                        Style="{StaticResource PrimaryButtonStyle}" />
+                </Grid>
+            </StackPanel>
+        </components:PageSection>
+
+        <components:PageSection Title="Status" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Margin="0,0,0,4">
+                    <Run Text="Current target: " Foreground="{DynamicResource MutedForegroundBrush}" />
+                    <Run Text="{Binding CurrentTargetKey, TargetNullValue=None, Mode=OneWay}" />
+                </TextBlock>
+                <TextBlock Margin="0,0,0,12">
+                    <Run Text="Engine: " Foreground="{DynamicResource MutedForegroundBrush}" />
+                    <Run Text="{Binding EngineStatusText, Mode=OneWay}" />
+                </TextBlock>
+
+                <StackPanel Visibility="{Binding HasHealth, Converter={StaticResource BooleanToVisibility}}">
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <components:StatusDot
+                            Grid.Column="0"
+                            State="{Binding LastHealth.StatusState}"
+                            VerticalAlignment="Center"
+                            Margin="0,0,8,0" />
+                        <TextBlock Grid.Column="1" Text="{Binding LastHealth.Summary}" TextWrapping="Wrap" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding LastHealth.Resources}" Margin="24,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="160" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <components:StatusDot
+                                        Grid.Column="0"
+                                        State="{Binding StatusState}"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,8,0" />
+                                    <TextBlock Grid.Column="1" Text="{Binding ResourceName}" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{Binding Detail}"
+                                        Foreground="{DynamicResource MutedForegroundBrush}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <TextBlock
+                    Text="No resource status yet. Run a dry run first."
+                    Foreground="{DynamicResource MutedForegroundBrush}"
+                    Visibility="{Binding ShowEmptyHealthMessage, Converter={StaticResource BooleanToVisibility}}" />
+            </StackPanel>
+        </components:PageSection>
+
+        <components:PageSection Title="Providers" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock
+                    Text="Loaded from the configuration. See the Hardware page for a full device report."
+                    Foreground="{DynamicResource MutedForegroundBrush}"
+                    Margin="0,0,0,8" />
+                <ItemsControl ItemsSource="{Binding Providers}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Display}" Margin="0,2" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </components:PageSection>
+
+        <components:PageSection Title="PCMode information" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Margin="0,0,0,2"><Run Text="Version: " Foreground="{DynamicResource MutedForegroundBrush}" /><Run Text="{Binding ApplicationVersion, Mode=OneWay}" /></TextBlock>
+                <TextBlock Margin="0,0,0,2"><Run Text="Data root: " Foreground="{DynamicResource MutedForegroundBrush}" /><Run Text="{Binding DataRoot, Mode=OneWay}" /></TextBlock>
+                <TextBlock Margin="0,0,0,2"><Run Text="Configuration file: " Foreground="{DynamicResource MutedForegroundBrush}" /><Run Text="{Binding ConfigurationPath, Mode=OneWay}" /></TextBlock>
+                <TextBlock Margin="0,0,0,2"><Run Text="State file: " Foreground="{DynamicResource MutedForegroundBrush}" /><Run Text="{Binding StatePath, Mode=OneWay}" /></TextBlock>
+                <TextBlock Margin="0,0,0,2"><Run Text="Log folder: " Foreground="{DynamicResource MutedForegroundBrush}" /><Run Text="{Binding LogFolder, Mode=OneWay}" /></TextBlock>
+            </StackPanel>
+        </components:PageSection>
+
+        <components:PageSection Title="Recent log">
+            <TextBox
+                Text="{Binding RecentLogText, Mode=OneWay}"
+                IsReadOnly="True"
+                TextWrapping="NoWrap"
+                FontFamily="Consolas"
+                FontSize="11"
+                Background="Transparent"
+                BorderThickness="0"
+                HorizontalScrollBarVisibility="Auto"
+                VerticalScrollBarVisibility="Disabled"
+                MaxHeight="400" />
+        </components:PageSection>
+
+    </StackPanel>
+
+</shells:ListPageShell>

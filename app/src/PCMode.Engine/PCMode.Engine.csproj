@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The application service: what PCMode knows and what it does.
+
+    net10.0-windows because the first real provider talks to Windows, but
+    deliberately WITHOUT UseWPF or UseWindowsForms. Nothing in here may know
+    that a window exists. That is what lets the tray, the picker and a future
+    command line all drive the same engine, and what makes every rule about
+    validation, ordering, cancellation and state recording testable without
+    starting a UI.
+
+    It owns its own versioned configuration and its own state file under
+    %LOCALAPPDATA%\PCMode\Native, a folder of its own, so that nothing it
+    writes lands among another program's files. It reads nothing above that
+    folder and starts no process.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PCMode.Engine</RootNamespace>
+
+    <!--
+      For one file: WasapiAudioMirror.cs, which converts audio buffers between
+      two endpoints' sample formats on a thread that has ten milliseconds to do
+      it in. WASAPI hands out raw pointers into shared memory, and the
+      alternative is copying every buffer into a managed array and back purely
+      to avoid the keyword. Nothing else in the engine may use it: the boundary
+      test in PCMode.Tray.Tests keeps the pointer work in that file.
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenRGB.NET" Version="3.1.1" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Dark palette entries are namespaced so both palettes can stay loaded;
+         see ApplicationThemeService. -->
+    <SolidColorBrush x:Key="Dark.AccentBrush" Color="#4C8DFF" />
+    <SolidColorBrush x:Key="Dark.AccentTextBrush" Color="White" />
+    <SolidColorBrush x:Key="Dark.ErrorBrush" Color="#FF6B6B" />
+    <SolidColorBrush x:Key="Dark.WarningBrush" Color="#E6B450" />
+    <SolidColorBrush x:Key="Dark.DisabledTextBrush" Color="#707070" />
+    <SolidColorBrush x:Key="Dark.WindowBackgroundBrush" Color="#111111" />
+    <SolidColorBrush x:Key="Dark.SurfaceBrush" Color="#191919" />
+    <SolidColorBrush x:Key="Dark.SurfaceHoverBrush" Color="#242424" />
+    <SolidColorBrush x:Key="Dark.ForegroundBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="Dark.MutedForegroundBrush" Color="#A8A8A8" />
+    <SolidColorBrush x:Key="Dark.DividerBrush" Color="#303030" />
+    <SolidColorBrush x:Key="Dark.BorderBrush" Color="#333333" />
+    <SolidColorBrush x:Key="Dark.SuccessBrush" Color="#66D286" />
+
+</ResourceDictionary>

@@ -1,0 +1,58 @@
+<Project>
+
+  <!--
+    Shared settings for the native side of PCMode.
+
+    This directory is the standalone native Windows application: its own
+    versioned configuration and state under %LOCALAPPDATA%\PCMode\Native, its own
+    engine, its own providers, its own picker and input. It starts no other
+    process and reads no other implementation's files.
+
+    TargetFramework is deliberately NOT set here. It genuinely differs (the
+    picker and its tests are plain net10.0 so they cannot reference a window
+    at all, while the engine and the shell are net10.0-windows), and a shared
+    default that half the projects override is a value nobody can trust.
+  -->
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- A warning here is a defect that has not happened yet. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <NeutralLanguage>en</NeutralLanguage>
+
+    <!--
+      Globalization-invariant mode is OFF, and stating it is not decoration.
+
+      It was on, and it stopped the tray from starting at all. In invariant
+      mode the invariant culture is the only one that exists, so
+      CultureInfo.GetCultureInfo throws for every named culture. WPF cannot
+      live with that. FrameworkElement.Language defaults to the hard-coded tag
+      "en-US" (a WPF constant, not anything the user picked), and every binding
+      resolves its culture through XmlLanguage.GetSpecificCulture(). The lookup
+      of "en-us" threw, the fallback to "en" threw, and the first binding
+      evaluated during InitializeComponent came back out as a XamlParseException
+      on Selector.SelectedItem wrapping "Cannot find non-neutral culture related
+      to 'en-us'", which killed OnStartup. Because the tag is a constant, this
+      happened on every machine in every region. It only looked like a locale
+      problem.
+
+      It applies to the tests too, deliberately. A test project configured
+      differently from the application it is the oracle for cannot be trusted
+      to catch this class of defect, and that is precisely how this one
+      survived: both were invariant together, so every ShellViewModel test
+      passed while the window could not be built at all.
+
+      Nothing here relies on ambient culture for correctness. Where culture
+      matters, which is reading and writing the configuration and state
+      documents, it is pinned explicitly at the call site. That is the only
+      place a guarantee can actually hold, because a build switch in one
+      project says nothing about the machine it eventually runs on.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Target's own architecture, kept honest: navigation validity, page
+    construction, page lifecycle/caching, the shared configuration ViewModel
+    base, and the Apply/Reload wiring. Not a UI test suite, and
+    nothing here drives the app by simulating keys or clicks; it builds real
+    pages and workspaces directly and asserts what came out.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PCMode.Tray.Tests</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PCMode.Tray\PCMode.Tray.csproj" />
+  </ItemGroup>
+
+</Project>

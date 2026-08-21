@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PCMode.Engine/PCMode.Engine.csproj" />
+    <Project Path="src/PCMode.Picker/PCMode.Picker.csproj" />
+    <Project Path="src/PCMode.Tray/PCMode.Tray.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PCMode.Engine.Tests/PCMode.Engine.Tests.csproj" />
+    <Project Path="tests/PCMode.Picker.Tests/PCMode.Picker.Tests.csproj" />
+    <Project Path="tests/PCMode.Tray.Tests/PCMode.Tray.Tests.csproj" />
+  </Folder>
+</Solution>

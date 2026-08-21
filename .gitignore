@@ -1,0 +1,54 @@
+# Local PCMode configuration and state
+app/config/config.json
+app/config/state.json
+*.local.json
+
+# Secrets and signing material
+.env
+.env.*
+!.env.example
+secrets.json
+*.pfx
+*.p12
+*.key
+
+# Build, test, coverage, and release output
+**/bin/
+**/obj/
+**/TestResults/
+artifacts/
+dist/
+release/
+*.trx
+*.coverage
+*.coveragexml
+*.nupkg
+*.snupkg
+*.zip
+
+# Logs, crash dumps, and scratch state
+*.log
+*.dmp
+logs/
+state/
+*.bak
+*.tmp
+*~
+*.swp
+
+# IDE and user-specific settings
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userprefs
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+**/desktop.ini
+$RECYCLE.BIN/
+

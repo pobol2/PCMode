@@ -1,0 +1,234 @@
+<shells:ConfigurationPageShell
+    x:Class="PCMode.Tray.Features.Cursor.CursorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shells="clr-namespace:PCMode.Tray.Controls.PageShells"
+    xmlns:components="clr-namespace:PCMode.Tray.Controls.Components"
+
+    PageTitle="Cursor positions"
+    PageDescription="Choose where the pointer should be parked when this position is used. Changes here do not move the pointer."
+
+    SelectorTitle="Positions"
+    SelectorDescription="Configured cursor positions"
+
+    EditorEyebrow="CURSOR POSITION"
+    EditorTitle="{Binding SelectedPosition, TargetNullValue=No position selected}"
+
+    CreateRequested="OnNewPositionClick"
+
+    CanUseActions="{Binding HasSelectedPosition}"
+
+    PrimaryActionLabel="Activate"
+    CanUsePrimaryAction="{Binding CanActivateSelected}"
+    PrimaryActionRequested="OnActivateClick"
+
+    SelectorItemsSource="{Binding Positions}">
+
+    <shells:ConfigurationPageShell.SelectorItemTemplate>
+
+        <DataTemplate>
+            <components:ConfigurationSelectorItem Title="{Binding Name}" />
+        </DataTemplate>
+
+    </shells:ConfigurationPageShell.SelectorItemTemplate>
+
+
+    <shells:ConfigurationPageShell.ActionsMenu>
+
+        <ContextMenu Style="{StaticResource EditorContextMenuStyle}">
+
+            <MenuItem
+                Header="Rename"
+                Style="{StaticResource EditorMenuItemStyle}"
+                Click="OnRenameClick" />
+
+            <MenuItem
+                Header="Duplicate"
+                Style="{StaticResource EditorMenuItemStyle}"
+                Click="OnDuplicateClick" />
+
+            <MenuItem
+                Header="Delete"
+                Style="{StaticResource EditorMenuItemStyle}"
+                Click="OnDeleteClick" />
+
+        </ContextMenu>
+
+    </shells:ConfigurationPageShell.ActionsMenu>
+
+
+    <shells:ConfigurationPageShell.EditorContent>
+        <StackPanel>
+
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Position preview" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock
+                        Text="Drag the marker to place the cursor on the primary display."
+                        Style="{StaticResource MutedTextStyle}"
+                        Margin="0,-4,12,0"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border
+                    Grid.Column="1"
+                    Padding="8,3"
+                    CornerRadius="9"
+                    Background="{DynamicResource AccentBrush}"
+                    VerticalAlignment="Top">
+                    <TextBlock Text="PRIMARY DISPLAY" Style="{StaticResource EyebrowTextStyle}" />
+                </Border>
+            </Grid>
+
+            <Border
+                Background="{DynamicResource WindowBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12"
+                ClipToBounds="True">
+
+                <Viewbox
+                    Stretch="Uniform"
+                    StretchDirection="DownOnly"
+                    HorizontalAlignment="Stretch"
+                    Height="270">
+
+                    <Border
+                        Width="640"
+                        Height="360"
+                        CornerRadius="6"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="2">
+
+                        <Canvas
+                            x:Name="CursorPreview"
+                            Width="636"
+                            Height="356"
+                            Background="Transparent"
+                            ClipToBounds="True"
+                            Cursor="Hand"
+                            PreviewMouseLeftButtonDown="OnPreviewMouseLeftButtonDown"
+                            PreviewMouseMove="OnPreviewMouseMove"
+                            PreviewMouseLeftButtonUp="OnPreviewMouseLeftButtonUp"
+                            LostMouseCapture="OnPreviewLostMouseCapture"
+                            SizeChanged="OnPreviewSizeChanged"
+                            AutomationProperties.Name="Primary display cursor position preview">
+
+                            <Border
+                                x:Name="CursorMarker"
+                                Width="22"
+                                Height="22"
+                                CornerRadius="11"
+                                Background="{DynamicResource AccentBrush}"
+                                BorderBrush="White"
+                                BorderThickness="3"
+                                IsHitTestVisible="False"
+                                AutomationProperties.Name="Configured cursor position" />
+
+                        </Canvas>
+
+                    </Border>
+
+                </Viewbox>
+
+            </Border>
+
+        </StackPanel>
+    </shells:ConfigurationPageShell.EditorContent>
+
+
+    <shells:ConfigurationPageShell.SecondaryEditorContent>
+
+        <Border Style="{StaticResource CardStyle}">
+
+            <Expander IsExpanded="False">
+
+                <Expander.Header>
+                    <TextBlock Text="Precise position" Style="{StaticResource SectionTitleStyle}" Margin="0" />
+                </Expander.Header>
+
+                <StackPanel Margin="0,12,0,0">
+
+                    <TextBlock
+                        Text="Choose how each axis is measured. Percentage scales with the display; pixels keep a fixed distance from the named edge."
+                        Style="{StaticResource MutedTextStyle}"
+                        Margin="0,-4,0,16"
+                        TextWrapping="Wrap" />
+
+                    <Grid MaxWidth="560" HorizontalAlignment="Left">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="105" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" MinWidth="120" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="105" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Column="2" Text="Positioning method" Style="{StaticResource EyebrowTextStyle}" Margin="0,0,0,7" />
+                        <TextBlock Grid.Column="4" Text="Value" Style="{StaticResource EyebrowTextStyle}" Margin="0,0,0,7" />
+
+                        <TextBlock Grid.Row="1" Text="Horizontal" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        <ComboBox
+                            Grid.Row="1"
+                            Grid.Column="2"
+                            ItemsSource="{Binding XModeChoices}"
+                            SelectedItem="{Binding XMode, Mode=TwoWay}" />
+                        <Grid Grid.Row="1" Grid.Column="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding XValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding XUnit}"
+                                VerticalAlignment="Center"
+                                Margin="7,0,0,0"
+                                Foreground="{DynamicResource MutedForegroundBrush}" />
+                        </Grid>
+
+                        <Border Grid.Row="2" Grid.ColumnSpan="5" Height="1" Background="{DynamicResource BorderBrush}" Margin="0,10" />
+
+                        <TextBlock Grid.Row="3" Text="Vertical" VerticalAlignment="Center" FontWeight="SemiBold" />
+                        <ComboBox
+                            Grid.Row="3"
+                            Grid.Column="2"
+                            ItemsSource="{Binding YModeChoices}"
+                            SelectedItem="{Binding YMode, Mode=TwoWay}" />
+                        <Grid Grid.Row="3" Grid.Column="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding YValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Text="{Binding YUnit}"
+                                VerticalAlignment="Center"
+                                Margin="7,0,0,0"
+                                Foreground="{DynamicResource MutedForegroundBrush}" />
+                        </Grid>
+                    </Grid>
+
+                </StackPanel>
+
+            </Expander>
+
+        </Border>
+
+    </shells:ConfigurationPageShell.SecondaryEditorContent>
+
+</shells:ConfigurationPageShell>

@@ -1,0 +1,397 @@
+{
+  // ==========================================================================
+  // pcmode.example.json -- one Desk Space with its four Activities, complete,
+  // with every machine-specific fact filled in with a plausible invention.
+  //
+  // This is an EXAMPLE and not a default. The document a fresh machine gets is
+  // deliberately much smaller (see ModeConfiguration.DefaultDocument): it names
+  // only things that mean the same on every machine, so that a first run works
+  // rather than failing on a monitor path nobody has.
+  //
+  // Everything below is either a fact about one house's hardware -- which monitor
+  // is which, what the sound card calls its outputs, which HDMI socket the machine
+  // is plugged into, where the programs are installed -- or a preference about
+  // what each mode should be. Copy it to %LOCALAPPDATA%\PCMode\Native\config.json
+  // and replace the inventions with your own.
+  //
+  // Comments and trailing commas are allowed here, because this is a file a
+  // person edits by hand. Nothing about the CONTENT is relaxed: an unknown key
+  // or an unusable value is refused by name, before anything is changed.
+  // ==========================================================================
+
+  "schemaVersion": 1,
+
+  // How PCMode itself behaves. The Settings window reads and writes this one
+  // section; command-line options are temporary overrides and do not replace it.
+  "application": {
+    "picker": {
+      "monitor": "primary", // primary, pointer, or foreground
+      "favorites": [
+        { "direction": "Up",    "target": "desk/desktop", "hotkey": "D" },
+        { "direction": "Right", "target": "desk/youtube", "hotkey": "Y" },
+        { "direction": "Down",  "target": "desk/gaming",  "hotkey": "G" },
+        { "direction": "Left",  "target": "desk/movie",   "hotkey": "M" },
+      ],
+    },
+    "controller": { "enabled": true },
+    "startup": {
+      "startWithWindows": false,
+      "behavior": "doNothing", // doNothing, restorePreviousMode, or switchToMode
+      "target": null,
+    },
+  },
+
+  "providers": {
+
+    // ------------------------------------------------------------------------
+    // Displays
+    //
+    // "monitors" maps a name you choose to the device path Windows reports for
+    // that physical monitor. The path is the identity, not the friendly name:
+    // two monitors of the same model report the same name, and the path is what
+    // actually tells them apart.
+    //
+    // "requires" is where one house's cabling is written down: this layout is
+    // only a picture at all if the television is awake, and nothing shipped could
+    // have guessed that the monitor called "TV" is one.
+    //
+    // The HDMI settings do not need saying here. They renegotiate the link, so a
+    // topology applied while they are arriving is undone by Windows -- which is a
+    // fact about televisions rather than about this house, and the display
+    // resource already knows to run after them when a mode sets both.
+    // ------------------------------------------------------------------------
+    "display": {
+      "monitors": {
+        "Desk1": "\\\\?\\DISPLAY#DEL4321#5&1a2b3c&0&UID4353#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+        "Desk2": "\\\\?\\DISPLAY#DEL4321#5&1a2b3c&0&UID4354#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+        "TV": "\\\\?\\DISPLAY#GSM7700#5&1a2b3c&0&UID4355#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}"
+      },
+
+      "layouts": {
+        "Desktop": {
+          "monitors": ["Desk1", "Desk2"],
+          "primary": "Desk2",
+          "placement": ["Desk1 LeftOf Desk2"],
+          "refresh": ["Desk1 144", "Desk2 144"]
+        },
+
+        "TVOnly": {
+          "monitors": ["TV"],
+          "primary": "TV",
+          "refresh": ["TV 120"],
+          "requires": { "tvPower": "On" }
+        }
+      }
+    },
+
+    // ------------------------------------------------------------------------
+    // Audio
+    //
+    // The name on the right is the exact string Windows shows in Sound settings.
+    // The television's endpoint does not exist until the television is awake and
+    // driving the display, which is what "requires" says -- without it, a mode
+    // that only asks for TV sound fails several times over and then reports,
+    // truthfully and uselessly, that no device has that name.
+    //
+    // "party" is the two-output group: the same Windows audio through both the
+    // soundbar and the speakers. It is a value of the audio resource like any
+    // device, so a mode says "audio": "Party" and the two are mutually exclusive
+    // without anything having to arrange it.
+    //
+    // "outputs" just lists the two members -- in whichever order reads best --
+    // and decides nothing on its own. "delay.output" is what decides: it names
+    // the output that gets delayed (the "mirror"), and the OTHER one becomes the
+    // Windows default that gets captured back (the "reference"). Get this
+    // backwards and swap the two names in "delay", not in "outputs".
+    //
+    // A soundbar or TV over HDMI/eARC is almost always the slower path in the
+    // room, so it is usually the one that should NOT appear in "delay" -- the
+    // speakers are what get delayed to meet it. "delay.ms" is found by ear:
+    // raise it until the two stop sounding like an echo.
+    //
+    // "gain" is a digital level on the delayed copy only, which is why its
+    // "output" must be the same one named in "delay". "volumes" moves the
+    // endpoints' own Windows sliders, and an output left out of it is left alone.
+    //
+    // The older "reference"/"mirror"/"delayMs"/"referenceVolume"/"mirrorVolume"
+    // form still works unchanged -- see docs/party-mode.md -- but new
+    // configurations should prefer this one.
+    // ------------------------------------------------------------------------
+    "audio": {
+      "devices": {
+        "Headphones": "Realtek HD Audio 2nd output (Realtek(R) Audio)",
+        "Speakers": "Desk speakers (Realtek(R) Audio)",
+        "Soundbar": "LG Soundbar (Intel(R) Display Audio)",
+        "TV": {
+          "device": "4 - LG TV SSCR2 (AMD High Definition Audio Device)",
+          "requires": { "display": "TVOnly" }
+        }
+      },
+
+      "party": {
+        "name": "Party",
+        "outputs": ["Speakers", "Soundbar"],
+        "delay": { "output": "Speakers", "ms": 40 },
+        "gain": { "output": "Speakers", "value": 0.85 },
+        "volumes": { "Speakers": 0.35, "Soundbar": 0.5 }
+      }
+    },
+
+    // ------------------------------------------------------------------------
+    // The television
+    //
+    // {n} in a setting name expands to the HDMI input below, so these profiles
+    // work unchanged on a television where the machine is plugged in elsewhere.
+    //
+    // Everything under "signal" renegotiates the HDMI link, so it is sent before
+    // the desktop moves onto the television. "pictureMode" is chosen afterwards,
+    // because webOS refuses an HDR picture mode until the incoming signal really
+    // is HDR -- and until Windows has switched, there is no incoming signal.
+    //
+    // "safeDisplayTarget" is where the desktop goes before the television is
+    // switched off. Without it, switching off the screen the desktop is on leaves
+    // Windows nowhere to draw and whoever did it with nothing to look at.
+    // ------------------------------------------------------------------------
+    "lgTv": {
+      // Example values only: 192.0.2.0/24 and 00:00:5E:00:53:xx are the ranges
+      // reserved for documentation. Use your own TV's address here.
+      "host": "192.0.2.31",
+      "macAddress": "00:00:5E:00:53:31",
+      "safeDisplayTarget": "Desktop",
+
+      "inputs": { "PC": "HDMI_4" },
+
+      "profiles": {
+        "Gaming": {
+          "pictureMode": "hdrGame",
+          "signal": {
+            "uhddeepcolor_hdmi{n}": "on",
+            "hdmipcmode_hdmi{n}": "on",
+            "gamemode_hdmi{n}": "on",
+            "gameoptimization_hdmi{n}": "on",
+            "freesyncoled_hdmi{n}": "on",
+            "inputoptimization": "boost"
+          }
+        },
+
+        "Movie": {
+          "pictureMode": "hdrFilmMaker",
+          "signal": {
+            "uhddeepcolor_hdmi{n}": "on",
+            "hdmipcmode_hdmi{n}": "on",
+            "gamemode_hdmi{n}": "off",
+            "gameoptimization_hdmi{n}": "off",
+            "freesyncoled_hdmi{n}": "on",
+            "inputoptimization": "standard"
+          }
+        }
+      }
+    },
+
+    // ------------------------------------------------------------------------
+    // The pointer
+    //
+    // Corner is pixels in from the far edge rather than a percentage, because
+    // what matters is being out of shot -- not being at some fraction of a screen
+    // whose size is not known here.
+    // ------------------------------------------------------------------------
+    "cursor": {
+      "positions": {
+        "Center": { "xPercent": 50, "yPercent": 50 },
+        "Corner": { "xFromRight": 2, "yFromBottom": 200 }
+      }
+    },
+
+    // ------------------------------------------------------------------------
+    // Applications
+    //
+    // "process" is the name Windows reports for the running program, without
+    // ".exe". It is the only way anything here can tell whether it is already
+    // running, and it is often not the same as the executable's name.
+    //
+    // "requires" is what must be settled before it may be STARTED. It does not
+    // apply to stopping: a mode that woke a television in order to shut something
+    // down would be doing the opposite of what it was asked.
+    //
+    // "restartWhen" names resources whose changing leaves a running copy stale. A
+    // window is placed when it opens, so one that opened on the desktop monitors
+    // is on a screen that is no longer there once the display has moved -- and
+    // nothing about the process says so.
+    //
+    // "reactivate" re-issues the start command even when it is already running,
+    // for a program whose "running" says less than the mode is asking for. Steam
+    // is running whether or not it is in Big Picture.
+    // ------------------------------------------------------------------------
+    "applications": {
+
+      "Steam": {
+        "process": "steam",
+        "start": "steam://open/bigpicture",
+        "stop": "steam://exit",
+        "reactivate": true,
+        "requires": { "display": "TVOnly" },
+        "startWithin": 4000,
+        "stopWithin": 8000
+      },
+
+      "LosslessScaling": {
+        "process": "LosslessScaling",
+        "start": "%ProgramFiles(x86)%\\Steam\\steamapps\\common\\Lossless Scaling\\LosslessScaling.exe",
+        "startWithin": 5000
+      },
+
+      "Stremio": {
+        "process": "stremio-shell-ng",
+        "start": "%LOCALAPPDATA%\\Programs\\Stremio\\stremio-shell-ng.exe",
+        "requires": { "display": "TVOnly", "LosslessScaling": "Running" },
+        "restartWhen": ["display"],
+        "ready": { "activate": true, "keys": "f", "within": 8000 }
+      },
+
+      "YouTube": {
+        "process": "YouTube TV",
+        "start": "%LOCALAPPDATA%\\Programs\\youtube-tv\\YouTube TV.exe",
+        "requires": { "display": "TVOnly" },
+        "restartWhen": ["display"]
+      }
+    },
+
+    // ------------------------------------------------------------------------
+    // Do Not Disturb
+    //
+    // OFF unless this says otherwise, and the reason is the interface rather than
+    // the feature: what Windows actually checks before showing a notification is
+    // a registry value Microsoft does not document, and whose behaviour has moved
+    // between Windows builds. Turn it on knowing that.
+    // ------------------------------------------------------------------------
+    "doNotDisturb": {
+      "enabled": true
+    },
+
+    // ------------------------------------------------------------------------
+    // Case lighting
+    //
+    // Device numbers are OpenRGB's own; its --list-devices reports them. The
+    // lighting mode is per device, because the hardware is: some accepts
+    // "Direct", some only "Static", and a device can accept a mode without
+    // actually applying the colour.
+    // ------------------------------------------------------------------------
+    "caseRgb": {
+      "enabled": true,
+      "executable": "%ProgramFiles%\\OpenRGB\\OpenRGB.exe",
+      "devices": {
+        "0": "Direct",
+        "1": "Static",
+        "2": "Static",
+        "3": "Direct",
+        "4": "Direct"
+      }
+    }
+  },
+
+  // ==========================================================================
+  // The Space and its Activities.
+  //
+  // Space -> Activity -> Source: this house has one desk, so everything below is
+  // one Space with four Activities and no Sources of their own -- what each
+  // Activity plays is a whole PC application, not something a Source would
+  // choose underneath it.
+  //
+  // An Activity states a destination and nothing else. There is no ordering here
+  // on purpose: what must happen before what is derived from the requirements
+  // declared above, so naming a picture profile brings the television, its input
+  // and the HDMI settings with it, in that order, without this file saying so.
+  //
+  // The plain form is required. The longer form says an Activity is still itself
+  // without something:
+  //
+  //     "caseRgb": { "value": "FF0000", "optional": true }
+  //
+  // What each Activity IS -- the layout, the sound, the television on the right
+  // picture, the program the Activity exists to run -- is required. Ambience and
+  // courtesies are optional: lighting, Do Not Disturb, parking the pointer, and
+  // switching the television off on the way back to the desk. 'Stopped' is always
+  // optional, because a program that is not installed is already stopped.
+  // ==========================================================================
+  "spaces": [
+    {
+      "id": "desk",
+      "name": "Desk",
+      "resources": {},
+      "activities": [
+
+        {
+          "id": "desktop",
+          "name": "Desktop",
+          "resources": {
+            "display": "Desktop",
+            "audio": "Headphones",
+            "theme": "Light",
+            "tvPower": { "value": "Off", "optional": true },
+            "doNotDisturb": { "value": "Off", "optional": true },
+            "caseRgb": { "value": "0020FF", "optional": true },
+            "cursor": { "value": "Center", "optional": true },
+            "Steam": { "value": "Stopped", "optional": true },
+            "Stremio": { "value": "Stopped", "optional": true },
+            "YouTube": { "value": "Stopped", "optional": true },
+            "LosslessScaling": { "value": "Stopped", "optional": true }
+          }
+        },
+
+        {
+          "id": "gaming",
+          "name": "Gaming",
+          "resources": {
+            "display": "TVOnly",
+            "tvProfile": "Gaming",
+            "audio": "Headphones",
+            "theme": "Dark",
+            "Steam": "Running",
+            "doNotDisturb": { "value": "On", "optional": true },
+            "caseRgb": { "value": "FFFFFF", "optional": true },
+            "cursor": { "value": "Corner", "optional": true },
+            "Stremio": { "value": "Stopped", "optional": true },
+            "YouTube": { "value": "Stopped", "optional": true },
+            "LosslessScaling": { "value": "Stopped", "optional": true }
+          }
+        },
+
+        {
+          "id": "movie",
+          "name": "Movie",
+          "resources": {
+            "display": "TVOnly",
+            "tvProfile": "Movie",
+            "audio": "TV",
+            "theme": "Dark",
+            "LosslessScaling": "Running",
+            "Stremio": "Running",
+            "doNotDisturb": { "value": "On", "optional": true },
+            "caseRgb": { "value": "7B00FF", "optional": true },
+            "cursor": { "value": "Corner", "optional": true },
+            "Steam": { "value": "Stopped", "optional": true },
+            "YouTube": { "value": "Stopped", "optional": true }
+          }
+        },
+
+        {
+          "id": "youtube",
+          "name": "YouTube",
+          "resources": {
+            "display": "TVOnly",
+            "tvProfile": "Movie",
+            "audio": "TV",
+            "theme": "Dark",
+            "YouTube": "Running",
+            "doNotDisturb": { "value": "On", "optional": true },
+            "caseRgb": { "value": "FF0000", "optional": true },
+            "cursor": { "value": "Corner", "optional": true },
+            "Steam": { "value": "Stopped", "optional": true },
+            "Stremio": { "value": "Stopped", "optional": true },
+            "LosslessScaling": { "value": "Stopped", "optional": true }
+          }
+        }
+      ]
+    }
+  ]
+}

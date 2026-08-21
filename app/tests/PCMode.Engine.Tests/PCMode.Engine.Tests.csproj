@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The engine's rules, with no UI and no machine in them.
+
+    Every test here uses a temporary folder and fake providers. Nothing writes
+    to the real %LOCALAPPDATA%\PCMode\Native, and nothing changes a setting on the
+    machine running the tests: the one production provider is exercised through
+    its store seam, never through the registry.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PCMode.Engine.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PCMode.Engine\PCMode.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

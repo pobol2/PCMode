@@ -1,0 +1,19 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Light palette entries are namespaced so both palettes can stay loaded;
+         see ApplicationThemeService. -->
+    <SolidColorBrush x:Key="Light.AccentBrush" Color="#1671B8" />
+    <SolidColorBrush x:Key="Light.AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Light.ErrorBrush" Color="#B42318" />
+    <SolidColorBrush x:Key="Light.WarningBrush" Color="#9A5B00" />
+    <SolidColorBrush x:Key="Light.DisabledTextBrush" Color="#89929C" />
+    <SolidColorBrush x:Key="Light.WindowBackgroundBrush" Color="#F7F8FA" />
+    <SolidColorBrush x:Key="Light.SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Light.SurfaceHoverBrush" Color="#E8F1F8" />
+    <SolidColorBrush x:Key="Light.ForegroundBrush" Color="#17202A" />
+    <SolidColorBrush x:Key="Light.MutedForegroundBrush" Color="#56616D" />
+    <SolidColorBrush x:Key="Light.DividerBrush" Color="#E4E8EC" />
+    <SolidColorBrush x:Key="Light.BorderBrush" Color="#D5DAE0" />
+    <SolidColorBrush x:Key="Light.SuccessBrush" Color="#217A3C" />
+
+</ResourceDictionary>
