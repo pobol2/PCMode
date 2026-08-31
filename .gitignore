@@ -51,4 +51,9 @@ ehthumbs.db
 desktop.ini
 **/desktop.ini
 $RECYCLE.BIN/
+# Native / WDK driver build output
+app/driver/**/x64/
 
+# Local diagnostic captures and probes
+_trace/
+_diag_probe/

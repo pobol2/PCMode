@@ -1,0 +1,21 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:construction="clr-namespace:PCMode.Tray.UI.Framework"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
+
+    <Style TargetType="{x:Type tree:ConfigurationEditorBlock}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tree:ConfigurationEditorBlock}">
+                    <StackPanel>
+                        <construction:RepeatedRegion x:Name="PART_EssentialRegion" ItemsSource="{TemplateBinding EssentialSections}" />
+                        <construction:RepeatedRegion x:Name="PART_AdvancedRegion" ItemsSource="{TemplateBinding AdvancedSections}" />
+                        <construction:RepeatedRegion x:Name="PART_ExtraRegion" ItemsSource="{TemplateBinding ExtraSections}" />
+                        <construction:RepeatedRegion x:Name="PART_HardwareRegion" ItemsSource="{TemplateBinding HardwareSections}" />
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

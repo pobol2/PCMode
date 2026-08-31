@@ -219,10 +219,10 @@ public sealed class CursorProviderTests
     [Fact]
     public async Task Reports_the_cursor_as_a_step_of_its_own()
     {
+        using var root = new TemporaryRoot();
         // A real resource, with its own line in the report. A pointer that moved
         // as a side effect of the theme would be a change the transition never
         // mentioned.
-        using var root = new TemporaryRoot();
 
         ModeEngine engine = Engine(root, new FakeCursor());
 

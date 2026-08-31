@@ -8,17 +8,76 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>Assets\PCMode.ico</ApplicationIcon>
+    <ApplicationIcon>Platform\Assets\PCMode.ico</ApplicationIcon>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\PCMode.ico" />
+    <Resource Include="Platform\Assets\PCMode.ico" />
+  </ItemGroup>
+
+  <!-- App.xaml lives in App/, not the project root, so the SDK's default
+       ApplicationDefinition glob (which only matches a root-level App.xaml)
+       does not find it. -->
+  <PropertyGroup>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ApplicationDefinition Include="App\App.xaml" />
+  </ItemGroup>
+
+  <!-- Functional Blocks keep dependency-property declarations and registrations together. -->
+  <ItemGroup>
+    <PackageReference Include="DependencyPropertyGenerator" Version="1.5.1" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PCMode.Engine\PCMode.Engine.csproj" />
     <ProjectReference Include="..\PCMode.Picker\PCMode.Picker.csproj" />
   </ItemGroup>
+
+  <!--
+    The audio Host, shipped beside PCMode rather than referenced by it.
+
+    Nothing in the tray or the engine may reference the Host's types: the Host
+    owns the live audio runtime, and the whole point of the boundary is that
+    PCMode talks to it over a versioned pipe. So ReferenceOutputAssembly is off
+    and this reference exists only to order the build.
+
+    Its whole output folder is then copied into AudioHost\ beside the tray,
+    because the Host is a program and not a library: it needs its own engine,
+    Windows and DriverClient assemblies and its own runtimeconfig, and flattening
+    those into the tray's folder would put the real-time audio assemblies exactly
+    where a future careless reference would find them. See AudioHostLink for the
+    other end of this arrangement.
+  -->
+  <ItemGroup>
+    <ProjectReference
+      Include="..\PCMode.Audio.Host\PCMode.Audio.Host.csproj"
+      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CopyAudioHost" AfterTargets="Build">
+
+    <MSBuild
+      Projects="..\PCMode.Audio.Host\PCMode.Audio.Host.csproj"
+      Targets="Build"
+      Properties="Configuration=$(Configuration)">
+
+      <Output TaskParameter="TargetOutputs" ItemName="AudioHostOutput" />
+
+    </MSBuild>
+
+    <ItemGroup>
+      <AudioHostFile Include="%(AudioHostOutput.RootDir)%(AudioHostOutput.Directory)**\*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(AudioHostFile)"
+      DestinationFiles="@(AudioHostFile->'$(OutDir)AudioHost\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+
+  </Target>
 
 </Project>

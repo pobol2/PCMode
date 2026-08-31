@@ -42,7 +42,7 @@ internal sealed class FakeAudioEndpoints : IAudioEndpoints
     /// <remarks>
     /// What a machine looks like when the undocumented policy interface accepts
     /// the call and Windows keeps the default where it was -- which is the one
-    /// failure Party mode must not build a mirror on top of.
+    /// failure an audio target must not conclude it is playing on top of.
     /// </remarks>
     public bool IgnoresMakeDefault { get; set; }
 

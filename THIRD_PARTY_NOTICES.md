@@ -2,55 +2,79 @@
 
 PCMode source code, documentation, and assets are proprietary except where a file or bundled component states otherwise. See [LICENSE](LICENSE).
 
-This notice distinguishes development/test dependencies from components distributed with an application release. A release must be audited against its actual contents; adding, bundling, or updating a dependency may require this file and the distributed license materials to be updated.
+This inventory reflects the current project files and restored dependency graphs. Development/test packages are listed separately from components used by production code. A release must still be audited against the files actually published or installed.
 
-## Application dependencies
+## Production managed dependency
 
-Packages referenced by `PCMode.Engine` and built into the application itself.
+| Component | Version | License | Use |
+|---|---:|---|---|
+| [OpenRGB.NET](https://www.nuget.org/packages/OpenRGB.NET/3.1.1) | 3.1.1 | MIT | OpenRGB SDK client used by `PCMode.Engine`. |
 
-| Package | License |
-|---|---|
-| [OpenRGB.NET](https://www.nuget.org/packages/OpenRGB.NET/3.1.1) | MIT License |
+The current `PCMode.Audio.*`, Picker, and Tray production projects have no additional third-party NuGet package references. They use .NET and Windows platform APIs directly.
 
-`OpenRGB.NET` is a client for the OpenRGB SDK protocol; it does not bundle or require the separately installed OpenRGB server application (see External integrations below).
+OpenRGB.NET does not include the OpenRGB server. PCMode connects only to a separately installed server on `127.0.0.1:6742`.
 
-## Development and test dependencies
+## Direct development and test dependencies
 
-The test projects currently reference packages restored from NuGet. They are used to build and run the test suite and are not intended to be part of the normal PCMode application output.
+The repository currently has two Microsoft test-platform version sets because the older Engine, Picker, and Tray tests and the newer audio tests do not use the same package versions.
 
-| Package | License |
-|---|---|
-| [xunit](https://www.nuget.org/packages/xunit/2.9.3) | Apache License 2.0 |
-| [xunit.runner.visualstudio](https://www.nuget.org/packages/xunit.runner.visualstudio/3.1.4) | Apache License 2.0 |
-| [Microsoft.NET.Test.Sdk](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/17.14.1) | MIT License |
+| Package | Version used | License |
+|---|---|---|
+| [Microsoft.NET.Test.Sdk](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk) | 17.14.1; 18.9.0 | MIT |
+| [xunit](https://www.nuget.org/packages/xunit) | 2.9.3 | Apache License 2.0 |
+| [xunit.runner.visualstudio](https://www.nuget.org/packages/xunit.runner.visualstudio) | 3.1.4; 3.1.5 | Apache License 2.0 |
 
-These packages are not vendored into the repository. Their source code, trademarks, and licenses remain the property of their respective owners.
+These packages are used to build and run tests and are not intended to be included in normal PCMode application output.
 
-## .NET and Windows components
+## Resolved test dependencies
 
-PCMode targets .NET and calls Windows platform APIs. Framework-dependent builds rely on components already installed on the user's system. If a release redistributes .NET runtime or other Microsoft components, the release packaging must preserve the license and third-party notice files supplied with those components.
+The restored NuGet graphs also contain the following transitive test components:
 
-Windows APIs and protocols are not copied third-party source code. Their use may nevertheless be subject to platform documentation, compatibility, trademark, or distribution terms.
+| Package | Version used | License |
+|---|---|---|
+| Microsoft.CodeCoverage | 17.14.1; 18.9.0 | MIT |
+| Microsoft.TestPlatform.ObjectModel | 17.14.1; 18.9.0 | MIT |
+| Microsoft.TestPlatform.TestHost | 17.14.1; 18.9.0 | MIT |
+| Newtonsoft.Json | 13.0.3 | MIT |
+| xunit.abstractions | 2.0.3 | Apache License 2.0 |
+| xunit.analyzers | 1.18.0 | Apache License 2.0 |
+| xunit.assert | 2.9.3 | Apache License 2.0 |
+| xunit.core | 2.9.3 | Apache License 2.0 |
+| xunit.extensibility.core | 2.9.3 | Apache License 2.0 |
+| xunit.extensibility.execution | 2.9.3 | Apache License 2.0 |
 
-## External integrations
+Transitive versions can change when direct package references or lock inputs change. Re-create this inventory from the restored assets before release.
 
-PCMode may interoperate with separately installed applications or devices. Interoperability does not mean that their software is included with PCMode. An external component must not be bundled, installed, or modified by PCMode until its license and redistribution requirements have been reviewed.
+## Microsoft platform and driver components
 
-## Compatibility interfaces
+PCMode currently targets .NET 10 and Windows. The native virtual-audio driver project targets the Windows kernel-mode driver toolset with:
 
-Some PCMode providers use interfaces or behavior that are not part of a stable, documented public control API. Current examples include Windows default-audio policy configuration, a Windows notification registry setting, and the LG webOS local control protocol.
+- Windows SDK/WDK `10.0.28000.0`;
+- Audio Class Extensions (ACX) `1.1`;
+- Kernel-Mode Driver Framework (KMDF) `1.33`;
+- Microsoft driver libraries including `acxstub.lib` and `libcntpr.lib`.
 
-The PCMode implementations of these compatibility boundaries are original project code. Their unsupported nature is documented because Windows or device updates may change their behavior; it is not a claim of ownership over the underlying platform or protocol.
+These are Microsoft platform/build components, not code owned by PCMode. Framework-dependent output relies on the installed .NET runtime; self-contained publishing or an installer may redistribute Microsoft files. Any distributed runtime, WDK redistributable, catalog, co-installer, or installer component must retain the applicable Microsoft license and notice materials.
 
-## Updating this notice
+## External products and protocols
+
+PCMode interoperates with products that are not bundled with the repository or application output, including:
+
+- the separately installed OpenRGB server and supported RGB hardware;
+- LG webOS televisions over their local WebSocket/Wake-on-LAN interfaces;
+- Windows display, audio, DDC/CI, power, registry, process, XInput, and shell interfaces;
+- applications and URI handlers selected by the user.
+
+Interoperability does not grant redistribution rights. Do not bundle an external server, vendor utility, firmware, SDK binary, trademarked asset, or other product without separately reviewing its license and distribution terms.
+
+## Release audit
 
 Before producing a release:
 
-1. inventory the packages and native files actually shipped;
-2. record each component's exact version and license;
-3. include required license, copyright, attribution, and notice text;
-4. verify whether optional integrations are merely invoked or actually redistributed;
-5. retain notices delivered with self-contained runtimes and installer components.
+1. Inventory the exact managed assemblies, native binaries, driver package, runtime, installer files, and assets being distributed.
+2. Confirm every component's exact version and license from the resolved build or publish output.
+3. Include all required license, copyright, attribution, and third-party notice files.
+4. Confirm optional integrations are invoked rather than redistributed.
+5. Recheck the driver kit, signing, catalog, and installer redistribution terms for the chosen release toolchain.
 
-No third-party component may be added to a release solely because its license appears compatible; its redistribution, modification, linking, trademark, and notice obligations must be reviewed for the intended packaging.
-
+No component should be added to a release solely because its license appears compatible; redistribution, modification, linking, trademark, and notice obligations must be reviewed for the actual packaging.

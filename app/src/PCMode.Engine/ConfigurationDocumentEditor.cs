@@ -11,7 +11,7 @@ namespace PCMode.Engine;
 /// ONE EDIT PATH, NOT ONE PER SECTION
 ///
 /// Every graphical editor in PCMode changes the same file: display layouts,
-/// cursor positions, audio outputs and the Party group are all sections of the
+/// cursor positions, audio outputs and audio targets are all sections of the
 /// one document <see cref="ModeConfiguration"/> parses. What they have in common
 /// -- read it, refuse a file that is not valid JSON, hand the object graph to a
 /// mutation, validate the candidate through

@@ -35,8 +35,8 @@ public sealed class ModeStateStoreTests
     [Fact]
     public void Creates_the_folder_it_writes_into()
     {
-        // First run writes state before anything else has made the directory.
         using var root = new TemporaryRoot();
+        // First run writes state before anything else has made the directory.
         string nested = Path.Combine(root.Path, "deeper", "state.json");
 
         Assert.True(new ModeStateStore(nested).TryWrite("Desktop", DateTimeOffset.UtcNow, out _));
@@ -49,10 +49,10 @@ public sealed class ModeStateStoreTests
     [InlineData("""{"schemaVersion":99,"mode":"Movie"}""")]
     public void Treats_a_document_it_cannot_use_as_no_mode_at_all(string json)
     {
+        using var root = new TemporaryRoot();
         // The application has to start on a machine where something else has
         // been writing files. A crash here would be a shell that will not open
         // because of a file it could simply have ignored.
-        using var root = new TemporaryRoot();
         File.WriteAllText(root.StateFile, json);
 
         Assert.Null(new ModeStateStore(root.StateFile).Read(out string? problem));
@@ -62,10 +62,10 @@ public sealed class ModeStateStoreTests
     [Fact]
     public void Explains_a_write_it_could_not_make_instead_of_throwing()
     {
+        using var root = new TemporaryRoot();
         // Called after the machine has already been changed. An exception here
         // would turn a transition that genuinely happened into one reported as
         // failed, which is the one thing the state write must never do.
-        using var root = new TemporaryRoot();
         Directory.CreateDirectory(root.StateFile);
 
         Assert.False(new ModeStateStore(root.StateFile).TryWrite("Movie", DateTimeOffset.UtcNow, out string? problem));

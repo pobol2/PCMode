@@ -79,11 +79,11 @@ public sealed class HardwareConfigurationStoreTests
     [Fact]
     public void Preserves_a_property_this_build_does_not_recognize()
     {
+        using var root = new TemporaryRoot();
         // A save only ever mutates the JSON graph at the paths it owns; a field
         // this build has never heard of -- a future one, or one nobody has
         // written a reader for yet -- is not something an alias write is
         // entitled to drop.
-        using var root = new TemporaryRoot();
         root.Write("""
             {
               "schemaVersion": 1,

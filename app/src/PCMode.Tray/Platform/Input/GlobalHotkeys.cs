@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
-using PCMode.Tray.Settings;
 
-namespace PCMode.Tray.Input;
+namespace PCMode.Tray.Platform.Input;
 
 /// <summary>Modifier bits, as RegisterHotKey defines them.</summary>
 [Flags]
@@ -86,43 +85,6 @@ public sealed class GlobalHotkeys : IDisposable
 
     /// <summary>What is currently registered. Empty unless a claim succeeded.</summary>
     public IReadOnlyList<HotkeyBinding> Registered => _registered;
-
-    /// <summary>
-    /// The picker binding plus each independently configured direct shortcut.
-    /// </summary>
-    /// <remarks>
-    /// Separate from registration so the mapping can be checked without
-    /// claiming a single real key.
-    /// </remarks>
-    public static IReadOnlyList<HotkeyBinding> BindingsFor(IReadOnlyList<DirectShortcut> shortcuts)
-    {
-        ArgumentNullException.ThrowIfNull(shortcuts);
-
-        const HotkeyModifiers CtrlAlt = HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.NoRepeat;
-
-        List<HotkeyBinding> bindings =
-        [
-            new HotkeyBinding(PickerHotkeyId, CtrlAlt, VirtualKeySpace, "Ctrl+Alt+Space (mode picker)"),
-        ];
-
-        int id = PickerHotkeyId;
-
-        foreach (DirectShortcut shortcut in shortcuts)
-        {
-            id++;
-
-            // A-Z virtual key codes are the uppercase ASCII values, which is
-            // why only letters are supported here.
-            bindings.Add(new HotkeyBinding(
-                id,
-                CtrlAlt,
-                char.ToUpperInvariant(shortcut.Key),
-                $"Ctrl+Alt+{char.ToUpperInvariant(shortcut.Key)} ({shortcut.Label})",
-                shortcut.Target));
-        }
-
-        return bindings;
-    }
 
     /// <summary>
     /// Takes every binding, or leaves the system exactly as it was found.

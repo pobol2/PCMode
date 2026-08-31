@@ -1,8 +1,8 @@
 using System.Runtime.InteropServices;
 using PCMode.Picker;
-using PCMode.Tray.Settings;
+using PCMode.Tray.Elements.Settings;
 
-namespace PCMode.Tray.Picker;
+namespace PCMode.Tray.Platform.Picker;
 
 /// <summary>
 /// One monitor, described the way the picker needs it.
@@ -17,7 +17,7 @@ public readonly record struct MonitorSurface(PixelRect WorkArea, double Scale);
 /// <remarks>
 /// Ported from legacy <c>PCMode.Tray.Picker.MonitorLayout</c>, minus its own
 /// copy of <c>PickerMonitorChoice</c> -- Target already defines that enum in
-/// <see cref="PCMode.Tray.Settings"/> (<c>ApplicationSettings.PickerMonitor</c>
+/// <see cref="PCMode.Tray.Elements.Settings"/> (<c>ApplicationSettings.PickerMonitor</c>
 /// persists it), ported ahead of the picker itself.
 ///
 /// The work area rather than the full bounds, so the wheel is centred in the

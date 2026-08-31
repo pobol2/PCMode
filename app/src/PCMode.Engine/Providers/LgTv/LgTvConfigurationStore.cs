@@ -30,7 +30,8 @@ public sealed record LgTvEdit(
     string MacAddress,
     string? SafeDisplayTarget,
     IReadOnlyList<LgTvInputEdit> Inputs,
-    IReadOnlyList<LgTvProfileEdit> Profiles);
+    IReadOnlyList<LgTvProfileEdit> Profiles,
+    string? DisplayMonitor = null);
 
 /// <summary>
 /// Creates and edits the named televisions stored under <c>providers.lgTv</c>.
@@ -516,6 +517,11 @@ public static class LgTvConfigurationStore
         if (!string.IsNullOrWhiteSpace(edit.SafeDisplayTarget))
         {
             body["safeDisplayTarget"] = edit.SafeDisplayTarget.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(edit.DisplayMonitor))
+        {
+            body["displayMonitor"] = edit.DisplayMonitor.Trim();
         }
 
         if (edit.Inputs.Count > 0)

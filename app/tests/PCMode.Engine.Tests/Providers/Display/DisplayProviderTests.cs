@@ -107,6 +107,48 @@ public sealed class DisplayProviderTests
         Assert.Contains(DisplayProvider.MonitorsPath, problem, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Accepts_a_layout_that_requires_something_other_than_the_cursor()
+    {
+        // "tvPower" runs before the display (TvPowerProvider declares no
+        // RunsAfter of its own), so requiring it here does not contradict
+        // anything -- unlike requiring the cursor, which does. See the next
+        // test.
+        string? problem = Configure(
+            new DisplayProvider(Machine()),
+            $$"""
+            {
+              "monitors": { "TV": "{{Tv}}" },
+              "layouts": { "TVOnly": { "monitors": ["TV"], "requires": { "tvPower": "On" } } }
+            }
+            """);
+
+        Assert.Null(problem);
+    }
+
+    [Fact]
+    public void Refuses_a_layout_that_requires_the_cursor()
+    {
+        // CursorProvider.RunsAfter always names the display: the pointer is
+        // placed once the desktop has finished changing shape. A layout that
+        // required the cursor would need it ordered both before (as
+        // something it requires) and after (its own declared preference)
+        // itself -- a cycle TransitionPlan.TryOrder could never resolve. This
+        // is refused here, at configuration time, rather than only once a
+        // mode using the layout is actually activated.
+        string? problem = Configure(
+            new DisplayProvider(Machine()),
+            $$"""
+            {
+              "monitors": { "TV": "{{Tv}}" },
+              "layouts": { "TVOnly": { "monitors": ["TV"], "requires": { "cursor": "Center" } } }
+            }
+            """);
+
+        Assert.NotNull(problem);
+        Assert.Contains("cursor", problem, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("\"Desktop\"", "must be an object")]
     [InlineData("""{"monitors":[]}""", "lists no monitors")]
@@ -345,10 +387,10 @@ public sealed class DisplayProviderTests
     [Fact]
     public async Task Leaves_the_screens_alone_when_the_layout_is_already_current()
     {
+        using var root = new TemporaryRoot();
         // Re-applying a mode must be a genuine no-op. Blanking the screens to
         // arrive where the machine already was is the most visible way a
         // transition can be wrong while reporting success.
-        using var root = new TemporaryRoot();
 
         FakeDisplayDevices machine = InDesktopLayout();
 
@@ -381,9 +423,9 @@ public sealed class DisplayProviderTests
     [Fact]
     public async Task Fails_the_transition_when_a_monitor_is_not_there()
     {
+        using var root = new TemporaryRoot();
         // The television is off. Validation could not have caught this: it is a
         // fact about the room, not about the file.
-        using var root = new TemporaryRoot();
 
         FakeDisplayDevices machine = InDesktopLayout();
         machine[Tv].Available = false;
@@ -401,13 +443,13 @@ public sealed class DisplayProviderTests
     [Fact]
     public async Task Asks_for_a_slow_television_once_and_then_waits_for_it()
     {
+        using var root = new TemporaryRoot();
         // THE thing a topology change must not do. Windows accepts the request
         // and returns; the picture arrives seconds later, and until it does the
         // configuration reads as though nothing happened. A provider that called
         // that a failure would have the whole topology issued again -- another
         // round of black screens -- for no better reason than that a television
         // takes longer to wake than an API call takes to return.
-        using var root = new TemporaryRoot();
 
         FakeDisplayDevices machine = new FakeDisplayDevices()
             .Add(new FakeMonitor { Path = Desk1, Name = "DELL U2720Q", Width = 2560, Height = 1440, Supported = [60, 144] })
@@ -469,6 +511,42 @@ public sealed class DisplayProviderTests
 
         Assert.Contains("240", failure.Message, StringComparison.Ordinal);
         Assert.Contains("60", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Applies_a_centered_placement_to_the_real_pixel_offset_it_implies()
+    {
+        // The visual arrangement's drag-to-center gesture is stored as
+        // DisplayAlignment.Center, not a raw offset -- this is the one place
+        // that confirms it reaches Arrange() as the actual pixel position
+        // Center means for these two monitors' real sizes, not merely that
+        // DisplayLayout.Positions computes it correctly in isolation (see
+        // DisplayLayoutTests).
+        FakeDisplayDevices machine = Machine();
+
+        var provider = new DisplayProvider(machine);
+
+        Assert.Null(Configure(
+            provider,
+            $$"""
+            {
+              "monitors": { "Desk1": "{{Desk1}}", "Desk2": "{{Desk2}}" },
+              "layouts": {
+                "Centered": {
+                  "monitors": ["Desk1", "Desk2"],
+                  "primary": "Desk1",
+                  "placement": ["Desk2 RightOf Desk1 Center"]
+                }
+              }
+            }
+            """));
+
+        provider.Apply("Centered", CancellationToken.None);
+
+        // Desk1 is 1440 tall, Desk2 is 1080 tall: centering Desk2 leaves
+        // (1440-1080)/2 = 180 above it.
+        Assert.Equal(2560, machine[Desk2].X);
+        Assert.Equal(180, machine[Desk2].Y);
     }
 
     [Fact]

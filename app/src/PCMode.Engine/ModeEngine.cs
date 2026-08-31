@@ -315,8 +315,7 @@ public sealed class ModeEngine
     /// The resource providers this engine was built with.
     /// </summary>
     /// <remarks>
-    /// Exists for hardware discovery, which wants to ask an
-    /// <see cref="ApplicationProvider"/> what it knows about an application
+    /// Exposes live provider status to shell composition and feature pages
     /// without re-reading the configuration document a second way. Nothing
     /// about a transition reaches into this: <see cref="ApplyAsync"/> and
     /// <see cref="ReadCurrentMode"/> still go through the provider dictionary

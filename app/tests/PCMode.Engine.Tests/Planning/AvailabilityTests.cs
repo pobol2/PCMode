@@ -413,10 +413,10 @@ public sealed class AvailabilityTests
     [Fact]
     public async Task Still_fails_a_mode_whose_optional_resource_was_there_and_broke()
     {
+        using var root = new TemporaryRoot();
         // Optional is about availability and nothing else. A resource that was
         // present enough to be attempted is a resource whose failure is a
         // failure.
-        using var root = new TemporaryRoot();
 
         root.Write(
             """

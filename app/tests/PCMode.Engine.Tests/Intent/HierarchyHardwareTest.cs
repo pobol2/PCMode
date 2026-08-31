@@ -26,6 +26,38 @@ public sealed class HierarchyHardwareFactAttribute : FactAttribute
 }
 
 /// <summary>
+/// A handoff test is skipped unless both a PC target and an External Source
+/// target were named, on top of the general hardware opt-in.
+/// </summary>
+/// <remarks>
+/// A separate attribute rather than a guard inside the test body, for the same
+/// reason <see cref="HierarchyHardwareFactAttribute"/> is: deciding it at
+/// discovery means an ordinary run never enters the method at all, rather than
+/// reporting a pass that quietly applied nothing to anybody's television.
+/// </remarks>
+public sealed class ExternalSourceHandoffHardwareFactAttribute : FactAttribute
+{
+    public ExternalSourceHandoffHardwareFactAttribute()
+    {
+        if (!HierarchyHardwareTest.Requested)
+        {
+            Skip =
+                "Hardware check. Set PCMODE_HIERARCHY_HARDWARE_TEST=1 to run it: it applies a PC target and " +
+                "an External Source target on this machine's real configuration, one after the other, for real.";
+
+            return;
+        }
+
+        if (!HierarchyHardwareTest.HandoffTargetsNamed)
+        {
+            Skip =
+                "Set PCMODE_HIERARCHY_PC_TARGET and PCMODE_HIERARCHY_EXTERNAL_TARGET to two configured " +
+                "targets -- a PC Source (or an Activity with none) and an External Source -- to run this.";
+        }
+    }
+}
+
+/// <summary>
 /// This machine's own configuration, composed and walked against its real
 /// hardware.
 /// </summary>
@@ -67,9 +99,15 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
     private const string Switch = "PCMODE_HIERARCHY_HARDWARE_TEST";
     private const string RootVariable = "PCMODE_HIERARCHY_HARDWARE_ROOT";
     private const string TargetVariable = "PCMODE_HIERARCHY_TARGET";
+    private const string PcTargetVariable = "PCMODE_HIERARCHY_PC_TARGET";
+    private const string ExternalTargetVariable = "PCMODE_HIERARCHY_EXTERNAL_TARGET";
 
     internal static bool Requested =>
         string.Equals(Environment.GetEnvironmentVariable(Switch), "1", StringComparison.Ordinal);
+
+    internal static bool HandoffTargetsNamed =>
+        Environment.GetEnvironmentVariable(PcTargetVariable) is { Length: > 0 } &&
+        Environment.GetEnvironmentVariable(ExternalTargetVariable) is { Length: > 0 };
 
     [HierarchyHardwareFact]
     public async Task This_machines_configuration_composes_and_walks_on_real_hardware()
@@ -121,6 +159,21 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
                 Assert.True(
                     dryRun.Status is TransitionStatus.Succeeded or TransitionStatus.Refused,
                     $"'{target.DisplayPath}' could not be walked: {dryRun.Message}");
+
+                // A refusal for lack of hardware (the television is off, say)
+                // is an ordinary, expected outcome of a dry run on a machine
+                // that is not fully switched on. A dependency cycle is not:
+                // it means two resources this target sets contradict each
+                // other's ordering -- as a display layout wrongly requiring
+                // the cursor position once did, see TransitionPlan.TryOrder
+                // -- and no machine, switched on or not, could ever satisfy
+                // it. This is the one shape of refusal this test insists on
+                // catching rather than shrugging off as "the room isn't
+                // ready".
+                Assert.False(
+                    dryRun.Status == TransitionStatus.Refused &&
+                    dryRun.Message.Contains("cannot be ordered", StringComparison.Ordinal),
+                    $"'{target.DisplayPath}' has a dependency cycle in its real configuration: {dryRun.Message}");
             }
 
             await ApplyIfAskedAsync(engine);
@@ -129,6 +182,105 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
         {
             Delete(root);
         }
+    }
+
+    /// <summary>
+    /// The External Source acceptance criterion, on real hardware: a PC target
+    /// and a console target, named from the person's own configuration, applied
+    /// one after the other and back again, for real.
+    /// </summary>
+    /// <remarks>
+    /// Everything the general check above does is a dry run -- it proves a
+    /// target composes and plans, not that switching to it and back actually
+    /// leaves the room the way it should. This is the one place that is
+    /// checked for real, which is why it needs somebody to say which two
+    /// targets to use rather than walking every target itself.
+    ///
+    /// Run it with:
+    ///
+    ///   $env:PCMODE_HIERARCHY_HARDWARE_TEST="1"; $env:PCMODE_HIERARCHY_PC_TARGET="desk/gaming/steam";
+    ///   $env:PCMODE_HIERARCHY_EXTERNAL_TARGET="desk/gaming/switch";
+    ///   dotnet test app/tests/PCMode.Engine.Tests --filter "FullyQualifiedName~Applies_a_pc_target_then_an_external_target_and_back" --logger "console;verbosity=detailed"
+    /// </remarks>
+    [ExternalSourceHandoffHardwareFact]
+    public async Task Applies_a_pc_target_then_an_external_target_and_back_for_real()
+    {
+        string source = Environment.GetEnvironmentVariable(RootVariable) is { Length: > 0 } named
+            ? named
+            : PCModePaths.DefaultRoot;
+
+        Assert.True(
+            File.Exists(PCModePaths.ConfigurationFile(source)),
+            $"There is no configuration at {PCModePaths.ConfigurationFile(source)}. Set {RootVariable} to a data root.");
+
+        string root = Copy(source);
+        output.WriteLine($"Real data root:  {source}");
+        output.WriteLine($"Working copy:    {root}");
+
+        try
+        {
+            ModeEngine engine = EngineBootstrap.Create(root);
+
+            string pcRequested = Environment.GetEnvironmentVariable(PcTargetVariable)!;
+            string externalRequested = Environment.GetEnvironmentVariable(ExternalTargetVariable)!;
+
+            ConfiguredTarget? pc = engine.ResolveTarget(pcRequested);
+            ConfiguredTarget? external = engine.ResolveTarget(externalRequested);
+
+            Assert.True(pc is not null, $"'{pcRequested}' does not name exactly one target.");
+            Assert.True(external is not null, $"'{externalRequested}' does not name exactly one target.");
+
+            Assert.True(
+                external!.SourceKind == SourceKind.ExternalDevice,
+                $"'{external.DisplayPath}' is a {external.SourceKind?.ToString() ?? "target with no Source"}, " +
+                $"not an External Source. Point {ExternalTargetVariable} at one.");
+
+            string? before = engine.ReadCurrentTargetKey(out _);
+            output.WriteLine(string.Empty);
+            output.WriteLine($"Recorded before: {before ?? "nothing"}.");
+
+            try
+            {
+                TransitionOutcome toPc = await Apply(engine, pc!.Key, "PC target");
+                Assert.True(toPc.Succeeded, toPc.Message);
+
+                TransitionOutcome toExternal = await Apply(engine, external.Key, "External Source target");
+                Assert.True(toExternal.Succeeded, toExternal.Message);
+
+                TransitionOutcome backToPc = await Apply(engine, pc.Key, "PC target, again");
+                Assert.True(backToPc.Succeeded, backToPc.Message);
+            }
+            finally
+            {
+                if (before is not null &&
+                    !string.Equals(before, engine.ReadCurrentTargetKey(out _), StringComparison.OrdinalIgnoreCase))
+                {
+                    TransitionOutcome restored = await engine.ApplyAsync(before);
+                    output.WriteLine($"Put back: {restored.Status} -- {restored.Message}");
+                }
+            }
+        }
+        finally
+        {
+            Delete(root);
+        }
+    }
+
+    private async Task<TransitionOutcome> Apply(ModeEngine engine, string key, string label)
+    {
+        TransitionOutcome outcome = await engine.ApplyAsync(key);
+
+        output.WriteLine(string.Empty);
+        output.WriteLine($"{label} ({key}): {outcome.Status} -- {outcome.Message}");
+
+        foreach (TransitionStep step in outcome.Steps)
+        {
+            output.WriteLine(
+                $"  {step.Status,-15} {step.ResourceName,-22} {step.Current ?? "?"} -> {step.Target}" +
+                (step.Problem is null ? string.Empty : $"  ({step.Problem})"));
+        }
+
+        return outcome;
     }
 
     /// <summary>

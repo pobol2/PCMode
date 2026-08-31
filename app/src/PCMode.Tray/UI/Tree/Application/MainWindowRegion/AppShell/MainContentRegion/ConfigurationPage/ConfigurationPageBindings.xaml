@@ -1,0 +1,81 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:configuration="clr-namespace:PCMode.Tray.Elements.Configuration"
+    xmlns:migration="clr-namespace:PCMode.Tray.UI.Components.Migration"
+    xmlns:selection="clr-namespace:PCMode.Tray.UI.Components.Selection"
+    xmlns:framework="clr-namespace:PCMode.Tray.UI.Framework"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
+
+    <!--
+        This is the Element-to-Tree seam. Elements supply only the parameter
+        objects above; these implicit templates select legal generic nodes.
+        Terminal feature UI stays below EditorSectionBlock's explicit
+        FinalUiComponent boundary and can be migrated independently.
+    -->
+
+    <DataTemplate DataType="{x:Type configuration:ConfigurationMigrationEditorPresentation}">
+    <framework:FinalUiComponent
+        HorizontalContentAlignment="Stretch"
+        VerticalContentAlignment="Stretch">
+
+        <migration:MigrationContent
+            Description="{Binding Description}"
+            Source="{Binding Source}" />
+
+    </framework:FinalUiComponent>
+</DataTemplate>
+    <DataTemplate DataType="{x:Type configuration:ConfigurationPageViewModelBase}">
+        <tree:ConfigurationPageBlock
+            Title="{Binding TreePresentation.Title}"
+            Selector="{Binding TreePresentation.Selector}"
+            Editor="{Binding TreePresentation.Editor}"
+            ValidationProblem="{Binding ValidationProblem}"
+            DiscardCommand="{Binding Commands.Discard}"
+            SaveCommand="{Binding Commands.Save}"
+            IsBusy="{Binding IsBusy}" />
+    </DataTemplate>
+
+    <DataTemplate x:Key="ConfigurationElementSelectorItemTemplate">
+        <framework:FinalUiComponent HorizontalContentAlignment="Stretch">
+            <selection:SelectorItem
+                Title="{Binding Title}"
+                Summary="{Binding Summary}"
+                Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationSelectorBlock}}}"
+                CommandParameter="{Binding}" />
+        </framework:FinalUiComponent>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type configuration:ConfigurationSelectorPresentation}">
+        <tree:ConfigurationSelectorBlock
+            Title="{Binding Title}"
+            Items="{Binding Items}"
+            ItemTemplate="{StaticResource ConfigurationElementSelectorItemTemplate}"
+            CreateCommand="{Binding CreateCommand}"
+            ShowCreateButton="{Binding ShowCreateButton}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type configuration:ConfigurationEditorPresentation}">
+        <tree:ConfigurationEditorBlock
+            EssentialSections="{Binding EssentialSections}"
+            AdvancedSections="{Binding AdvancedSections}"
+            ExtraSections="{Binding ExtraSections}"
+            HardwareSections="{Binding HardwareSections}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type configuration:EditorSectionPresentation}">
+        <tree:EditorSectionBlock
+            Title="{Binding Title}"
+            Content="{Binding Content}"
+            IsCollapsible="{Binding IsCollapsible}"
+            IsExpanded="{Binding IsExpanded}"
+            ShowChrome="{Binding ShowChrome}" />
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type configuration:TerminalElementContent}">
+        <migration:MigrationContent
+            Description="{Binding Description}"
+            Source="{Binding Source}" />
+    </DataTemplate>
+
+</ResourceDictionary>

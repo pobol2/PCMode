@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PCMode.Audio.Core.Interop;
 using static PCMode.Engine.Wasapi;
 
 namespace PCMode.Engine;

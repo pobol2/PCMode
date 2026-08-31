@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using PCMode.Picker;
 
-namespace PCMode.Tray.Input;
+namespace PCMode.Tray.Platform.Input;
 
 /// <summary>Reads one controller slot.</summary>
 /// <remarks>

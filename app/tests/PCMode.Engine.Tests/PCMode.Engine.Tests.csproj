@@ -29,4 +29,18 @@
     <ProjectReference Include="..\..\src\PCMode.Engine\PCMode.Engine.csproj" />
   </ItemGroup>
 
+  <!--
+    For one opt-in hardware check, and for nothing else.
+
+    AudioTargetHardwareTest asks the PCMode audio driver how many PCM packets it
+    actually received, which is the only way to prove that Windows playback
+    reached the virtual endpoint rather than that PCMode merely said it had. The
+    engine itself deliberately does not reference DriverClient (see
+    PCMode.Engine.csproj) and this reference must not become the excuse for it
+    to start.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PCMode.Audio.DriverClient\PCMode.Audio.DriverClient.csproj" />
+  </ItemGroup>
+
 </Project>

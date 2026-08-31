@@ -62,11 +62,11 @@ public interface IAudioEndpoints
     /// That endpoint's master volume, 0 to 1, or null when it has none.
     /// </summary>
     /// <remarks>
-    /// The slider in Sound settings, not an application's own level. Party mode
-    /// needs it because balancing a soundbar against a pair of speakers is done
-    /// on the endpoints themselves -- the mirrored stream's digital gain can only
-    /// ever make the copy quieter or louder than the original, and cannot make
-    /// the original quieter.
+    /// The slider in Sound settings, not an application's own level. An audio
+    /// target needs it because balancing a soundbar against a pair of speakers is
+    /// partly done on the endpoints themselves: a route's own gain changes only
+    /// what that route sends, and cannot move a device somebody has left at a
+    /// level of their own.
     ///
     /// Null rather than an exception for an endpoint with no volume control,
     /// which some HDMI and virtual devices genuinely are.

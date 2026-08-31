@@ -12,8 +12,42 @@ public enum DisplayDirection
     Below,
 }
 
-/// <summary>One monitor's place in a layout: a direction and what it is next to.</summary>
-public sealed record DisplayPlacement(DisplayDirection Direction, string Anchor);
+/// <summary>
+/// Where a monitor sits along the edge it shares with its anchor -- the axis
+/// <see cref="DisplayDirection"/> does not already pin down. <see cref="Start"/>
+/// is the top edge for <see cref="DisplayDirection.LeftOf"/>/<see cref="DisplayDirection.RightOf"/>
+/// and the left edge for <see cref="DisplayDirection.Above"/>/<see cref="DisplayDirection.Below"/>
+/// -- which is also exactly what every layout written before this existed
+/// already meant, so it is the default.
+/// </summary>
+public enum DisplayAlignment
+{
+    Start,
+    Center,
+    End,
+}
+
+/// <summary>
+/// One monitor's place in a layout: a direction, what it is next to, and where
+/// along that shared edge it sits.
+/// </summary>
+/// <param name="Alignment">
+/// Named the way dragging one monitor onto another in the visual arrangement
+/// snaps it -- flush with the near edge, centered, or flush with the far edge
+/// -- rather than as a raw number, so a layout stays exactly as intended when
+/// the anchor's resolution later changes and its edge moves.
+/// </param>
+/// <param name="Offset">
+/// A further nudge, in pixels, applied after <paramref name="Alignment"/> --
+/// how a drag that does not land on one of the three named alignments is
+/// still represented exactly, and how a precise pixel adjustment is made
+/// without abandoning the resolution-independent alignment it is relative to.
+/// </param>
+public sealed record DisplayPlacement(
+    DisplayDirection Direction,
+    string Anchor,
+    DisplayAlignment Alignment = DisplayAlignment.Start,
+    int Offset = 0);
 
 /// <summary>
 /// One named arrangement of monitors: which are on, which is primary, and where
@@ -116,6 +150,14 @@ public sealed class DisplayLayout
     /// coordinate, which is a normal virtual desktop and is deliberately not
     /// normalised back into positive space -- doing that would move the primary
     /// off the origin and it would stop being the primary.
+    ///
+    /// <see cref="DisplayDirection"/> fixes the coordinate along the axis the
+    /// two monitors touch on; <see cref="DisplayPlacement.Alignment"/> and
+    /// <see cref="DisplayPlacement.Offset"/> fix the other one, computed from
+    /// the anchor's and the monitor's own live sizes so that, like the touching
+    /// axis, an alignment survives a resolution change exactly as intended --
+    /// only a raw <see cref="DisplayPlacement.Offset"/> is a pixel count that
+    /// does not move with a resized anchor.
     /// </remarks>
     public IReadOnlyDictionary<string, (int X, int Y)> Positions(
         IReadOnlyDictionary<string, (int Width, int Height)> sizes)
@@ -135,12 +177,19 @@ public sealed class DisplayLayout
             (int anchorWidth, int anchorHeight) = sizes[placement.Anchor];
             (int width, int height) = sizes[monitor];
 
+            int along(int anchorSize, int monitorSize) => placement.Alignment switch
+            {
+                DisplayAlignment.Center => (anchorSize - monitorSize) / 2,
+                DisplayAlignment.End => anchorSize - monitorSize,
+                _ => 0,
+            } + placement.Offset;
+
             positions[monitor] = placement.Direction switch
             {
-                DisplayDirection.RightOf => (anchorX + anchorWidth, anchorY),
-                DisplayDirection.LeftOf => (anchorX - width, anchorY),
-                DisplayDirection.Below => (anchorX, anchorY + anchorHeight),
-                _ => (anchorX, anchorY - height),
+                DisplayDirection.RightOf => (anchorX + anchorWidth, anchorY + along(anchorHeight, height)),
+                DisplayDirection.LeftOf => (anchorX - width, anchorY + along(anchorHeight, height)),
+                DisplayDirection.Below => (anchorX + along(anchorWidth, width), anchorY + anchorHeight),
+                _ => (anchorX + along(anchorWidth, width), anchorY - height),
             };
         }
 
@@ -226,6 +275,25 @@ public sealed class DisplayLayout
                         out IReadOnlyList<ResourceRequirement>? declared,
                         out problem))
                 {
+                    return false;
+                }
+
+                if (declared!.Any(requirement =>
+                    string.Equals(requirement.Key, CursorProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)))
+                {
+                    // CursorProvider.RunsAfter always names the display: the
+                    // pointer is placed once the desktop has finished changing
+                    // shape. A layout that required the cursor would need it
+                    // BEFORE the display too, which the planner can never
+                    // satisfy -- see TransitionPlan.TryOrder. The association
+                    // still exists; it just belongs to whichever Space,
+                    // Activity or Source sets this layout, the same place a
+                    // mode already sets 'cursor' directly.
+                    problem =
+                        $"{where} requires 'cursor', but the cursor always runs after the display layout, " +
+                        "so a layout can never require it. Set 'cursor' on the Space, Activity or Source " +
+                        "that uses this layout instead.";
+
                     return false;
                 }
 
@@ -325,12 +393,20 @@ public sealed class DisplayLayout
     }
 
     /// <summary>
-    /// Parses entries reading "Desktop2 RightOf Desktop1".
+    /// Parses entries reading "Desktop2 RightOf Desktop1", optionally followed
+    /// by an alignment ("Desktop2 RightOf Desktop1 Center") and/or a signed
+    /// pixel offset ("Desktop2 RightOf Desktop1 Center +40").
     /// </summary>
     /// <remarks>
-    /// The direction word is located rather than assumed to be the second token,
-    /// so a logical monitor name may contain spaces -- as long as it is not
-    /// itself one of the direction words.
+    /// The direction word is located rather than assumed to be the second
+    /// token, so a logical monitor name may contain spaces -- as long as it is
+    /// not itself one of the direction words. The trailing alignment and
+    /// offset are found the same way, working in from the end: an entry
+    /// without them behaves exactly as it always has, which is what lets every
+    /// layout ever written keep parsing unchanged. A monitor named "Center" or
+    /// "+40" at the very end of an anchor is the one case this cannot tell
+    /// apart from an actual alignment or offset -- the same trade a direction
+    /// word makes for a monitor named "RightOf".
     /// </remarks>
     private static bool TryReadPlacements(
         string where,
@@ -392,9 +468,30 @@ public sealed class DisplayLayout
             }
 
             string monitor = string.Join(' ', tokens[..index]);
-            string anchor = string.Join(' ', tokens[(index + 1)..]);
+            string[] rest = tokens[(index + 1)..];
+            int anchorEnd = rest.Length;
 
-            if (!parsed.TryAdd(monitor, new DisplayPlacement(Enum.Parse<DisplayDirection>(direction), anchor)))
+            int offset = 0;
+
+            if (anchorEnd > 1 && TryParseOffset(rest[anchorEnd - 1], out int parsedOffset))
+            {
+                offset = parsedOffset;
+                anchorEnd--;
+            }
+
+            DisplayAlignment alignment = DisplayAlignment.Start;
+
+            if (anchorEnd > 1 && TryParseAlignment(rest[anchorEnd - 1], out DisplayAlignment parsedAlignment))
+            {
+                alignment = parsedAlignment;
+                anchorEnd--;
+            }
+
+            string anchor = string.Join(' ', rest[..anchorEnd]);
+
+            if (!parsed.TryAdd(
+                monitor,
+                new DisplayPlacement(Enum.Parse<DisplayDirection>(direction), anchor, alignment, offset)))
             {
                 problem = $"{where} places '{monitor}' more than once. Each monitor gets one placement.";
                 return false;
@@ -404,6 +501,40 @@ public sealed class DisplayLayout
         placements = parsed;
         problem = null;
         return true;
+    }
+
+    /// <summary>Matches "Start"/"Center"/"End" case-insensitively.</summary>
+    private static bool TryParseAlignment(string token, out DisplayAlignment alignment)
+    {
+        foreach (DisplayAlignment candidate in Enum.GetValues<DisplayAlignment>())
+        {
+            if (string.Equals(candidate.ToString(), token, StringComparison.OrdinalIgnoreCase))
+            {
+                alignment = candidate;
+                return true;
+            }
+        }
+
+        alignment = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Matches an explicitly signed integer, such as "+40" or "-12" -- the sign
+    /// is required so a plain number is free to be part of an anchor name
+    /// instead of being mistaken for an offset.
+    /// </summary>
+    private static bool TryParseOffset(string token, out int offset)
+    {
+        if (token.Length > 1 && (token[0] == '+' || token[0] == '-') &&
+            int.TryParse(token, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int parsed))
+        {
+            offset = parsed;
+            return true;
+        }
+
+        offset = 0;
+        return false;
     }
 
     /// <summary>Parses entries reading "Desktop1 144".</summary>

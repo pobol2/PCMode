@@ -43,6 +43,9 @@ internal sealed class FakeTelevision : ILgTvNetwork
     /// <summary>Set to refuse switchInput.</summary>
     public bool RefusesInput { get; set; }
 
+    /// <summary>Set to return an explicit webOS error for a power read.</summary>
+    public bool RefusesPower { get; set; }
+
     /// <summary>Set to refuse the alert a settings write is carried on.</summary>
     public bool RefusesSettings { get; set; }
 
@@ -180,6 +183,18 @@ internal sealed class FakeTelevision : ILgTvNetwork
             JsonElement payload = root.GetProperty("payload");
 
             television._requests.Add(uri);
+
+            if (television.RefusesPower && uri.EndsWith("getPowerState", StringComparison.Ordinal))
+            {
+                _pending.Enqueue(new JsonObject
+                {
+                    ["id"] = id,
+                    ["type"] = "error",
+                    ["error"] = "power read refused",
+                }.ToJsonString());
+
+                return Task.CompletedTask;
+            }
 
             if (uri == "ssap://tv/switchInput")
             {

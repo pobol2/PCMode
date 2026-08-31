@@ -148,7 +148,8 @@ public static class CursorPositionConfigurationStore
                 return ModeSaveOutcome.Failed($"'{name}' is not a configured cursor position.");
             }
 
-            IReadOnlyList<string> referencing = LayoutConfigurationStore.ModesReferencing(document, CursorProvider.ResourceKey, name);
+            IReadOnlyList<string> referencing =
+                LayoutConfigurationStore.ModesReferencing(document, CursorProvider.ResourceKey, name);
 
             if (referencing.Count > 0)
             {

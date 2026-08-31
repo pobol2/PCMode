@@ -37,12 +37,12 @@ public sealed class TransitionAwarenessTests
     [Fact]
     public async Task A_resource_that_was_already_correct_is_not_reported_as_a_change()
     {
+        using var root = new TemporaryRoot();
         // Otherwise every re-assert of a mode would restart every application in
         // it, because nothing in the mode would ever look untouched.
         var display = new FakeProvider("display", "TVOnly") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
 
-        using var root = new TemporaryRoot();
 
         TransitionOutcome outcome = await Run(root, display, player);
 
@@ -53,10 +53,10 @@ public sealed class TransitionAwarenessTests
     [Fact]
     public async Task A_dry_run_says_that_nothing_has_changed_because_nothing_has()
     {
+        using var root = new TemporaryRoot();
         var display = new FakeProvider("display", "Desktop") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
 
-        using var root = new TemporaryRoot();
 
         TransitionOutcome outcome = await Run(root, display, player, dryRun: true);
 
@@ -69,13 +69,13 @@ public sealed class TransitionAwarenessTests
     [Fact]
     public async Task A_resource_never_carries_an_answer_from_one_transition_into_the_next()
     {
+        using var root = new TemporaryRoot();
         // Told before every step, including the first, so a provider has nothing
         // to reset and cannot be left believing that a display which moved half
         // an hour ago has just moved.
         var display = new FakeProvider("display", "Desktop") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
 
-        using var root = new TemporaryRoot();
 
         ModeEngine engine = Build(root, display, player);
 
@@ -90,6 +90,7 @@ public sealed class TransitionAwarenessTests
     [Fact]
     public async Task A_resource_that_refuses_to_hear_it_fails_rather_than_deciding_without_it()
     {
+        using var root = new TemporaryRoot();
         // The one thing worse than restarting an application unnecessarily is
         // silently declining to restart one that needed it. There is no defined
         // meaning for "was not told", so the step fails with the machine no
@@ -101,7 +102,6 @@ public sealed class TransitionAwarenessTests
             Deaf = new InvalidOperationException("it would not listen."),
         };
 
-        using var root = new TemporaryRoot();
 
         TransitionOutcome outcome = await Run(root, display, player);
 

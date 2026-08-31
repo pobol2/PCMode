@@ -1,39 +1,41 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
+using PCMode.Audio.Core.Models;
 
 namespace PCMode.Engine;
 
 /// <summary>
-/// One Party group as a settings screen has it: two outputs named by their
-/// PCMode aliases, which of the two is delayed, and how the pair is balanced.
+/// One route of an Audio Target as a settings screen has it.
 /// </summary>
 /// <remarks>
-/// Deliberately not <see cref="PartySettings"/> itself. That type is the parsed
-/// result of a document that has already been validated -- its members are known
-/// to exist, and its delay and gain are known to be in range. This is the
+/// Deliberately not <see cref="AudioRouteSettings"/> itself. That type is the
+/// parsed result of a document that has already been validated -- its output is
+/// known to exist, and its delay and gain are known to be in range. This is the
 /// unchecked form a person has just typed, which is exactly what
-/// <see cref="AudioConfigurationStore.SaveParty"/> is for.
+/// <see cref="AudioConfigurationStore.SaveTarget"/> is for.
 /// </remarks>
-/// <param name="ReferenceOutput">
-/// The output Windows plays through and loopback capture reads back -- the
-/// slower path in the room, usually the soundbar or television.
-/// </param>
-/// <param name="MirroredOutput">The copy, and the only one of the two that can be delayed.</param>
-/// <param name="ReferenceVolume">
+/// <param name="Volume">
 /// A Windows endpoint volume from 0 to 1, or null to leave that endpoint's own
 /// slider wherever the user last put it.
 /// </param>
-public sealed record PartyGroupEdit(
+public sealed record AudioRouteEdit(
+    string Output,
+    int DelayMs = 0,
+    double Gain = 1.0,
+    double? Volume = null,
+    bool Required = true,
+    string? Profile = null);
+
+public sealed record AudioProcessingProfileEdit(
     string Name,
-    string ReferenceOutput,
-    string MirroredOutput,
-    int DelayMs,
-    double Gain,
-    double? ReferenceVolume = null,
-    double? MirroredVolume = null);
+    float PreampGainDb,
+    IReadOnlyList<EqBand> Bands);
+
+/// <summary>One Audio Target as a settings screen has it: a name and its routes.</summary>
+public sealed record AudioTargetEdit(string Name, IReadOnlyList<AudioRouteEdit> Routes);
 
 /// <summary>
-/// Creates, edits and removes the Party group and audio output aliases in the
+/// Creates, edits and removes Audio Targets and audio output aliases in the
 /// same configuration file <see cref="AudioProvider"/> reads, by editing
 /// 'providers.audio'.
 /// </summary>
@@ -41,179 +43,412 @@ public sealed record PartyGroupEdit(
 /// NO SECOND SOURCE OF TRUTH
 ///
 /// This writes exactly the document <see cref="AudioProvider"/> parses and
-/// <see cref="PartySettings.TryParse"/> checks, and validates the result through
-/// the same production pipeline a real startup uses -- see
+/// <see cref="AudioTargetSettings.TryParse"/> checks, and validates the result
+/// through the same production pipeline a real startup uses -- see
 /// <see cref="ConfigurationDocumentEditor"/> -- before a single byte reaches
 /// disk. The checks made here before that are the ones a person needs phrased in
 /// their own terms ("choose two different outputs"); they never replace the
 /// parser's, and a disagreement between the two is resolved by the parser
 /// refusing the write.
 ///
-/// EDITING NORMALISES TO THE CURRENT FORM
-///
-/// A Party group can be written two ways -- the 'outputs'/'delay' form and the
-/// older 'reference'/'mirror' one -- and <see cref="PartySettings"/> reads both.
-/// Saving through this writes the current form whichever one was there before,
-/// which is what makes a document a person hand-wrote in the older form editable
-/// on screen without a migration step. Nothing about what the group MEANS
-/// changes: the two forms parse to the same reference-and-mirror pair.
-///
 /// REMOVAL FOLLOWS REFERENCES
 ///
-/// The group's name is a value a mode's 'audio' resource takes, exactly as a
-/// device alias is, so renaming the group rewrites every mode that named it, and
-/// removing the group -- or an output the group is built from -- is refused, with
+/// A target's name is a value a mode's 'audio' resource takes, exactly as a
+/// device alias is, so renaming a target rewrites every mode that named it, and
+/// removing a target -- or an output a target is built from -- is refused, with
 /// nothing changed, while anything still names it.
 /// </remarks>
 public static class AudioConfigurationStore
 {
-    /// <summary>What the group is called when a document defines one without naming it.</summary>
-    private const string DefaultPartyName = "Party";
-
     /// <summary>
-    /// Creates the Party group, or replaces the one already configured.
+    /// Creates an Audio Target, or replaces one already configured.
     /// </summary>
-    /// <remarks>
-    /// There is exactly one group, so this is a save rather than an add: the
-    /// 'party' object is written whole every time. A group whose name changed
-    /// takes every mode that named it along with it.
-    /// </remarks>
-    public static ModeSaveOutcome SaveParty(string? root, PartyGroupEdit group)
+    /// <param name="previousName">
+    /// The name this target had before, when it is being renamed. Every mode
+    /// naming the old one is rewritten: the name is what a mode's 'audio'
+    /// resource holds, not a copy of it, so left alone those modes would name
+    /// nothing.
+    /// </param>
+    public static ModeSaveOutcome SaveTarget(string? root, AudioTargetEdit target, string? previousName = null)
     {
-        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(target);
 
-        string name = group.Name?.Trim() ?? string.Empty;
-        string reference = group.ReferenceOutput?.Trim() ?? string.Empty;
-        string mirrored = group.MirroredOutput?.Trim() ?? string.Empty;
+        string name = target.Name?.Trim() ?? string.Empty;
 
         if (name.Length == 0)
         {
-            return ModeSaveOutcome.Failed("Give the Party group a name. A mode asks for it by that name.");
+            return ModeSaveOutcome.Failed("Give the audio target a name. A mode asks for it by that name.");
         }
 
-        if (reference.Length == 0 || mirrored.Length == 0)
+        if (target.Routes is null || target.Routes.Count == 0)
         {
-            return ModeSaveOutcome.Failed("Choose both of the Party group's outputs.");
+            return ModeSaveOutcome.Failed("Choose at least one output for the audio target.");
         }
 
-        if (string.Equals(reference, mirrored, StringComparison.OrdinalIgnoreCase))
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (AudioRouteEdit route in target.Routes)
         {
-            // Capturing an endpoint's own loopback and rendering it back into
-            // the same endpoint is a feedback loop, and it gets loud.
+            string output = route.Output?.Trim() ?? string.Empty;
+
+            if (output.Length == 0)
+            {
+                return ModeSaveOutcome.Failed("Choose every one of the audio target's outputs.");
+            }
+
+            if (!seen.Add(output))
+            {
+                // The same alias twice is the same endpoint twice, which the
+                // engine refuses outright.
+                return ModeSaveOutcome.Failed(
+                    $"'{output}' cannot be two of the audio target's outputs. Choose different outputs.");
+            }
+
+            if (route.DelayMs < 0 || route.DelayMs > AudioTargetSettings.MaxDelayMs)
+            {
+                return ModeSaveOutcome.Failed(
+                    $"The delay for '{output}' must be between 0 and {AudioTargetSettings.MaxDelayMs} ms.");
+            }
+
+            if (!IsUsable(route.Gain) || route.Gain < 0 || route.Gain > AudioTargetSettings.MaxGain)
+            {
+                return ModeSaveOutcome.Failed(
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"The gain for '{output}' must be between 0 and {AudioTargetSettings.MaxGain}."));
+            }
+
+            if (route.Volume is double level && (!IsUsable(level) || level < 0 || level > 1))
+            {
+                return ModeSaveOutcome.Failed($"The volume for '{output}' must be between 0 and 100 percent.");
+            }
+        }
+
+        if (!target.Routes.Any(route => route.Required))
+        {
             return ModeSaveOutcome.Failed(
-                $"'{reference}' cannot be both of the Party group's outputs. Choose two different outputs.");
+                "At least one of the audio target's outputs has to be required, or nothing could fail it.");
         }
 
-        if (group.DelayMs < 0 || group.DelayMs > PartySettings.MaxDelayMs)
-        {
-            return ModeSaveOutcome.Failed(
-                $"The delay must be between 0 and {PartySettings.MaxDelayMs} ms.");
-        }
-
-        if (!IsUsable(group.Gain) || group.Gain < 0 || group.Gain > PartySettings.MaxGain)
-        {
-            return ModeSaveOutcome.Failed(
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"The mirrored gain must be between 0 and {PartySettings.MaxGain}."));
-        }
-
-        if (VolumeProblem(group.ReferenceVolume, reference) is string referenceProblem)
-        {
-            return ModeSaveOutcome.Failed(referenceProblem);
-        }
-
-        if (VolumeProblem(group.MirroredVolume, mirrored) is string mirroredProblem)
-        {
-            return ModeSaveOutcome.Failed(mirroredProblem);
-        }
+        string? renamedFrom = string.IsNullOrWhiteSpace(previousName) ? null : previousName.Trim();
 
         return ConfigurationDocumentEditor.Edit(root, document =>
         {
             JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
             JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
+            JsonObject targets = HardwareConfigurationStore.AsObject(audio, "targets");
 
-            string? previousName = ConfiguredPartyName(audio);
-
-            var body = new JsonObject
+            if (renamedFrom is not null && !string.Equals(renamedFrom, name, StringComparison.OrdinalIgnoreCase))
             {
-                ["name"] = name,
-                ["outputs"] = new JsonArray(JsonValue.Create(reference), JsonValue.Create(mirrored)),
-
-                // 'delay' is what says which output is the mirror, so it is
-                // written even when the delay is zero. See PartySettings.
-                ["delay"] = new JsonObject
-                {
-                    ["output"] = mirrored,
-                    ["ms"] = group.DelayMs,
-                },
-                ["gain"] = new JsonObject
-                {
-                    ["output"] = mirrored,
-                    ["value"] = group.Gain,
-                },
-            };
-
-            if (group.ReferenceVolume is double referenceVolume || group.MirroredVolume is double)
-            {
-                var volumes = new JsonObject();
-
-                if (group.ReferenceVolume is double level)
-                {
-                    volumes[reference] = level;
-                }
-
-                if (group.MirroredVolume is double mirroredLevel)
-                {
-                    volumes[mirrored] = mirroredLevel;
-                }
-
-                body["volumes"] = volumes;
+                HardwareConfigurationStore.RemoveCaseInsensitive(targets, renamedFrom);
+                LayoutConfigurationStore.RenameModeReferences(document, AudioProvider.ResourceKey, renamedFrom, name);
             }
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(audio, "party");
-            audio.Add("party", body);
-
-            if (previousName is not null && !string.Equals(previousName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                // The group's name is what a mode's 'audio' resource holds, not
-                // a copy of it. Left alone, every mode that asked for the group
-                // would now name nothing, and the validation below would say so.
-                LayoutConfigurationStore.RenameModeReferences(
-                    document, AudioProvider.ResourceKey, previousName, name);
-            }
+            HardwareConfigurationStore.RemoveCaseInsensitive(targets, name);
+            targets.Add(name, Write(target.Routes));
 
             return null;
         });
     }
 
-    /// <summary>
-    /// Removes the Party group, refused while any mode still asks for it.
-    /// </summary>
-    public static ModeSaveOutcome RemoveParty(string? root) =>
-        ConfigurationDocumentEditor.Edit(root, document =>
+    private static void UpdateProfileReferences(
+        JsonObject document,
+        string oldName,
+        string? replacement)
+    {
+        if (
+            document["audioTargets"]
+            is not JsonObject targets)
         {
-            if (FindAudioSection(document) is not JsonObject audio ||
-                HardwareConfigurationStore.FindProperty(audio, "party") is null)
+            return;
+        }
+
+        foreach (
+            KeyValuePair<string, JsonNode?> target
+            in targets)
+        {
+            if (
+                target.Value
+                is not JsonObject targetObject ||
+                targetObject["routes"]
+                is not JsonArray routes)
             {
-                return ModeSaveOutcome.Failed("No Party group is configured.");
+                continue;
             }
 
-            string name = ConfiguredPartyName(audio) ?? DefaultPartyName;
-
-            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, name) is { Count: > 0 } referencing)
+            foreach (JsonNode? routeNode in routes)
             {
-                return ModeSaveOutcome.Failed(
-                    $"'{name}' is used by {string.Join(", ", referencing)}. Change those first.");
+                if (
+                    routeNode
+                    is not JsonObject route)
+                {
+                    continue;
+                }
+
+                string? profile =
+                    route["processingProfile"]
+                        ?.GetValue<string>();
+
+                if (
+                    !string.Equals(
+                        profile,
+                        oldName,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (replacement is null)
+                {
+                    route.Remove(
+                        "processingProfile");
+                }
+                else
+                {
+                    route["processingProfile"] =
+                        replacement;
+                }
+            }
+        }
+    }
+
+    public static ModeSaveOutcome SaveProfile(
+        string? root,
+        AudioProcessingProfileEdit profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        string name = profile.Name?.Trim() ?? string.Empty;
+
+        if (name.Length == 0)
+        {
+            return ModeSaveOutcome.Failed("Choose a processing profile first.");
+        }
+
+        if (profile.PreampGainDb < ParametricEqProfile.MinPreampGainDb ||
+            profile.PreampGainDb > ParametricEqProfile.MaxPreampGainDb)
+        {
+            return ModeSaveOutcome.Failed(
+                $"Preamp must be between {ParametricEqProfile.MinPreampGainDb} and {ParametricEqProfile.MaxPreampGainDb} dB.");
+        }
+
+        return ConfigurationDocumentEditor.Edit(root, document =>
+        {
+            JsonObject providers =
+                HardwareConfigurationStore.AsObject(document, "providers");
+
+            JsonObject audio =
+                HardwareConfigurationStore.AsObject(providers, "audio");
+
+            JsonObject profiles =
+                HardwareConfigurationStore.AsObject(audio, "profiles");
+
+            HardwareConfigurationStore.RemoveCaseInsensitive(profiles, name);
+
+            var bands = new JsonArray();
+
+            foreach (EqBand band in profile.Bands)
+            {
+                bands.Add(new JsonObject
+                {
+                    ["type"] = band.Type.ToString(),
+                    ["frequencyHz"] = band.FrequencyHz,
+                    ["gainDb"] = band.GainDb,
+                    ["q"] = band.Q,
+                });
             }
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(audio, "party");
+            profiles.Add(
+                name,
+                new JsonObject
+                {
+                    ["preampGainDb"] = profile.PreampGainDb,
+                    ["bands"] = bands,
+                });
+
             return null;
         });
+    }
+
+    public static ModeSaveOutcome RenameProfile(
+        string? root,
+        string oldName,
+        string newName)
+    {
+        string source =
+            oldName?.Trim()
+            ?? string.Empty;
+
+        string destination =
+            newName?.Trim()
+            ?? string.Empty;
+
+        if (
+            source.Length == 0 ||
+            destination.Length == 0)
+        {
+            return ModeSaveOutcome.Failed(
+                "Both processing profile names are required.");
+        }
+
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
+            {
+                JsonObject providers =
+                    HardwareConfigurationStore.AsObject(
+                        document,
+                        "providers");
+
+                JsonObject audio =
+                    HardwareConfigurationStore.AsObject(
+                        providers,
+                        "audio");
+
+                JsonObject profiles =
+                    HardwareConfigurationStore.AsObject(
+                        audio,
+                        "profiles");
+
+                KeyValuePair<string, JsonNode?> existing =
+                    profiles.FirstOrDefault(
+                        pair =>
+                            string.Equals(
+                                pair.Key,
+                                source,
+                                StringComparison.OrdinalIgnoreCase));
+
+                if (existing.Key is null)
+                {
+                    return ModeSaveOutcome.Failed($"Processing profile '{source}' does not exist.");
+                }
+
+                if (
+                    profiles.Any(
+                        pair =>
+                            !string.Equals(
+                                pair.Key,
+                                source,
+                                StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(
+                                pair.Key,
+                                destination,
+                                StringComparison.OrdinalIgnoreCase)))
+                {
+                    return ModeSaveOutcome.Failed("Processing profile '{destination}' already exists.");
+                }
+
+                JsonNode? value =
+                    existing.Value?.DeepClone();
+
+                profiles.Remove(
+                    existing.Key);
+
+                profiles[destination] =
+                    value;
+
+                UpdateProfileReferences(
+                    document,
+                    source,
+                    destination);
+
+                return null;
+            }
+        );
+    }
+
+    public static ModeSaveOutcome RemoveProfile(
+        string? root,
+        string name)
+    {
+        string trimmed =
+            name?.Trim()
+            ?? string.Empty;
+
+        if (trimmed.Length == 0)
+        {
+            return ModeSaveOutcome.Failed(
+                "Choose a processing profile first.");
+        }
+
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
+            {
+                JsonObject providers =
+                    HardwareConfigurationStore.AsObject(
+                        document,
+                        "providers");
+
+                JsonObject audio =
+                    HardwareConfigurationStore.AsObject(
+                        providers,
+                        "audio");
+
+                JsonObject profiles =
+                    HardwareConfigurationStore.AsObject(
+                        audio,
+                        "profiles");
+
+                string? actualName =
+                    profiles
+                        .Select(
+                            pair => pair.Key)
+                        .FirstOrDefault(
+                            key =>
+                                string.Equals(
+                                    key,
+                                    trimmed,
+                                    StringComparison.OrdinalIgnoreCase));
+
+                if (actualName is null)
+                {
+                    return ModeSaveOutcome.Failed("Processing profile '{trimmed}' does not exist.");
+                }
+
+                profiles.Remove(
+                    actualName);
+
+                UpdateProfileReferences(
+                    document,
+                    trimmed,
+                    replacement: null);
+
+                return null;
+            });
+    }
+
+    /// <summary>
+    /// Removes one Audio Target, refused while any mode still asks for it.
+    /// </summary>
+    public static ModeSaveOutcome RemoveTarget(string? root, string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        string wanted = name.Trim();
+
+        return ConfigurationDocumentEditor.Edit(root, document =>
+        {
+            if (FindTargets(document) is not JsonObject targets || FindKey(targets, wanted) is not string key)
+            {
+                return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio target.");
+            }
+
+            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, key)
+                is { Count: > 0 } referencing)
+            {
+                return ModeSaveOutcome.Failed(
+                    $"'{key}' is used by {string.Join(", ", referencing)}. Change those first.");
+            }
+
+            targets.Remove(key);
+            return null;
+        });
+    }
 
     /// <summary>
     /// Removes one audio output alias from 'providers.audio.devices', refused
-    /// while the Party group or any mode still names it.
+    /// while any Audio Target or any mode still names it.
     /// </summary>
     /// <remarks>
     /// The counterpart of <see cref="HardwareConfigurationStore.SetAudioAlias"/>,
@@ -236,14 +471,24 @@ public static class AudioConfigurationStore
                 return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio output.");
             }
 
-            if (HardwareConfigurationStore.FindProperty(audio, "party") is JsonObject party &&
-                PartyNamesOutput(party, wanted))
+            if (HardwareConfigurationStore.FindProperty(audio, "targets") is JsonObject targets)
             {
-                return ModeSaveOutcome.Failed(
-                    $"'{wanted}' is one of the Party group's two outputs. Change the Party group first.");
+                List<string> used =
+                [
+                    .. targets
+                        .Where(pair => pair.Value is JsonObject target && TargetNamesOutput(target, wanted))
+                        .Select(pair => $"'{pair.Key}'"),
+                ];
+
+                if (used.Count > 0)
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{wanted}' is an output of {string.Join(", ", used)}. Change those first.");
+                }
             }
 
-            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, wanted) is { Count: > 0 } referencing)
+            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, wanted)
+                is { Count: > 0 } referencing)
             {
                 return ModeSaveOutcome.Failed(
                     $"'{wanted}' is used by {string.Join(", ", referencing)}. Change those first.");
@@ -254,58 +499,71 @@ public static class AudioConfigurationStore
         });
     }
 
-    /// <summary>
-    /// The configured group's name, or null when no group is configured.
-    /// </summary>
-    /// <remarks>
-    /// A group written without a 'name' is called Party, which is the same
-    /// default <see cref="PartySettings.TryParse"/> applies -- so a rename away
-    /// from the implicit name still finds the modes that were naming it.
-    /// </remarks>
-    private static string? ConfiguredPartyName(JsonObject audio) =>
-        HardwareConfigurationStore.FindProperty(audio, "party") switch
-        {
-            JsonObject party => HardwareConfigurationStore.FindProperty(party, "name") is JsonValue named &&
-                named.TryGetValue(out string? text) && !string.IsNullOrWhiteSpace(text)
-                    ? text.Trim()
-                    : DefaultPartyName,
-            _ => null,
-        };
-
-    /// <summary>
-    /// Whether a written group names <paramref name="alias"/> as one of its two
-    /// outputs, in either of the forms a group may be written in.
-    /// </summary>
-    private static bool PartyNamesOutput(JsonObject party, string alias)
+    /// <summary>One target's routes, in the shape the document holds them.</summary>
+    private static JsonObject Write(IReadOnlyList<AudioRouteEdit> routes)
     {
-        if (HardwareConfigurationStore.FindProperty(party, "outputs") is JsonArray outputs &&
-            outputs.Any(output => output is JsonValue value && value.TryGetValue(out string? name) &&
-                string.Equals(name?.Trim(), alias, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
+        var outputs = new JsonArray();
 
-        foreach (string field in (string[])["reference", "mirror"])
+        foreach (AudioRouteEdit route in routes)
         {
-            if (HardwareConfigurationStore.FindProperty(party, field) is JsonValue member &&
-                member.TryGetValue(out string? memberName) &&
-                string.Equals(memberName?.Trim(), alias, StringComparison.OrdinalIgnoreCase))
+            var written = new JsonObject
             {
-                return true;
+                ["output"] = route.Output.Trim(),
+
+                // Delay and gain are written even at their defaults. They are
+                // the two numbers somebody calibrating by ear goes looking for
+                // in the file, and a document that omitted them would read as
+                // though nothing had ever been set.
+                ["delayMs"] = route.DelayMs,
+                ["gain"] = route.Gain,
+            };
+
+            if (route.Volume is double level)
+            {
+                written["volume"] = level;
             }
+
+            if (!string.IsNullOrWhiteSpace(route.Profile))
+            {
+                written["profile"] = route.Profile.Trim();
+            }
+
+            if (!route.Required)
+            {
+                // Only when it is false. Required is what a route is unless
+                // somebody said otherwise, and writing it everywhere would put
+                // the exception on every line.
+                written["required"] = false;
+            }
+
+            outputs.Add(written);
         }
 
-        return false;
+        return new JsonObject { ["outputs"] = outputs };
     }
+
+    /// <summary>Whether a written target names <paramref name="alias"/> as one of its outputs.</summary>
+    private static bool TargetNamesOutput(JsonObject target, string alias) =>
+        HardwareConfigurationStore.FindProperty(target, "outputs") is JsonArray outputs &&
+        outputs.Any(output => string.Equals(OutputNameOf(output), alias, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The alias one written route names, in either form it may take.</summary>
+    internal static string? OutputNameOf(JsonNode? written) => written switch
+    {
+        JsonValue value when value.TryGetValue(out string? name) => name?.Trim(),
+        JsonObject route when HardwareConfigurationStore.FindProperty(route, "output") is JsonValue named &&
+            named.TryGetValue(out string? name) => name?.Trim(),
+        _ => null,
+    };
 
     private static JsonObject? FindAudioSection(JsonObject document) =>
         HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers
             ? HardwareConfigurationStore.FindProperty(providers, "audio") as JsonObject
             : null;
 
-    private static string? VolumeProblem(double? volume, string output) =>
-        volume is double level && (!IsUsable(level) || level < 0 || level > 1)
-            ? $"The volume for '{output}' must be between 0 and 100 percent."
+    private static JsonObject? FindTargets(JsonObject document) =>
+        FindAudioSection(document) is JsonObject audio
+            ? HardwareConfigurationStore.FindProperty(audio, "targets") as JsonObject
             : null;
 
     private static bool IsUsable(double value) => !double.IsNaN(value) && !double.IsInfinity(value);

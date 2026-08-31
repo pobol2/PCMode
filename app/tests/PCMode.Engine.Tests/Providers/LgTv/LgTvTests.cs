@@ -137,6 +137,9 @@ public sealed class LgTvTests
         Assert.Null(power.Read());
         Assert.Null(input.Read());
 
+        Assert.Equal(LgTvObservationStatus.Unpaired, power.ObservedState.Power.Status);
+        Assert.Equal(LgTvObservationStatus.Unpaired, power.ObservedState.Input.Status);
+
         Assert.Equal(0, set.Connections);
         Assert.Equal(0, set.Prompts);
         Assert.Equal(0, keys.Writes);
@@ -150,6 +153,11 @@ public sealed class LgTvTests
 
         Assert.Equal("On", power.Read());
         Assert.Equal("PC", input.Read());
+
+        Assert.Equal(LgTvObservationStatus.Observed, power.ObservedState.Power.Status);
+        Assert.Equal("On", power.ObservedState.Power.Value);
+        Assert.Equal(LgTvObservationStatus.Observed, power.ObservedState.Input.Status);
+        Assert.Equal("PC", power.ObservedState.Input.Value);
 
         Assert.Equal(0, set.Prompts);
         Assert.Equal(0, keys.Writes);
@@ -285,6 +293,7 @@ public sealed class LgTvTests
         set.Processing = "Request Power On";
 
         Assert.Null(power.Read());
+        Assert.Equal(LgTvObservationStatus.Unknown, power.ObservedState.Power.Status);
 
         set.Processing = null;
 
@@ -319,18 +328,32 @@ public sealed class LgTvTests
     // ---- giving up, and being called off ------------------------------------
 
     [Fact]
-    public void Gives_up_on_a_television_that_stops_answering()
+    public void Keeps_an_unreachable_television_distinct_from_off()
     {
         // It accepted the socket and then went quiet -- network standby, which is
         // the commonest state a television is in. The read gives up on its own
-        // deadline rather than waiting for the transition's, and reports what
-        // silence from a webOS socket means: the television is off.
+        // deadline rather than waiting for the transition's. Silence is not an
+        // observed Off answer: the status snapshot retains why there is no value.
         (TvPowerProvider power, _, FakeTelevision set, _) =
             Television(Configured(), paired: true, clock: new FakeTime());
 
         set.GoesQuiet = true;
 
-        Assert.Equal("Off", power.Read());
+        Assert.Null(power.Read());
+        Assert.Equal(LgTvObservationStatus.Unreachable, power.ObservedState.Power.Status);
+        Assert.Contains(Host, power.ObservedState.Power.Problem, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Keeps_an_explicit_power_read_error_distinct_from_unreachable()
+    {
+        (TvPowerProvider power, _, FakeTelevision set, _) = Television(Configured(), paired: true);
+
+        set.RefusesPower = true;
+
+        Assert.Null(power.Read());
+        Assert.Equal(LgTvObservationStatus.Error, power.ObservedState.Power.Status);
+        Assert.Contains("refused", power.ObservedState.Power.Problem, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

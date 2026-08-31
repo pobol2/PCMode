@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
+using PCMode.Audio.Core.Interop;
 
 namespace PCMode.Engine.Tests;
 
@@ -32,8 +33,8 @@ public sealed class WasapiInteropTests
     {
         Type[] interfaces =
         [
-            typeof(Wasapi.IMMDeviceEnumerator),
-            typeof(Wasapi.IMMDevice),
+            typeof(IMMDeviceEnumerator),
+            typeof(IMMDevice),
             typeof(Wasapi.IAudioClient),
             typeof(Wasapi.IAudioClient3),
             typeof(Wasapi.IAudioCaptureClient),

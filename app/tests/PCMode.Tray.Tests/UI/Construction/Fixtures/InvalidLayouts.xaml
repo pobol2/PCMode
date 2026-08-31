@@ -1,0 +1,50 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
+    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
+
+    <!--
+        Layouts that break the region contract on purpose. They live in the
+        tests, not the framework: they are what the enforcement tests point at,
+        and nothing should ever be able to reach them from production.
+    -->
+
+    <!-- Omits a region the block declares. -->
+    <ControlTemplate x:Key="LayoutMissingDetailRegion" TargetType="{x:Type fixtures:FixtureRootBlock}">
+        <StackPanel>
+            <controls:Region x:Name="PART_HeaderRegion" />
+            <controls:RepeatedRegion x:Name="PART_ItemsRegion" />
+        </StackPanel>
+    </ControlTemplate>
+
+    <!-- Supplies a repeated region as a single-child one. -->
+    <ControlTemplate x:Key="LayoutWithSingleChildItemsRegion" TargetType="{x:Type fixtures:FixtureRootBlock}">
+        <StackPanel>
+            <controls:Region x:Name="PART_HeaderRegion" />
+            <controls:Region x:Name="PART_ItemsRegion" />
+            <controls:Region x:Name="PART_DetailRegion" />
+        </StackPanel>
+    </ControlTemplate>
+
+    <!-- Adds a Region the block never declared. -->
+    <ControlTemplate x:Key="LayoutWithUndeclaredRegion" TargetType="{x:Type fixtures:FixtureRootBlock}">
+        <StackPanel>
+            <controls:Region x:Name="PART_HeaderRegion" />
+            <controls:RepeatedRegion x:Name="PART_ItemsRegion" />
+            <controls:Region x:Name="PART_DetailRegion" />
+            <controls:Region x:Name="PART_InventedRegion" />
+        </StackPanel>
+    </ControlTemplate>
+
+    <!-- Creates a child block itself instead of reaching it through a region. -->
+    <ControlTemplate x:Key="LayoutWithDirectStructuralBlock" TargetType="{x:Type fixtures:FixtureRootBlock}">
+        <StackPanel>
+            <controls:Region x:Name="PART_HeaderRegion" />
+            <controls:RepeatedRegion x:Name="PART_ItemsRegion" />
+            <controls:Region x:Name="PART_DetailRegion" />
+            <fixtures:FixtureDetailBlock />
+        </StackPanel>
+    </ControlTemplate>
+
+</ResourceDictionary>

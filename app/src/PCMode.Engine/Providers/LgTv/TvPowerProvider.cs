@@ -56,6 +56,9 @@ public sealed class TvPowerProvider : IConfigurableProvider, IDependentProvider,
     /// </summary>
     public LgTvConnection Connection => _connection;
 
+    /// <summary>The latest observations made through this television's shared connection.</summary>
+    public LgTvObservedState ObservedState => _connection.ObservedState;
+
     /// <summary>Shared with the input resource. One television, one section.</summary>
     public string SettingsKey => LgTvSettings.SectionKey;
 
@@ -131,35 +134,20 @@ public sealed class TvPowerProvider : IConfigurableProvider, IDependentProvider,
     /// Where the television is, in the words a mode can use.
     /// </summary>
     /// <remarks>
-    /// A TELEVISION THAT IS NOT ANSWERING IS OFF
+    /// SILENCE IS NOT AN OBSERVED POWER STATE
     ///
     /// This is the judgement, and this is the right place for it: the connection
     /// reports what it observed -- see <see cref="LgTvPower"/> -- and the resource
     /// that owns the meaning of "on" and "off" decides what that observation is
-    /// worth.
-    ///
-    /// The socket is served by webOS, which runs only while the television is on.
-    /// So being reached for and staying silent is not merely consistent with being
-    /// off, it is what being off looks like from every other machine on the
-    /// network. A misplaced cable looks the same, and would be reported the same --
-    /// but a television that cannot be reached also cannot be switched off, so
-    /// there is no action that the two cases would want differently.
-    ///
-    /// It is what keeps an ordinary evening quick. Answering "I don't know"
-    /// instead meant a mode asking for Off could never see that it had nothing to
-    /// do: it dispatched a switch-off at a television that was already off, paid a
-    /// second handshake to hear the same silence again, and then sat out the delay
-    /// that exists to let a live HDMI link drop.
-    ///
-    /// Unknown stays unknown. A television nobody has paired with was never
-    /// contacted, and one that is part way through switching on has said so --
-    /// neither is evidence of anything, and both mean "apply it anyway".
+    /// worth. Only an answer from the television becomes On or Off. Unpaired,
+    /// unreachable, changing, and failed reads remain unknown to convergence and
+    /// retain their distinct detail in <see cref="ObservedState"/>.
     /// </remarks>
     public string? Read() =>
         LgTvBridge.Wait(_connection.ReadPowerAsync, LgTvPower.Unknown) switch
         {
             LgTvPower.On => On,
-            LgTvPower.Off or LgTvPower.Unreachable => Off,
+            LgTvPower.Off => Off,
             _ => null,
         };
 

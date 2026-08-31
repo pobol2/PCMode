@@ -2,7 +2,7 @@ namespace PCMode.Engine.Tests;
 
 /// <summary>
 /// What <see cref="EngineRuntime"/> does with a configuration saved from
-/// Hardware, Modes or Settings: rebuild it, validate it the same way a real
+/// a feature page: rebuild it, validate it the same way a real
 /// startup would, and only then let it replace what is running.
 /// </summary>
 public sealed class EngineRuntimeTests
@@ -21,7 +21,7 @@ public sealed class EngineRuntimeTests
             """);
 
         var initial = EngineBootstrap.Create(root.Path);
-        var runtime = new EngineRuntime(initial, root.Path, FakeControllers);
+        var runtime = new EngineRuntime(initial, root.Path);
 
         HardwareAliasOutcome alias = HardwareConfigurationStore.SetAudioAlias(root.Path, "Endpoint B", "Speakers");
         Assert.True(alias.Success, alias.Problem);
@@ -47,7 +47,7 @@ public sealed class EngineRuntimeTests
         var gate = new TaskCompletionSource();
         var theme = new FakeProvider("theme", "Light") { Gate = gate };
         var initial = BuildEngine(root.Path, [theme]);
-        var runtime = new EngineRuntime(initial, root.Path, FakeControllers);
+        var runtime = new EngineRuntime(initial, root.Path);
 
         Task<TransitionOutcome> transition = initial.ApplyAsync("Desktop");
 
@@ -74,7 +74,7 @@ public sealed class EngineRuntimeTests
         root.Write(Document);
 
         var initial = BuildEngine(root.Path, [new FakeProvider("theme", "Light")]);
-        var runtime = new EngineRuntime(initial, root.Path, FakeControllers);
+        var runtime = new EngineRuntime(initial, root.Path);
 
         // Corrupted after the runtime was built with a good one -- exactly what
         // a hand edit, or a save that raced with something else, would leave.
@@ -101,7 +101,7 @@ public sealed class EngineRuntimeTests
             """);
 
         var initial = EngineBootstrap.Create(root.Path);
-        var runtime = new EngineRuntime(initial, root.Path, FakeControllers);
+        var runtime = new EngineRuntime(initial, root.Path);
 
         RuntimeActivationOutcome outcome = runtime.Reload();
         Assert.True(outcome.Activated, outcome.Message);
@@ -113,31 +113,31 @@ public sealed class EngineRuntimeTests
         Assert.Equal("tvPower", omitted.Resource);
     }
 
+    /// <summary>
+    /// The audio Host is deliberately not one of the things Dispose stops.
+    /// </summary>
+    /// <remarks>
+    /// While an audio target is active the PCMode virtual endpoint is the
+    /// machine's playback device, so a shell that shut the Host down on its way
+    /// out would leave Windows playing into an endpoint with nothing behind it.
+    /// PCMode's side of the connection is closed; the Host keeps the target and
+    /// the next start reconnects to it. See <see cref="AudioHostLink"/>.
+    /// </remarks>
     [Fact]
-    public void Dispose_stops_the_party_mirror_and_disposes_a_loaded_controller_source()
+    public void Dispose_closes_the_audio_link_without_stopping_the_host()
     {
         using var root = new TemporaryRoot();
         root.Write(Document);
 
-        var mirrors = new FakeAudioMirrorFactory();
-        var party = new PartyAudioHost(mirrors);
-        party.Start(new AudioMirrorRequest("ref-id", "Reference", "mirror-id", "Mirror", TimeSpan.Zero, 1.0));
+        var audio = new FakeAudioRuntime();
 
         var initial = BuildEngine(root.Path, [new FakeProvider("theme", "Light")]);
-        var controllers = new DisposableFakeGamepadCapabilities();
-        var runtime = new EngineRuntime(initial, root.Path, () => controllers, party);
-
-        // Forces the lazily-cached controller source to actually load, so
-        // Dispose has something to dispose.
-        _ = runtime.HardwareDiscoverers;
+        var runtime = new EngineRuntime(initial, root.Path, audio);
 
         runtime.Dispose();
 
-        Assert.True(mirrors.Started[0].Disposed);
-        Assert.True(controllers.Disposed);
+        Assert.Equal(0, audio.Stops);
     }
-
-    private static IGamepadCapabilitiesSource FakeControllers() => new FakeGamepadCapabilities();
 
     private static ModeEngine BuildEngine(string root, IReadOnlyList<IModeResourceProvider> providers) =>
         new(ModeConfiguration.LoadOrCreate(root, providers), new ModeStateStore(PCModePaths.StateFile(root)), providers);
@@ -149,21 +149,4 @@ public sealed class EngineRuntimeTests
           {"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}
         """;
 
-    private sealed class FakeGamepadCapabilities : IGamepadCapabilitiesSource
-    {
-        public bool IsAvailable => false;
-
-        public GamepadCapabilities? Read(int slot) => null;
-    }
-
-    private sealed class DisposableFakeGamepadCapabilities : IGamepadCapabilitiesSource, IDisposable
-    {
-        public bool IsAvailable => false;
-
-        public bool Disposed { get; private set; }
-
-        public GamepadCapabilities? Read(int slot) => null;
-
-        public void Dispose() => Disposed = true;
-    }
 }

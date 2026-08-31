@@ -53,8 +53,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 4, poll: 1),
             Reads = ["Desktop", "Desktop", "TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -87,8 +87,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 8, poll: 1),
             Reads = ["TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -110,8 +110,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 8, poll: 1, settle: 2),
             Reads = ["TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -139,8 +139,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 8, poll: 1, settle: 2),
             Reads = ["TVOnly", "Desktop", "TVOnly", "TVOnly", "TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -167,8 +167,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 8, poll: 1, settle: 2),
             Reads = ["Desktop", "TVOnly", "Desktop", "TVOnly", "TVOnly", "TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -218,8 +218,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(attempts: 2, window: 2, poll: 1),
             Reads = ["Desktop", "Desktop", "Desktop", "Desktop", "Desktop", "TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -239,8 +239,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(attempts: 3, window: 2, poll: 1),
             Reads = ["Desktop"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -285,8 +285,8 @@ public sealed class ConvergenceTests
             Fails = new InvalidOperationException("No active playback device is named 'TV'."),
             FailedAttempts = int.MaxValue,
         };
-
         using var world = new World(sound, Document("""{"sound":"TV"}"""));
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -329,8 +329,8 @@ public sealed class ConvergenceTests
             Fails = new InvalidOperationException("Windows refused to move the pointer."),
             FailedAttempts = int.MaxValue,
         };
-
         using var world = new World(pointer, Document("""{"pointer":"Corner"}"""));
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -347,8 +347,8 @@ public sealed class ConvergenceTests
         // observed value at all, because reusing the read taken before the
         // command would put a confirmation in the report that nobody made.
         var pointer = new Machine("pointer");
-
         using var world = new World(pointer, Document("""{"pointer":"Corner"}"""));
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -523,8 +523,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(attempts: 1, window: 2, poll: 1),
             Reads = ["Desktop"],
         };
-
         using var world = new World(screen);
+
 
         world.Record("Desktop");
 
@@ -550,8 +550,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 2, poll: 1),
             Reads = ["TVOnly"],
         };
-
         using var world = new World(screen);
+
 
         world.Record("Desktop");
 
@@ -573,8 +573,8 @@ public sealed class ConvergenceTests
             Fails = new InvalidOperationException("the television did not answer"),
             FailedAttempts = int.MaxValue,
         };
-
         using var world = new World(screen);
+
 
         world.Record("Desktop");
 
@@ -644,8 +644,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(attempts: 3, window: 8, poll: 1, settle: 2),
             Reads = ["Desktop"],
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film", dryRun: true);
 
@@ -673,8 +673,8 @@ public sealed class ConvergenceTests
         {
             Policy = new ConvergencePolicy { Verify = true, PollInterval = TimeSpan.Zero },
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -691,8 +691,8 @@ public sealed class ConvergenceTests
         // resource -- not an exception out of a method whose whole contract is
         // that it decides before it changes anything.
         var screen = new Machine("screen") { PolicyThrows = new InvalidOperationException("no idea") };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -705,8 +705,8 @@ public sealed class ConvergenceTests
     public async Task Refuses_a_mode_whose_provider_cannot_say_what_it_needs()
     {
         var screen = new Machine("screen") { RequirementsThrow = new InvalidOperationException("cannot say") };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -801,8 +801,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(window: 4, poll: 1) with { DispatchAtLeastOnce = true },
             Current = "TVOnly",
         };
-
         using var world = new World(screen);
+
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -826,8 +826,8 @@ public sealed class ConvergenceTests
             Policy = Verifying(attempts: 3, window: 4, poll: 1) with { DispatchAtLeastOnce = true },
             Current = "TVOnly",
         };
-
         using var world = new World(screen);
+
 
         Assert.Equal(TransitionStatus.Succeeded, (await world.Engine.ApplyAsync("Film")).Status);
         Assert.Single(screen.Commands);
@@ -850,8 +850,8 @@ public sealed class ConvergenceTests
             FailedAttempts = 3,
             Fails = new InvalidOperationException("the socket went away."),
         };
-
         using var world = new World(screen);
+
 
         world.Record("Desktop");
 
@@ -907,8 +907,8 @@ public sealed class ConvergenceTests
         // it is inconvenient. It is the whole of what makes a half-applied machine
         // admit to being one, so a transition that cannot do it does not go.
         var screen = new Machine("screen") { Current = "Desktop" };
-
         using var world = new World(screen);
+
 
         world.Record("Desktop");
 

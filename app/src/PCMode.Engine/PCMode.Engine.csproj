@@ -21,18 +21,36 @@
     <RootNamespace>PCMode.Engine</RootNamespace>
 
     <!--
-      For one file: WasapiAudioMirror.cs, which converts audio buffers between
-      two endpoints' sample formats on a thread that has ten milliseconds to do
-      it in. WASAPI hands out raw pointers into shared memory, and the
-      alternative is copying every buffer into a managed array and back purely
-      to avoid the keyword. Nothing else in the engine may use it: the boundary
-      test in PCMode.Tray.Tests keeps the pointer work in that file.
+      For one file: WasapiTestSignal.cs, which fills a WASAPI render buffer on a
+      thread that has ten milliseconds to do it in. WASAPI hands out raw
+      pointers into shared memory, and the alternative is copying every buffer
+      into a managed array and back purely to avoid the keyword.
+
+      Real-time audio no longer lives here at all. Routing, DSP, buffering,
+      resampling and synchronisation belong to PCMode.Audio.Engine inside
+      PCMode.Audio.Host; this project only chooses the desired Audio Target.
     -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="OpenRGB.NET" Version="3.1.1" />
+  </ItemGroup>
+
+  <!--
+    The audio control plane, and deliberately nothing below it.
+
+    Core carries the Audio Target and Health models, Protocol the Host/Client
+    messages, Client the connection and the launcher. PCMode.Audio.Engine,
+    PCMode.Audio.Windows and PCMode.Audio.DriverClient are absent on purpose:
+    they are the live runtime, they belong to PCMode.Audio.Host, and a
+    reference to any of them here would be the first step towards a second
+    audio graph inside the desired-state engine.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\PCMode.Audio.Core\PCMode.Audio.Core.csproj" />
+    <ProjectReference Include="..\PCMode.Audio.Protocol\PCMode.Audio.Protocol.csproj" />
+    <ProjectReference Include="..\PCMode.Audio.Client\PCMode.Audio.Client.csproj" />
   </ItemGroup>
 
 </Project>

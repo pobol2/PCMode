@@ -1,0 +1,47 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:construction="clr-namespace:PCMode.Tray.UI.Framework"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
+
+    <Style TargetType="{x:Type tree:ConfigurationSelectorBlock}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type tree:ConfigurationSelectorBlock}">
+                    <Border Style="{StaticResource ConfigurationSelectorCardStyle}">
+                        <DockPanel>
+                            <construction:Region
+                            x:Name="PART_HeaderRegion"
+                            DockPanel.Dock="Top">
+                            <construction:FinalUiComponent>
+                                <Grid Style="{StaticResource ConfigurationSelectorHeaderStyle}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{TemplateBinding Title}" Style="{StaticResource ConfigurationSelectorTitleStyle}" />
+                                <Button
+                                    Grid.Column="1"
+                                    Content="Create"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                    Command="{TemplateBinding CreateCommand}"
+                                    Visibility="{Binding ShowCreateButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibility}}" />
+                            </Grid>
+                            </construction:FinalUiComponent>
+                        </construction:Region>
+                            <Border DockPanel.Dock="Top" Style="{StaticResource ConfigurationSelectorSeparatorStyle}" />
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <construction:RepeatedRegion
+                                    x:Name="PART_ItemsRegion"
+                                    Margin="0,4,0,8"
+                                    ItemsSource="{TemplateBinding Items}"
+                                    ItemTemplate="{TemplateBinding ItemTemplate}" />
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

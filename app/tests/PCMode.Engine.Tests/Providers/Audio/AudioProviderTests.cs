@@ -123,6 +123,49 @@ public sealed class AudioProviderTests
         Assert.Equal([endpoints.IdOf(0)], endpoints.MadeDefault);
     }
 
+    [Fact]
+    public void Applying_a_device_alias_never_touches_the_runtime_when_no_target_is_configured()
+    {
+        // The direct-output requirement in its narrowest form: a machine that
+        // has never defined a Native Audio target must not depend on the
+        // runtime even to be told it has nothing to stop.
+        var endpoints = new FakeAudioEndpoints(Speakers);
+        var runtime = new FakeAudioRuntime();
+        var provider = new AudioProvider(endpoints, runtime);
+
+        Assert.Null(Configure(provider, $$$"""{"devices":{"Desk":"{{{Speakers}}}"}}"""));
+
+        provider.Apply("Desk", CancellationToken.None);
+
+        Assert.Equal(0, runtime.Stops);
+        Assert.Equal([endpoints.IdOf(0)], endpoints.MadeDefault);
+    }
+
+    [Fact]
+    public void Applying_a_device_alias_stops_a_configured_target_first()
+    {
+        // The other half: when this machine does define targets, one of them
+        // may actually be running, so switching to a plain device still has to
+        // check and tear it down before the default moves.
+        var endpoints = new FakeAudioEndpoints(Speakers, Television);
+        var runtime = new FakeAudioRuntime();
+        var provider = new AudioProvider(endpoints, runtime);
+
+        Assert.Null(Configure(
+            provider,
+            $$$"""
+            {
+              "devices": { "Desk": "{{{Speakers}}}", "TV": "{{{Television}}}" },
+              "targets": { "Both": { "outputs": [{ "output": "Desk" }, { "output": "TV" }] } }
+            }
+            """));
+
+        provider.Apply("Desk", CancellationToken.None);
+
+        Assert.Equal(1, runtime.Stops);
+        Assert.Equal([endpoints.IdOf(0)], endpoints.MadeDefault);
+    }
+
     // ---- discovery ----------------------------------------------------------
 
     [Fact]
@@ -252,9 +295,9 @@ public sealed class AudioProviderTests
     [Fact]
     public async Task Leaves_the_default_alone_when_it_is_already_right()
     {
+        using var root = new TemporaryRoot();
         // Unlike the pointer, this one has a current value worth asking about,
         // so re-applying a mode does not command the sound card again.
-        using var root = new TemporaryRoot();
 
         var endpoints = new FakeAudioEndpoints(Speakers, Television);
         endpoints.Default = endpoints.IdOf(1);
@@ -272,9 +315,9 @@ public sealed class AudioProviderTests
     [Fact]
     public async Task Fails_the_transition_when_the_device_is_not_there()
     {
+        using var root = new TemporaryRoot();
         // The television is off, so its HDMI endpoint does not exist. Validation
         // could not have caught this: it is a fact about the room, not the file.
-        using var root = new TemporaryRoot();
 
         var endpoints = new FakeAudioEndpoints(Speakers);
 
@@ -296,10 +339,10 @@ public sealed class AudioProviderTests
     [Fact]
     public async Task Refuses_to_guess_when_two_devices_share_a_name()
     {
+        using var root = new TemporaryRoot();
         // Windows does not enforce unique friendly names. Picking one would send
         // sound wherever enumeration happened to land, which looks like a
         // working feature until the day it lands the other way.
-        using var root = new TemporaryRoot();
 
         var endpoints = new FakeAudioEndpoints(Speakers, Television).Add(Television);
 

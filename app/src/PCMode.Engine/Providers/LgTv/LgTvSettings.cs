@@ -102,6 +102,22 @@ public sealed record LgTvSettings
     /// </remarks>
     public string? SafeDisplayTarget { get; private init; }
 
+    /// <summary>
+    /// The Windows device path of the physical display this television is
+    /// connected as, when known.
+    /// </summary>
+    /// <remarks>
+    /// The same identity <see cref="DdcMonitorCatalog"/> binds a DDC/CI alias
+    /// to, and what a settings screen matches against
+    /// <c>DisplayMonitorInfo.DevicePath</c> to know that a particular
+    /// physical display -- not merely a television by name -- is this one.
+    /// Purely descriptive: unlike <see cref="SafeDisplayTarget"/> it names no
+    /// resource and the planner never resolves it, so an unset or stale value
+    /// only means a settings screen cannot show the association, never a
+    /// refused transition.
+    /// </remarks>
+    public string? DisplayMonitor { get; private init; }
+
     /// <summary>The named picture profiles.</summary>
     public IReadOnlyDictionary<string, LgTvProfile> Profiles { get; private init; } =
         new Dictionary<string, LgTvProfile>(StringComparer.OrdinalIgnoreCase);
@@ -210,6 +226,7 @@ public sealed record LgTvSettings
         string? host = null;
         string? mac = null;
         string? safeDisplay = null;
+        string? displayMonitor = null;
         string? profileInput = null;
         JsonElement? profileSection = null;
         var inputs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -244,6 +261,13 @@ public sealed record LgTvSettings
             else if (property.NameEquals("safeDisplayTarget"))
             {
                 if (!TryReadText(property, "safeDisplayTarget", out safeDisplay, out problem))
+                {
+                    return false;
+                }
+            }
+            else if (property.NameEquals("displayMonitor"))
+            {
+                if (!TryReadText(property, "displayMonitor", out displayMonitor, out problem))
                 {
                     return false;
                 }
@@ -283,8 +307,8 @@ public sealed record LgTvSettings
                 // dropped one is a setting the user believes they have written.
                 problem =
                     $"'{SettingsPath}' does not understand '{property.Name}'. It takes " +
-                    "'enabled', 'host', 'macAddress', 'inputs', 'profileInput', 'profiles' " +
-                    "and 'safeDisplayTarget'.";
+                    "'enabled', 'host', 'macAddress', 'inputs', 'profileInput', 'profiles', " +
+                    "'safeDisplayTarget' and 'displayMonitor'.";
 
                 return false;
             }
@@ -325,6 +349,7 @@ public sealed record LgTvSettings
                 Inputs = inputs,
                 Profiles = profiles,
                 SafeDisplayTarget = safeDisplay,
+                DisplayMonitor = displayMonitor,
             };
 
             problem = null;
@@ -368,6 +393,7 @@ public sealed record LgTvSettings
             Inputs = inputs,
             Profiles = profiles,
             SafeDisplayTarget = safeDisplay,
+            DisplayMonitor = displayMonitor,
         };
 
         problem = null;

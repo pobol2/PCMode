@@ -1,70 +1,18 @@
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using Microsoft.Win32;
-using PCMode.Tray.Settings;
+using PCMode.Tray.Elements.Settings;
 
-namespace PCMode.Tray.Themes;
-
-public enum EffectiveTheme
-{
-    Light,
-    Dark,
-}
-
-public interface ISystemThemePreference
-{
-    EffectiveTheme Read();
-}
-
-public interface ISystemThemeChangeSource
-{
-    event EventHandler? Changed;
-}
-
-/// <summary>Reads the Windows preference used by ordinary application surfaces.</summary>
-public sealed class WindowsSystemThemePreference : ISystemThemePreference, ISystemThemeChangeSource, IDisposable
-{
-    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-
-    public WindowsSystemThemePreference()
-    {
-        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
-    }
-
-    public event EventHandler? Changed;
-
-    public EffectiveTheme Read()
-    {
-        try
-        {
-            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);
-            return key?.GetValue("AppsUseLightTheme") is int value && value == 0
-                ? EffectiveTheme.Dark
-                : EffectiveTheme.Light;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
-        {
-            // Windows' default when the value is absent or unreadable is light.
-            return EffectiveTheme.Light;
-        }
-    }
-
-    public void Dispose() => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
-
-    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e) =>
-        Changed?.Invoke(this, EventArgs.Empty);
-}
+namespace PCMode.Tray.Platform.Themes;
 
 /// <summary>
 /// Owns the one semantic color dictionary used by every WPF surface.
 /// </summary>
 /// <remarks>
-/// Both palettes are namespaced: <c>Platform/Themes/Dark.xaml</c> defines the
-/// 13-key palette under a <c>Dark.</c> prefix and <c>Platform/Themes/Light.xaml</c>
+/// Both palettes are namespaced: <c>UI/Components/Theme/Dark.xaml</c> defines the
+/// 13-key palette under a <c>Dark.</c> prefix and <c>UI/Components/Theme/Light.xaml</c>
 /// defines the same 13 keys under a <c>Light.</c> prefix. Neither file defines
-/// the unprefixed keys that <c>Framework/Layout/Styles.xaml</c> binds to via
+/// the unprefixed keys that <c>UI/Components/Theme/heme.xaml</c> binds to via
 /// <c>DynamicResource</c> -- <see cref="Apply"/> is what writes the unprefixed,
 /// in-<see cref="_resources"/> copy of each key from whichever palette
 /// currently applies, so the merge order of the two files in <c>App.xaml</c>
@@ -82,7 +30,7 @@ public sealed class ApplicationThemeService : IDisposable
     private readonly IReadOnlyDictionary<string, object> _lightPalette;
     private readonly IReadOnlyDictionary<string, object> _darkPalette;
 
-    /// <summary>Target's 13-key palette (<c>Framework/Layout/Styles.xaml</c>), not legacy's 34-key set.</summary>
+    /// <summary>Target's 13-key palette (<c>UI/Components/Theme/Theme.xaml</c>), not legacy's 34-key set.</summary>
     public static IReadOnlyList<string> SemanticResourceKeys { get; } =
     [
         "AccentBrush", "AccentTextBrush", "ErrorBrush", "WarningBrush", "DisabledTextBrush",

@@ -32,18 +32,13 @@ public sealed record RuntimeActivationOutcome(RuntimeActivationStatus Status, st
 }
 
 /// <summary>
-/// The one place the shell, the tray, the picker, diagnostics, settings and
-/// hardware discovery all reach for "the running configuration".
+/// The one place the shell, tray, picker, diagnostics, and settings reach for
+/// the running configuration.
 /// </summary>
 /// <remarks>
 /// ONE ENGINE, SHARED RATHER THAN COPIED
 ///
-/// Before this existed, a hardware alias save rebuilt an engine only to hand
-/// its discoverers to the Hardware window and throw the engine itself away --
-/// so the shell, the tray and Diagnostics went on running the configuration
-/// from before the save until the process restarted. This is what closes that
-/// gap: every part of the shell that needs "the engine" or "the hardware
-/// discoverers" reads <see cref="Engine"/> or <see cref="HardwareDiscoverers"/>
+/// Every part of the shell that needs the live engine reads <see cref="Engine"/>
 /// here, and a save that calls <see cref="Reload"/> is what every one of them
 /// then sees, without any of them rebuilding their own copy.
 ///
@@ -70,45 +65,28 @@ public sealed record RuntimeActivationOutcome(RuntimeActivationStatus Status, st
 public sealed class EngineRuntime : IDisposable
 {
     private readonly string? _root;
-    private readonly Func<IGamepadCapabilitiesSource> _controllersFactory;
-    private readonly PartyAudioHost? _party;
-    private IGamepadCapabilitiesSource? _controllers;
+    private readonly IAudioRuntime? _audio;
     private ModeEngine _engine;
 
-    /// <param name="controllersFactory">
-    /// How to obtain the controller capabilities source, called at most once
-    /// and cached -- so a caller that never opens Hardware or Diagnostics never
-    /// pays for loading XInput. Defaults to the real one.
-    /// </param>
-    /// <param name="party">
-    /// The Party mirror's owner, handed to every engine this builds. It has to
-    /// outlive them: a reload replaces the audio provider, and a mirror owned by
-    /// the replaced one would keep two threads and two endpoints with nothing
-    /// left able to stop them.
+    /// <param name="audio">
+    /// The audio Host connection's owner, handed to every engine this builds. It
+    /// has to outlive them: a reload replaces the audio provider, and a Host
+    /// launched by the replaced one would be a process nothing left could steer.
     /// </param>
     public EngineRuntime(
         ModeEngine engine,
         string? root = null,
-        Func<IGamepadCapabilitiesSource>? controllersFactory = null,
-        PartyAudioHost? party = null)
+        IAudioRuntime? audio = null)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
         _engine = engine;
         _root = root;
-        _party = party;
-        _controllersFactory = controllersFactory ?? XInputCapabilitiesSource.Load;
+        _audio = audio;
     }
 
     /// <summary>The engine every operation should read and apply modes through right now.</summary>
     public ModeEngine Engine => Volatile.Read(ref _engine);
-
-    /// <summary>
-    /// The discoverers a hardware scan should use right now, built fresh from
-    /// the current engine on every read.
-    /// </summary>
-    public IReadOnlyList<IHardwareDiscoverer> HardwareDiscoverers =>
-        HardwareDiscoveryBootstrap.ProductionDiscoverers(Engine, _controllers ??= _controllersFactory());
 
     /// <summary>
     /// Rebuilds and validates the configuration on disk, and activates it if
@@ -128,7 +106,7 @@ public sealed class EngineRuntime : IDisposable
 
         try
         {
-            candidate = EngineBootstrap.Create(_root, _party);
+            candidate = EngineBootstrap.Create(_root, _audio);
         }
         catch (ModeConfigurationException exception)
         {
@@ -156,21 +134,17 @@ public sealed class EngineRuntime : IDisposable
     }
 
     /// <summary>
-    /// Releases the controller capabilities source, if one was ever loaded, and
-    /// stops the Party mirror if one is running.
+    /// Closes PCMode's side of the audio Host connection.
     /// </summary>
     /// <remarks>
-    /// The mirror is the reason this matters beyond tidiness. It is two threads
-    /// holding two endpoints, and a shell that exited without stopping them would
-    /// leave audio being duplicated by a process the user has just closed.
+    /// The Host is deliberately left running. While an audio target is active
+    /// the PCMode virtual endpoint is the machine's playback device, and a shell
+    /// that killed the Host on its way out would leave Windows playing into an
+    /// endpoint with nothing behind it -- silence, caused by closing a tray icon.
+    /// See <see cref="AudioHostLink"/>.
     /// </remarks>
     public void Dispose()
     {
-        _party?.Dispose();
-
-        if (_controllers is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        _audio?.Dispose();
     }
 }

@@ -42,18 +42,18 @@ public static class EngineBootstrap
     /// resources, which is the right answer for a caller that only wants to know
     /// what this build can do.
     /// </param>
-    /// <param name="party">
-    /// Who owns the running Party mirror, when the caller has one to share. The
-    /// providers built here are rebuilt whenever the configuration is re-read, and
-    /// a mirror owned by a discarded provider would be a capture stream nothing
-    /// could find in order to stop it -- see <see cref="PartyAudioHost"/>. Callers
-    /// that only want to validate a document pass nothing and get a host that
-    /// never starts anything.
+    /// <param name="audio">
+    /// Who owns the connection to the audio Host, when the caller has one to
+    /// share. The providers built here are rebuilt whenever the configuration is
+    /// re-read, and a Host launched by a discarded provider would be a process
+    /// nothing could find in order to steer it -- see <see cref="AudioHostLink"/>.
+    /// Callers that only want to validate a document pass nothing and get a link
+    /// that never starts one.
     /// </param>
     public static IReadOnlyList<IModeResourceProvider> ProductionProviders(
         string? root = null,
         string? document = null,
-        PartyAudioHost? party = null)
+        IAudioRuntime? audio = null)
     {
         string profileRoot = root ?? PCModePaths.DefaultRoot;
 
@@ -62,7 +62,7 @@ public static class EngineBootstrap
             new WindowsThemeProvider(),
             new DisplayProvider(),
             new CursorProvider(),
-            new AudioProvider(new CoreAudioEndpoints(), party),
+            new AudioProvider(new CoreAudioEndpoints(), audio),
             new DoNotDisturbProvider(new WindowsNotificationSetting()),
             new CaseRgbProvider(new OpenRgbSdkClient()),
         ];
@@ -71,7 +71,51 @@ public static class EngineBootstrap
 
         if (document is not null)
         {
+            providers.AddRange(DdcMonitorProviders(document, new WindowsDdcMonitors()));
             providers.AddRange(ApplicationProviders(document, new WindowsProcessHost(), providers));
+        }
+
+        return providers;
+    }
+
+    /// <summary>
+    /// Two providers per configured DDC/CI monitor: brightness and input.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the television, a machine that configures none gets no DDC/CI
+    /// resources at all. There is no historical document shape to stay
+    /// compatible with -- see <see cref="DdcResourceKeys"/> -- so there is no
+    /// reason to carry four keys nobody can use onto every machine that has
+    /// never named a monitor.
+    /// </remarks>
+    public static IReadOnlyList<IModeResourceProvider> DdcMonitorProviders(string document, IDdcMonitors monitors)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(monitors);
+
+        IReadOnlyList<string> aliases = DdcMonitorCatalog.NamesIn(document);
+
+        if (aliases.Count == 0)
+        {
+            return [];
+        }
+
+        var providers = new List<IModeResourceProvider>(aliases.Count * 2);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string alias in aliases)
+        {
+            if (!seen.Add(alias))
+            {
+                // The full parser gives the detailed configuration error. This
+                // guard merely prevents constructing two connections for the
+                // same alias before validation gets that chance.
+                continue;
+            }
+
+            var connection = new DdcMonitorConnection(monitors, alias);
+            providers.Add(new DdcBrightnessProvider(connection));
+            providers.Add(new DdcInputProvider(connection));
         }
 
         return providers;
@@ -253,17 +297,84 @@ public static class EngineBootstrap
     /// The caller shows the message: a shell that started with a broken
     /// configuration would list no modes and explain nothing.
     /// </exception>
-    public static ModeEngine Create(string? root = null, PartyAudioHost? party = null)
+    public static ModeEngine Create(string? root = null, IAudioRuntime? audio = null)
     {
         string folder = root ?? PCModePaths.DefaultRoot;
 
         (string json, string path) = ModeConfiguration.ReadOrCreate(folder);
 
-        IReadOnlyList<IModeResourceProvider> providers = ProductionProviders(folder, json, party);
+        json = ConvertAudioTargets(folder, path, json);
+
+        IReadOnlyList<IModeResourceProvider> providers = ProductionProviders(folder, json, audio);
 
         ModeConfiguration configuration = ModeConfiguration.Parse(json, providers, path);
         var state = new ModeStateStore(PCModePaths.StateFile(folder));
 
         return new ModeEngine(configuration, state, providers);
+    }
+
+    /// <summary>
+    /// Converts a document that still has a Party group, once, before anything
+    /// tries to read it.
+    /// </summary>
+    /// <remarks>
+    /// BACKED UP, VALIDATED, AND ONLY THEN WRITTEN
+    ///
+    /// The converted text is built into providers and parsed exactly as a real
+    /// startup would -- see <see cref="AudioMigration"/> for what the conversion
+    /// preserves -- before a byte of it reaches disk. A conversion that does not
+    /// produce a document this build can load is abandoned, and the original is
+    /// returned untouched: the loader then refuses it by name, which is a far
+    /// better outcome than a machine left holding a file it wrote itself and
+    /// cannot read.
+    ///
+    /// The original is copied beside it first, so a conversion that turns out to
+    /// be wrong in some way nothing checked is still recoverable by hand.
+    ///
+    /// A DOCUMENT THAT NEEDS NOTHING COSTS NOTHING
+    ///
+    /// Almost every start is that one. The conversion is a pure function of the
+    /// text and reports that it changed nothing, and this returns immediately
+    /// without touching the file.
+    ///
+    /// INTERNAL RATHER THAN PRIVATE, FOR ONE CALLER
+    ///
+    /// <c>AudioTargetHardwareTest</c> reads a real machine's configuration but
+    /// deliberately builds its own <see cref="ModeEngine"/> over a temporary
+    /// state file rather than calling <see cref="Create"/> -- see that test for
+    /// why. It still has to see the same migrated document a real start would,
+    /// so it calls this directly instead of re-implementing conversion, or
+    /// skipping it and failing on a document <see cref="Create"/> would have
+    /// handled.
+    /// </remarks>
+    internal static string ConvertAudioTargets(string root, string path, string json)
+    {
+        if (!AudioMigration.TryConvert(json, out string migrated, out _))
+        {
+            return json;
+        }
+
+        try
+        {
+            _ = ModeConfiguration.Parse(migrated, ProductionProviders(root, migrated), path);
+        }
+        catch (ModeConfigurationException)
+        {
+            return json;
+        }
+
+        try
+        {
+            File.WriteAllText(Path.Combine(root, AudioMigration.BackupFileName), json);
+            File.WriteAllText(path, migrated);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The conversion is a pure function of the text, so a start that
+            // could not write it simply runs on the converted document in memory
+            // and tries again next time.
+        }
+
+        return migrated;
     }
 }

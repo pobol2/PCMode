@@ -809,7 +809,9 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         string.Join(
             ',',
             layout.Placements
-                .Select(placement => $"{placement.Key} {placement.Value.Direction} {placement.Value.Anchor}")
+                .Select(placement =>
+                    $"{placement.Key} {placement.Value.Direction} {placement.Value.Anchor} " +
+                    $"{placement.Value.Alignment} {placement.Value.Offset}")
                 .Order(StringComparer.OrdinalIgnoreCase)),
         string.Join(
             ',',

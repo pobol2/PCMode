@@ -198,8 +198,10 @@ public sealed class LgTvConnection
     private readonly string? _televisionName;
     private readonly bool _isDefault;
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Lock _observedStateLock = new();
 
     private LgTvSettings _settings = LgTvSettings.Disabled;
+    private LgTvObservedState _observedState = LgTvObservedState.Empty;
 
     /// <param name="time">
     /// The clock every deadline here is measured against. Injected for the same
@@ -256,6 +258,12 @@ public sealed class LgTvConnection
 
     /// <summary>The television as configured, or a disabled one.</summary>
     public LgTvSettings Settings => _settings;
+
+    /// <summary>The latest observations made through this television's shared connection.</summary>
+    public LgTvObservedState ObservedState
+    {
+        get { lock (_observedStateLock) { return _observedState; } }
+    }
 
     /// <summary>
     /// Whether there is a television here to do anything with, shared by all four
@@ -349,45 +357,84 @@ public sealed class LgTvConnection
     /// </remarks>
     internal async Task<LgTvPower> ReadPowerAsync(CancellationToken cancellationToken)
     {
-        Reached<LgTvPower> reached = await RunAsync(
-            allowPairing: false,
-            unreachableIsFine: true,
-            roundTrips: 1,
-            requestTimeout: ReadTimeout,
-            async (session, token) =>
-            {
-                JsonElement payload = await session
-                    .RequestAsync("ssap://com.webos.service.tvpower/power/getPowerState", null, token)
-                    .ConfigureAwait(false);
-
-                string? state = Text(payload, "state");
-
-                if (string.IsNullOrWhiteSpace(state))
-                {
-                    return LgTvPower.Unknown;
-                }
-
-                // A television part way through switching on reports where it is
-                // going as well as where it is. Answering with the destination
-                // would be reporting the transition finished at the moment there
-                // is most reason to think it is not.
-                if (!string.IsNullOrWhiteSpace(Text(payload, "processing")))
-                {
-                    return LgTvPower.Unknown;
-                }
-
-                return string.Equals(state, "Active", StringComparison.OrdinalIgnoreCase)
-                    ? LgTvPower.On
-                    : LgTvPower.Off;
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        return reached.Reach switch
+        if (!_settings.Enabled)
         {
-            LgTvReach.Answered => reached.Value,
-            LgTvReach.Unreachable => LgTvPower.Unreachable,
-            _ => LgTvPower.Unknown,
-        };
+            RecordPower(LgTvObservationStatus.Disabled, problem: "This television is disabled.");
+            return LgTvPower.Unknown;
+        }
+
+        try
+        {
+            Reached<LgTvPower> reached = await RunAsync(
+                allowPairing: false,
+                unreachableIsFine: true,
+                roundTrips: 1,
+                requestTimeout: ReadTimeout,
+                async (session, token) =>
+                {
+                    JsonElement payload = await session
+                        .RequestAsync("ssap://com.webos.service.tvpower/power/getPowerState", null, token)
+                        .ConfigureAwait(false);
+
+                    string? state = Text(payload, "state");
+
+                    if (string.IsNullOrWhiteSpace(state))
+                    {
+                        return LgTvPower.Unknown;
+                    }
+
+                    // A television part way through switching on reports where it is
+                    // going as well as where it is. Answering with the destination
+                    // would be reporting the transition finished at the moment there
+                    // is most reason to think it is not.
+                    if (!string.IsNullOrWhiteSpace(Text(payload, "processing")))
+                    {
+                        return LgTvPower.Unknown;
+                    }
+
+                    return string.Equals(state, "Active", StringComparison.OrdinalIgnoreCase)
+                        ? LgTvPower.On
+                        : LgTvPower.Off;
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            LgTvPower power = reached.Reach switch
+            {
+                LgTvReach.Answered => reached.Value,
+                LgTvReach.Unreachable => LgTvPower.Unreachable,
+                _ => LgTvPower.Unknown,
+            };
+
+            switch (reached.Reach)
+            {
+                case LgTvReach.NotAttempted:
+                    RecordPower(LgTvObservationStatus.Unpaired, problem: "This television has not been paired.");
+                    break;
+                case LgTvReach.Unreachable:
+                    RecordPower(
+                        LgTvObservationStatus.Unreachable,
+                        problem: $"The television at {_settings.Host} did not answer.");
+                    break;
+                case LgTvReach.Answered when power == LgTvPower.On:
+                    RecordPower(LgTvObservationStatus.Observed, TvPowerProvider.On);
+                    break;
+                case LgTvReach.Answered when power == LgTvPower.Off:
+                    RecordPower(LgTvObservationStatus.Observed, TvPowerProvider.Off);
+                    break;
+                default:
+                    RecordPower(
+                        LgTvObservationStatus.Unknown,
+                        problem: "The television answered, but its power state is not settled or recognized.");
+                    break;
+            }
+
+            return power;
+        }
+        catch (Exception exception)
+        {
+            RecordPower(LgTvObservationStatus.Error, problem: exception.Message);
+            throw;
+        }
     }
 
     /// <summary>
@@ -396,43 +443,69 @@ public sealed class LgTvConnection
     /// </summary>
     internal async Task<string?> ReadInputAsync(CancellationToken cancellationToken)
     {
-        Reached<string> reached = await RunAsync<string>(
-            allowPairing: false,
-            unreachableIsFine: true,
-            roundTrips: 1,
-            requestTimeout: ReadTimeout,
-            async (session, token) =>
-            {
-                JsonElement payload = await session
-                    .RequestAsync("ssap://com.webos.applicationManager/getForegroundAppInfo", null, token)
-                    .ConfigureAwait(false);
+        if (!_settings.Enabled)
+        {
+            RecordInput(LgTvObservationStatus.Disabled, problem: "This television is disabled.");
+            return null;
+        }
 
-                string? application = Text(payload, "appId");
-
-                if (string.IsNullOrWhiteSpace(application))
+        try
+        {
+            Reached<string> reached = await RunAsync<string>(
+                allowPairing: false,
+                unreachableIsFine: true,
+                roundTrips: 1,
+                requestTimeout: ReadTimeout,
+                async (session, token) =>
                 {
-                    return null;
-                }
+                    JsonElement payload = await session
+                        .RequestAsync("ssap://com.webos.applicationManager/getForegroundAppInfo", null, token)
+                        .ConfigureAwait(false);
 
-                // The television names its inputs as applications:
-                // "com.webos.app.hdmi4". A television showing its own menu, or
-                // anything streaming, is showing no input at all -- which is not
-                // an error and not a failure, simply not one of the answers a
-                // mode can ask for.
-                Match hdmi = Regex.Match(
-                    application,
-                    @"hdmi[^1-9]*([1-9])",
-                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                    TimeSpan.FromSeconds(1));
+                    string? application = Text(payload, "appId");
 
-                return hdmi.Success ? _settings.LogicalFor($"HDMI_{hdmi.Groups[1].Value}") : null;
-            },
-            cancellationToken).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(application))
+                    {
+                        return null;
+                    }
 
-        // Null for anything that is not an answer, silence included. A television
-        // that is off is not showing an input, and saying which one it would be
-        // showing if it were on would be inventing a reading.
-        return reached.Value;
+                    // The television names its inputs as applications:
+                    // "com.webos.app.hdmi4". A television showing its own menu, or
+                    // anything streaming, is showing no input at all -- which is not
+                    // an error and not a failure, simply not one of the answers a
+                    // mode can ask for.
+                    Match hdmi = Regex.Match(
+                        application,
+                        @"hdmi[^1-9]*([1-9])",
+                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                        TimeSpan.FromSeconds(1));
+
+                    return hdmi.Success ? _settings.LogicalFor($"HDMI_{hdmi.Groups[1].Value}") : null;
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            RecordInput(reached.Reach switch
+            {
+                LgTvReach.Answered => LgTvObservationStatus.Observed,
+                LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
+                _ => LgTvObservationStatus.Unpaired,
+            }, reached.Value, reached.Reach switch
+            {
+                LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
+                LgTvReach.NotAttempted => "This television has not been paired.",
+                _ => null,
+            });
+
+            // Null for anything that is not an answer, silence included. A television
+            // that is off is not showing an input, and saying which one it would be
+            // showing if it were on would be inventing a reading.
+            return reached.Value;
+        }
+        catch (Exception exception)
+        {
+            RecordInput(LgTvObservationStatus.Error, problem: exception.Message);
+            throw;
+        }
     }
 
     /// <summary>
@@ -531,24 +604,70 @@ public sealed class LgTvConnection
     /// </remarks>
     internal async Task<string?> ReadProfileAsync(CancellationToken cancellationToken)
     {
-        Reached<string> reached = await RunAsync<string>(
-            allowPairing: false,
-            unreachableIsFine: true,
-            roundTrips: 1,
-            requestTimeout: ReadTimeout,
-            async (session, token) =>
+        if (!_settings.Enabled)
+        {
+            RecordProfile(LgTvObservationStatus.Disabled, problem: "This television is disabled.");
+            return null;
+        }
+
+        try
+        {
+            Reached<string> reached = await RunAsync<string>(
+                allowPairing: false,
+                unreachableIsFine: true,
+                roundTrips: 1,
+                requestTimeout: ReadTimeout,
+                async (session, token) =>
+                {
+                    JsonElement settings = await session
+                        .GetSettingsAsync(LgTvProfile.PictureCategory, [LgTvProfile.PictureModeKey], token)
+                        .ConfigureAwait(false);
+
+                    return _settings.ProfileForPictureMode(Text(settings, LgTvProfile.PictureModeKey) ?? string.Empty);
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            RecordProfile(reached.Reach switch
             {
-                JsonElement settings = await session
-                    .GetSettingsAsync(LgTvProfile.PictureCategory, [LgTvProfile.PictureModeKey], token)
-                    .ConfigureAwait(false);
+                LgTvReach.Answered => LgTvObservationStatus.Observed,
+                LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
+                _ => LgTvObservationStatus.Unpaired,
+            }, reached.Value, reached.Reach switch
+            {
+                LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
+                LgTvReach.NotAttempted => "This television has not been paired.",
+                _ => null,
+            });
 
-                return _settings.ProfileForPictureMode(Text(settings, LgTvProfile.PictureModeKey) ?? string.Empty);
-            },
-            cancellationToken).ConfigureAwait(false);
+            // Null for anything that is not an answer. A television that is off is in
+            // no picture mode at all.
+            return reached.Value;
+        }
+        catch (Exception exception)
+        {
+            RecordProfile(LgTvObservationStatus.Error, problem: exception.Message);
+            throw;
+        }
+    }
 
-        // Null for anything that is not an answer. A television that is off is in
-        // no picture mode at all.
-        return reached.Value;
+    private void RecordPower(LgTvObservationStatus status, string? value = null, string? problem = null) =>
+        RecordObservation(state => state with { Power = Observation(status, value, problem) });
+
+    private void RecordInput(LgTvObservationStatus status, string? value = null, string? problem = null) =>
+        RecordObservation(state => state with { Input = Observation(status, value, problem) });
+
+    private void RecordProfile(LgTvObservationStatus status, string? value = null, string? problem = null) =>
+        RecordObservation(state => state with { Profile = Observation(status, value, problem) });
+
+    private LgTvObservation Observation(LgTvObservationStatus status, string? value, string? problem) =>
+        new(status, value, problem, _time.GetUtcNow());
+
+    private void RecordObservation(Func<LgTvObservedState, LgTvObservedState> update)
+    {
+        lock (_observedStateLock)
+        {
+            _observedState = update(_observedState);
+        }
     }
 
     /// <summary>

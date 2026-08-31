@@ -31,7 +31,7 @@ public sealed class AudioOutputDiscovererTests
         Assert.Equal(2, items.Count);
         Assert.Equal(HardwareItemStatus.Ok, items[0].Status);
         Assert.Equal("Available.", items[0].Summary);
-        Assert.Equal("Default playback device.", items[1].Summary);
+        Assert.Equal("Default Windows output.", items[1].Summary);
         Assert.Equal("No", items[0].Details.Single(detail => detail.Label == "Default").Value);
         Assert.Equal("Yes", items[1].Details.Single(detail => detail.Label == "Default").Value);
     }

@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace PCMode.Engine;
 
 /// <summary>
@@ -35,6 +33,17 @@ public sealed class AudioOutputDiscoverer(AudioProvider provider) : IHardwareDis
         {
             throw new InvalidOperationException(snapshot.Problem ?? "The audio outputs could not be read.");
         }
+
+        return DescribeOutputs(snapshot);
+    }
+
+    /// <summary>
+    /// Projects an already-read provider snapshot into endpoint discovery rows, allowing a feature
+    /// page that also needs mapping or target runtime state to enumerate Core Audio only once.
+    /// </summary>
+    public static IReadOnlyList<HardwareItem> DescribeOutputs(AudioSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
 
         // Only a mapping that unambiguously resolves counts as this endpoint's
         // alias -- the same rule AudioProvider.Read applies before it will call
@@ -75,85 +84,31 @@ public sealed class AudioOutputDiscoverer(AudioProvider provider) : IHardwareDis
                 ? found
                 : null;
 
+            List<HardwareDetail> details = [new("Default", endpoint.IsDefault ? "Yes" : "No")];
+
+            if (endpoint.IsVirtualEndpoint)
+            {
+                details.Add(new("PCMode virtual endpoint", "Yes"));
+            }
+
             items.Add(new HardwareItem(
                 name,
                 HardwareItemStatus.Ok,
-                endpoint.IsDefault ? "Default playback device." : "Available.",
-                [new("Default", endpoint.IsDefault ? "Yes" : "No")],
-                identifier,
-                alias,
+                endpoint.IsVirtualEndpoint
+                    ? "PCMode's own audio endpoint. Audio targets play into this one."
+                    : endpoint.IsDefault ? "Default Windows output." : "Available.",
+                details,
+
+                // The virtual endpoint is offered no identifier, so nothing
+                // proposes aliasing it. It is not a device a mode should be able
+                // to select: it is where audio targets send sound in, and a mode
+                // naming it directly would put Windows in front of an engine
+                // holding no target at all.
+                endpoint.IsVirtualEndpoint ? null : identifier,
+                endpoint.IsVirtualEndpoint ? null : alias,
                 CategoryName));
         }
 
-        List<HardwareItem> reported = [.. HardwareNaming.Disambiguate(items)];
-
-        if (Describe(snapshot.Party) is HardwareItem party)
-        {
-            reported.Add(party);
-        }
-
-        return reported;
-    }
-
-    /// <summary>
-    /// The Party group as a line in the hardware report.
-    /// </summary>
-    /// <remarks>
-    /// Reported beside the endpoints rather than somewhere of its own, because
-    /// what a person wants to know here is one thing: what is this machine
-    /// playing through. A group that has failed is the answer to that question
-    /// and the endpoint list on its own cannot give it -- both members are still
-    /// present and active, and the mirror between them stopped an hour ago.
-    ///
-    /// No identifier, so nothing offers to alias it. It is not a device: it is
-    /// two of them and a configuration.
-    /// </remarks>
-    private static HardwareItem? Describe(AudioPartyStatus? party)
-    {
-        if (party is null)
-        {
-            return null;
-        }
-
-        List<HardwareDetail> details =
-        [
-            new("Members", string.Join(" -> ", party.Members)),
-            new("Delay", $"{party.DelayMs} ms"),
-            new("Gain", party.Gain.ToString("0.00", CultureInfo.InvariantCulture)),
-        ];
-
-        if (party.Health is AudioMirrorHealth health)
-        {
-            details.Add(new("Reference format", health.ReferenceFormat));
-            details.Add(new("Mirrored format", health.MirrorFormat));
-            details.Add(new("Capture", health.EventDriven ? "Event-driven" : "Polled"));
-            details.Add(new("Clock offset", string.Create(
-                CultureInfo.InvariantCulture, $"{health.ClockOffsetMs:0.00} ms")));
-            details.Add(new("Drift corrections", health.DriftCorrections.ToString(CultureInfo.InvariantCulture)));
-            details.Add(new("Re-alignments", health.Resyncs.ToString(CultureInfo.InvariantCulture)));
-            details.Add(new("Buffer underruns", health.Underruns.ToString(CultureInfo.InvariantCulture)));
-        }
-
-        if (party.Problem is not null)
-        {
-            details.Add(new("Last failure", party.Problem));
-        }
-
-        return new HardwareItem(
-            $"{party.Name} (two-output group)",
-            party.State switch
-            {
-                PartyState.Failed => HardwareItemStatus.Error,
-                PartyState.Running => HardwareItemStatus.Ok,
-                _ => HardwareItemStatus.NotDetected,
-            },
-            party.State switch
-            {
-                PartyState.Running => $"Mirroring '{party.Members[0]}' to '{party.Members[1]}'.",
-                PartyState.Failed => party.Problem ?? "The mirror stopped on its own.",
-                _ => "Configured, and not running.",
-            },
-            details,
-            Category: CategoryName);
+        return HardwareNaming.Disambiguate(items);
     }
 }

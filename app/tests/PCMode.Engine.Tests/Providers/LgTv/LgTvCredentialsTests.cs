@@ -33,11 +33,11 @@ public sealed class LgTvCredentialsTests
     [Fact]
     public void Never_writes_the_key_where_anything_could_read_it()
     {
+        using var root = new TemporaryRoot();
         // The claim the whole class exists to make. config.json gets edited,
         // copied, put in backups and pasted into messages asking for help; a
         // credential for a device on somebody's network does not go in it, and
         // does not go anywhere else in the clear either.
-        using var root = new TemporaryRoot();
 
         Assert.True(new ProtectedLgTvCredentials(root.Path)
             .TryWrite(Host, new LgTvCredential("secret-key", "AABB"), out _));
@@ -58,10 +58,10 @@ public sealed class LgTvCredentialsTests
     [Fact]
     public void A_credential_does_not_open_for_a_different_television()
     {
+        using var root = new TemporaryRoot();
         // The entropy binds a file to the television it was issued for, so one
         // renamed or copied between roots fails to open rather than quietly
         // offering another television's key.
-        using var root = new TemporaryRoot();
 
         var store = new ProtectedLgTvCredentials(root.Path);
 
@@ -73,11 +73,11 @@ public sealed class LgTvCredentialsTests
     [Fact]
     public void Reads_nothing_rather_than_failing_when_the_file_is_not_one_of_ours()
     {
+        using var root = new TemporaryRoot();
         // A profile copied from another machine, or a truncated write. Both mean
         // "there is no key", and pairing again is the way out of either -- where
         // throwing would leave a television that can never be used again without
         // somebody finding and deleting a file.
-        using var root = new TemporaryRoot();
 
         var store = new ProtectedLgTvCredentials(root.Path);
 
@@ -93,9 +93,9 @@ public sealed class LgTvCredentialsTests
     [Fact]
     public void Keeps_the_previous_credential_when_a_new_one_cannot_be_written()
     {
+        using var root = new TemporaryRoot();
         // Written aside and moved into place, so an interrupted write leaves the
         // old credential intact rather than a file that decrypts to nothing.
-        using var root = new TemporaryRoot();
 
         var store = new ProtectedLgTvCredentials(root.Path);
 

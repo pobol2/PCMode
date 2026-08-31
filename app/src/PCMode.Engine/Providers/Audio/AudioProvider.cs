@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Text.Json;
+using PCMode.Audio.Core.Models;
 
 namespace PCMode.Engine;
 
 /// <summary>
-/// Chooses which device sound comes out of.
+/// Chooses which device sound comes out of, and which Audio Target runs.
 /// </summary>
 /// <remarks>
 /// LOGICAL NAMES, NOT WINDOWS NAMES
@@ -30,32 +32,59 @@ namespace PCMode.Engine;
 /// television was off would make the configuration valid or invalid depending on
 /// what was switched on at the time.
 ///
-/// PARTY IS A DEVICE NAME LIKE ANY OTHER
+/// TWO KINDS OF VALUE, ONE RESOURCE
 ///
-/// A Party group is another value this resource takes -- "Party" beside
-/// "Headphones" and "TV" -- and that is the whole of what makes the two mutually
-/// exclusive. A mode asks for one audio target, so applying a single output
-/// stops the mirror without anything having to coordinate it, and applying Party
-/// sets its reference output as the Windows default before the mirror starts.
-/// Nothing else in the engine needs to know Party exists.
+/// This resource takes a device alias or an Audio Target name, and a mode names
+/// exactly one of them -- which is the whole of what makes them mutually
+/// exclusive.
+///
+/// A device alias means "let Windows play into that device", and is a Windows
+/// setting rather than a runtime: it is what PCMode has always done, it needs
+/// nothing installed, and it goes on working on a machine with no PCMode audio
+/// subsystem at all.
+///
+/// An Audio Target means "run this route graph in the PCMode audio engine". The
+/// target is applied to <see cref="IAudioRuntime"/> and then the PCMode virtual
+/// endpoint is made the machine's playback device, so applications render into
+/// the engine and the engine fans them out to the target's routes. One route or
+/// four, it is the same graph -- there is no separate synchronised-pair runtime,
+/// and nothing is captured back off an endpoint any more.
+///
+/// A THIN ADAPTER, AND NOTHING BELOW IT
+///
+/// Everything about real-time audio -- PCM, DSP, routing, buffering, resampling,
+/// clock correction, synchronisation, the driver transport -- belongs to
+/// PCMode.Audio.Host and the engine inside it. This provider decides which
+/// target is wanted, resolves its aliases to endpoints, hands it over, and
+/// reports what came back.
 /// </remarks>
 public sealed class AudioProvider :
-    IConfigurableProvider, IDependentProvider, IConvergentProvider, IHealthReportingProvider
+    IConfigurableProvider,
+    IDependentProvider,
+    IHealthReportingProvider
 {
-    /// <summary>The configuration key.</summary>
+    /// <summary>The resource key a mode names.</summary>
     public const string ResourceKey = "audio";
 
-    /// <summary>Where this provider's settings live in the document.</summary>
+    /// <summary>Where the device aliases live in the document.</summary>
     public const string SettingsPath = "providers.audio.devices";
 
     private readonly IAudioEndpoints _endpoints;
-    private readonly PartyAudioHost _party;
+    private readonly IAudioRuntime _runtime;
 
     private IReadOnlyDictionary<string, string> _devices =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The one configured Party group, when there is one.</summary>
-    private PartySettings? _group;
+    /// <summary>The configured Audio Targets, keyed by the name a mode asks for.</summary>
+    private IReadOnlyDictionary<string, AudioTargetSettings> _targets =
+        new Dictionary<string, AudioTargetSettings>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The configured processing profiles, keyed by name.</summary>
+    private IReadOnlyDictionary<string, AudioProcessingProfileSettings> _profiles =
+        new Dictionary<string, AudioProcessingProfileSettings>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The exact Windows name of the virtual endpoint, when one is written.</summary>
+    private string? _virtualEndpointName;
 
     /// <summary>
     /// What each device needs before it exists, keyed by logical name.
@@ -73,18 +102,19 @@ public sealed class AudioProvider :
     {
     }
 
-    /// <param name="party">
-    /// Who owns the running mirror. Shared across every engine this process
-    /// builds, so that re-reading the configuration does not abandon a running
-    /// Party group -- see <see cref="PartyAudioHost"/>. A provider given its own
-    /// host is one nothing else can see, which is right for validation and wrong
-    /// for the shell.
+    /// <param name="runtime">
+    /// Who owns the audio Host. Shared across every engine this process builds,
+    /// so that re-reading the configuration does not abandon a running target --
+    /// see <see cref="AudioHostLink"/>. A provider given nothing gets
+    /// <see cref="IAudioRuntime.None"/>: its device aliases work exactly as they
+    /// always did, and its audio targets refuse to play rather than reaching for
+    /// a Host this engine was never given.
     /// </param>
-    public AudioProvider(IAudioEndpoints endpoints, PartyAudioHost? party = null)
+    public AudioProvider(IAudioEndpoints endpoints, IAudioRuntime? runtime = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         _endpoints = endpoints;
-        _party = party ?? new PartyAudioHost();
+        _runtime = runtime ?? IAudioRuntime.None;
     }
 
     public string Key => ResourceKey;
@@ -129,10 +159,9 @@ public sealed class AudioProvider :
     /// active playback device has that name, which is true and useless.
     /// </remarks>
     /// <remarks>
-    /// A Party group needs whatever both its members need. Nothing else would
-    /// do: the group cannot start unless both endpoints exist, so a group with a
-    /// television in it depends on the television's display exactly as the
-    /// television's own alias does.
+    /// An Audio Target needs whatever its routes need, including the optional
+    /// ones. Nothing else would do: an optional route is one whose failure the
+    /// target survives, not one whose television PCMode may leave switched off.
     /// </remarks>
     public IReadOnlyList<ResourceRequirement> RequirementsFor(string target)
     {
@@ -143,9 +172,9 @@ public sealed class AudioProvider :
 
         string wanted = target.Trim();
 
-        if (_group is PartySettings group && string.Equals(wanted, group.Name, StringComparison.OrdinalIgnoreCase))
+        if (_targets.TryGetValue(wanted, out AudioTargetSettings? configured))
         {
-            return [.. group.Members.SelectMany(RequirementsFor).Distinct()];
+            return [.. configured.Routes.SelectMany(route => RequirementsFor(route.Output)).Distinct()];
         }
 
         return _requires.TryGetValue(wanted, out IReadOnlyList<ResourceRequirement>? needed) ? needed : [];
@@ -166,7 +195,11 @@ public sealed class AudioProvider :
     /// A single attempt would fail a mode that was about to work.
     ///
     /// So the attempts are the point, and the interval between them is short
-    /// enough that a device appearing is noticed rather than waited out.
+    /// enough that a device appearing is noticed rather than waited out. It is
+    /// also what makes an Audio Target converge rather than fail: applying the
+    /// same target again is idempotent all the way down to the engine, so an
+    /// attempt that got the routes running and lost the race for the default
+    /// playback device finishes the job on the next one.
     ///
     /// It settles, briefly, because the default endpoint is contested. Windows
     /// moves the default itself when devices arrive, so a readback taken the
@@ -186,8 +219,25 @@ public sealed class AudioProvider :
     public IReadOnlyList<string> DeviceNames =>
         [.. _devices.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
-    /// <summary>The configured Party group, or null when there is not one.</summary>
-    public PartySettings? Party => _group;
+    /// <summary>The configured Audio Targets, in name order.</summary>
+    public IReadOnlyList<AudioTargetSettings> Targets =>
+        [.. _targets.Values.OrderBy(target => target.Name, StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>That Audio Target, or null for a name nothing defines.</summary>
+    public AudioTargetSettings? Target(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && _targets.TryGetValue(name.Trim(), out AudioTargetSettings? found)
+            ? found
+            : null;
+
+    /// <summary>The configured processing profiles, in name order.</summary>
+    public IReadOnlyList<AudioProcessingProfileSettings> Profiles =>
+        [.. _profiles.Values.OrderBy(profile => profile.Name, StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>That processing profile, or null for a name nothing defines.</summary>
+    public AudioProcessingProfileSettings? Profile(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && _profiles.TryGetValue(name.Trim(), out AudioProcessingProfileSettings? found)
+            ? found
+            : null;
 
     /// <summary>
     /// The Windows device name a logical name points at, or null for a name this
@@ -205,28 +255,21 @@ public sealed class AudioProvider :
 
     /// <summary>
     /// Every value a mode may give this resource, in name order: the device
-    /// aliases, and the Party group when one is configured.
+    /// aliases and the Audio Targets.
     /// </summary>
     /// <remarks>
     /// What a settings screen must offer, and deliberately not the same list as
-    /// <see cref="DeviceNames"/>. A Party group is a value of this resource like
-    /// any alias -- that is the whole of what makes it and a single output
-    /// mutually exclusive -- so a mode editor offering only the aliases would
-    /// leave a configured group impossible to ask for without editing JSON.
+    /// <see cref="DeviceNames"/>. A target is a value of this resource like any
+    /// alias -- that is the whole of what makes it and a single output mutually
+    /// exclusive -- so a mode editor offering only the aliases would leave a
+    /// configured target impossible to ask for without editing JSON.
     /// </remarks>
     public IReadOnlyList<string> SelectableNames
     {
         get
         {
-            List<string> names = [.. _devices.Keys];
-
-            if (_group is not null)
-            {
-                names.Add(_group.Name);
-            }
-
+            List<string> names = [.. _devices.Keys, .. _targets.Keys];
             names.Sort(StringComparer.OrdinalIgnoreCase);
-
             return names;
         }
     }
@@ -241,7 +284,9 @@ public sealed class AudioProvider :
         {
             _devices = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             _requires = new Dictionary<string, IReadOnlyList<ResourceRequirement>>(StringComparer.OrdinalIgnoreCase);
-            _group = null;
+            _targets = new Dictionary<string, AudioTargetSettings>(StringComparer.OrdinalIgnoreCase);
+            _profiles = new Dictionary<string, AudioProcessingProfileSettings>(StringComparer.OrdinalIgnoreCase);
+            _virtualEndpointName = null;
             problem = null;
             return true;
         }
@@ -255,22 +300,55 @@ public sealed class AudioProvider :
         var parsed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var required = new Dictionary<string, IReadOnlyList<ResourceRequirement>>(StringComparer.OrdinalIgnoreCase);
 
-        // Read after the devices, whatever order they were written in: a Party
-        // group is defined in terms of them, so it cannot be checked until they
-        // are all known.
-        JsonElement? group = null;
+        // Read after the devices, whatever order they were written in: a target
+        // is defined in terms of them, so it cannot be checked until they are
+        // all known. Profiles have no such dependency, but are still read
+        // before targets are validated, since a route may name one.
+        JsonElement? targets = null;
+        string? virtualEndpoint = null;
+
+        IReadOnlyDictionary<string, AudioProcessingProfileSettings>? profiles = null;
 
         foreach (JsonProperty property in element.EnumerateObject())
         {
-            if (property.NameEquals("party"))
+            if (property.NameEquals("targets"))
             {
-                group = property.Value;
+                targets = property.Value;
+                continue;
+            }
+
+            if (property.NameEquals("virtualEndpoint"))
+            {
+                if (property.Value.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                {
+                    problem =
+                        $"'{AudioVirtualEndpoint.SettingsPath}' must be the exact device name Windows shows " +
+                        "in Sound settings for the PCMode virtual audio endpoint, in quotes.";
+
+                    return false;
+                }
+
+                virtualEndpoint = property.Value.GetString()!.Trim();
+                continue;
+            }
+
+            if (property.NameEquals("profiles"))
+            {
+                if (!AudioProcessingProfileSettings.TryParse(property.Value, out profiles, out problem))
+                {
+                    return false;
+                }
+
                 continue;
             }
 
             if (!property.NameEquals("devices"))
             {
-                problem = $"'providers.audio' does not understand '{property.Name}'. It takes 'devices' and 'party'.";
+                problem =
+                    $"'providers.audio' does not understand '{property.Name}'. " +
+                    "It takes 'devices', 'targets', 'profiles' and 'virtualEndpoint'.";
+
                 return false;
             }
 
@@ -316,16 +394,23 @@ public sealed class AudioProvider :
             return false;
         }
 
-        PartySettings? party = null;
+        IReadOnlyDictionary<string, AudioProcessingProfileSettings> resolvedProfiles =
+            profiles ?? new Dictionary<string, AudioProcessingProfileSettings>(StringComparer.OrdinalIgnoreCase);
 
-        if (group is JsonElement written && !PartySettings.TryParse(written, parsed, out party, out problem))
+        IReadOnlyDictionary<string, AudioTargetSettings>? configured =
+            new Dictionary<string, AudioTargetSettings>(StringComparer.OrdinalIgnoreCase);
+
+        if (targets is JsonElement written &&
+            !AudioTargetSettings.TryParse(written, parsed, resolvedProfiles, out configured, out problem))
         {
             return false;
         }
 
         _devices = parsed;
         _requires = required;
-        _group = party;
+        _targets = configured!;
+        _profiles = resolvedProfiles;
+        _virtualEndpointName = virtualEndpoint;
         problem = null;
         return true;
     }
@@ -347,7 +432,7 @@ public sealed class AudioProvider :
             return false;
         }
 
-        if (!_devices.ContainsKey(value.Trim()) && !IsParty(value))
+        if (!_devices.ContainsKey(value.Trim()) && !_targets.ContainsKey(value.Trim()))
         {
             problem =
                 $"'{value.Trim()}' is not an audio device. " +
@@ -361,14 +446,14 @@ public sealed class AudioProvider :
     }
 
     /// <summary>
-    /// The logical name of whatever is currently the default, when it has one.
+    /// The logical name of whatever is currently playing, when it has one.
     /// </summary>
     /// <remarks>
-    /// Null covers three genuinely different situations -- Core Audio could not
+    /// Null covers several genuinely different situations -- Core Audio could not
     /// be reached, there is no default at all, and the default is a device
     /// nothing in the configuration names -- and they are folded together on
     /// purpose. To the engine null means one thing, "apply it anyway", and that
-    /// is the correct answer to all three. Telling them apart is what
+    /// is the correct answer to all of them. Telling them apart is what
     /// <see cref="Discover"/> is for.
     /// </remarks>
     public string? Read()
@@ -394,20 +479,31 @@ public sealed class AudioProvider :
             return null;
         }
 
-        // A group is the current audio target only while BOTH halves of it are
-        // true: a mirror of this pair is running, and the reference endpoint is
-        // still what Windows plays through. Either one alone is not the feature.
+        // An Audio Target is what the machine is doing only while BOTH halves of
+        // it are true: the Host is running that target, and the PCMode virtual
+        // endpoint is still what Windows plays into. Either one alone is not the
+        // feature.
         //
         // Which is what stops three different things from being mistaken for a
-        // running group -- a runtime that died with its endpoint, a fresh
-        // process that has never started one, and something else having moved
-        // the default out from under a mirror that is still faithfully copying
-        // an endpoint nothing plays to any more.
-        if (_group is PartySettings group &&
-            Running(group) &&
-            string.Equals(current.Name, _devices[group.Reference], StringComparison.OrdinalIgnoreCase))
+        // running target -- a Host that failed with its endpoint, a fresh Host
+        // that has never been given one, and something else having moved the
+        // default out from under an engine still faithfully rendering to routes
+        // nothing is feeding.
+        //
+        // Asked of the Host only when the virtual endpoint is the default. This
+        // is on the convergence poll, and a machine playing through its speakers
+        // has no reason to open a pipe four times a second to be told so.
+        if (AudioVirtualEndpoint.IsVirtualEndpointName(current.Name, _virtualEndpointName) && _targets.Count > 0)
         {
-            return group.Name;
+            AudioRuntimeStatus runtime = _runtime.Refresh();
+
+            foreach (AudioTargetSettings target in _targets.Values)
+            {
+                if (runtime.IsRunning(target.Name))
+                {
+                    return target.Name;
+                }
+            }
         }
 
         // The first match is the only match: two logical names for one endpoint
@@ -426,14 +522,15 @@ public sealed class AudioProvider :
 
     public void Apply(string value, CancellationToken cancellationToken)
     {
-        if (IsParty(value))
+        string wanted = value?.Trim() ?? string.Empty;
+
+        if (_targets.TryGetValue(wanted, out AudioTargetSettings? target))
         {
-            StartParty(_group!, cancellationToken);
+            StartTarget(target, cancellationToken);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(value) ||
-            !_devices.TryGetValue(value.Trim(), out string? wanted))
+        if (!_devices.TryGetValue(wanted, out string? device))
         {
             // Unreachable through the engine, which validates first. Kept so a
             // direct caller cannot send sound to a device nobody named.
@@ -442,167 +539,212 @@ public sealed class AudioProvider :
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Before the default moves, not after. A mirror left running would go on
-        // capturing an endpoint that is no longer what the machine plays through,
-        // so the sound would arrive at the new device and at the old group's
-        // mirror, seconds apart, with nothing on screen admitting to it.
-        _party.Stop();
+        // Before the default moves, not after. A target left running would go on
+        // rendering to its routes, so the sound would arrive at the new device
+        // and at the old target's outputs, with nothing on screen admitting to it.
+        //
+        // Skipped entirely when nothing here has ever defined an Audio Target:
+        // there is then nothing that could be running, and a machine using only
+        // direct outputs must not depend on the Native Audio runtime at all --
+        // not even to be told it has nothing to stop.
+        if (_targets.Count > 0)
+        {
+            _runtime.Stop();
+        }
 
-        _endpoints.MakeDefault(Resolve(wanted));
+        _endpoints.MakeDefault(Resolve(device, _endpoints.ActivePlayback()));
     }
 
     /// <summary>
-    /// Establishes the reference output, then starts the mirror.
+    /// Starts the routes, then points Windows at the engine.
     /// </summary>
     /// <remarks>
     /// THE ORDER IS THE FEATURE
     ///
-    /// Loopback capture reads what an endpoint is playing, so the reference
-    /// endpoint has to be the one Windows is actually playing through before
-    /// there is anything to mirror. Starting the mirror first would capture
-    /// silence from a device nothing is using and render it, perfectly, to the
-    /// speakers.
+    /// The routes are started first and the PCMode virtual endpoint is made the
+    /// default last. The other way round would hand Windows an endpoint whose
+    /// engine is not running yet, and the machine would go silent for as long as
+    /// that took.
     ///
     /// The default is read back rather than assumed. Changing it is the one
     /// thing PCMode does through an interface Windows does not document, and a
-    /// Party group built on a default that did not take would be two outputs
-    /// where one of them plays nothing.
+    /// target built on a default that did not take is an engine rendering
+    /// silence to two speakers.
     ///
-    /// Volumes are set before the mirror starts, so that a group configured
-    /// quietly does not announce itself at whatever the endpoints were left at.
+    /// Endpoint volumes are set before the routes start, so that a target
+    /// configured quietly does not announce itself at whatever the endpoints
+    /// were left at.
     ///
-    /// EVERYTHING IT CHANGES, IT CAN PUT BACK
+    /// EVERY ALIAS IS RESOLVED FROM ONE ENUMERATION
     ///
-    /// A failure at any point after the default has moved rolls back the default
-    /// and whichever volumes were actually changed, best-effort, before the
-    /// exception reaches the caller. A Party group that cannot start is meant to
-    /// be exactly as harmless as one that failed validation -- not a machine left
-    /// on the reference endpoint at whatever volume the group wanted, with no
-    /// mirror to show for it.
+    /// Devices appear and disappear, and two routes resolved from two separate
+    /// enumerations could disagree about what is present. One snapshot is taken
+    /// and every route, and the virtual endpoint, is resolved from it.
+    ///
+    /// WHAT IT PUTS BACK
+    ///
+    /// A failure before the routes start rolls back whichever endpoint volumes
+    /// were actually changed. A failure after them does not stop the engine: the
+    /// Host has been told what PCMode wants and owns converging on it, the
+    /// default playback device is put back so nothing plays into an endpoint
+    /// PCMode is not using, and the next attempt -- this resource retries six
+    /// times -- finishes the job. Applying the same target again is idempotent
+    /// all the way down, so that costs nothing and restarts nothing.
     /// </remarks>
-    private void StartParty(PartySettings group, CancellationToken cancellationToken)
+    private void StartTarget(AudioTargetSettings target, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        string reference = Resolve(_devices[group.Reference]);
-        string mirror = Resolve(_devices[group.Mirror]);
+        IReadOnlyList<AudioEndpoint> active = _endpoints.ActivePlayback();
+        string virtualEndpointId = AudioVirtualEndpoint.Resolve(active, _virtualEndpointName);
 
-        if (string.Equals(reference, mirror, StringComparison.Ordinal))
-        {
-            // Two aliases that resolved to one endpoint. Capturing an endpoint's
-            // own output and rendering it back into the same endpoint is a
-            // feedback loop, and it is loud.
-            throw new InvalidOperationException(
-                $"'{group.Reference}' and '{group.Mirror}' are the same playback device right now, " +
-                "so there is nothing to mirror to.");
-        }
-
-        var request = new AudioMirrorRequest(reference, group.Reference, mirror, group.Mirror, group.Delay, group.Gain);
+        AudioTarget composed = target.Compose(
+            output => Resolve(_devices[output], active),
+            profileName => _profiles[profileName].ToProfile());
 
         // Read before anything changes, so a failure partway through has
         // something to restore. Best-effort: a read that cannot be taken simply
         // leaves nothing to roll that particular thing back to.
         AudioEndpoint? previousDefault = SafeReadDefault();
-        double? previousReferenceVolume = SafeReadVolume(reference);
-        double? previousMirrorVolume = SafeReadVolume(mirror);
-
-        bool defaultChanged = false;
-        bool referenceVolumeChanged = false;
-        bool mirrorVolumeChanged = false;
+        var restore = new List<(string EndpointId, double Level)>();
 
         try
         {
-            // Set every time, including when the mirror for this pair is already
-            // running. Getting here at all means the readback disagreed, and one
-            // of the two things it checks is that the reference is still the
-            // default -- so this is either the first start or something that has
-            // to be put back.
-            _endpoints.MakeDefault(reference);
-            defaultChanged = true;
+            foreach (AudioRouteSettings route in target.Routes)
+            {
+                if (route.Volume is not double level)
+                {
+                    // Omission means "leave it alone". A target that silently
+                    // normalised every endpoint it touched would undo whatever
+                    // the user last did with their own volume keys.
+                    continue;
+                }
+
+                string endpointId = Resolve(_devices[route.Output], active);
+
+                if (SafeReadVolume(endpointId) is double previous)
+                {
+                    restore.Add((endpointId, previous));
+                }
+
+                SetVolume(route.Output, endpointId, level);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _runtime.Apply(composed, cancellationToken);
+        }
+        catch
+        {
+            RollBackVolumes(restore);
+            throw;
+        }
+
+        try
+        {
+            _endpoints.MakeDefault(virtualEndpointId);
 
             cancellationToken.ThrowIfCancellationRequested();
 
             AudioEndpoint? now = _endpoints.DefaultPlayback();
 
-            if (now is null || !string.Equals(now.Id, reference, StringComparison.Ordinal))
+            if (now is null || !string.Equals(now.Id, virtualEndpointId, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Windows did not accept '{group.Reference}' as the playback device, so there is nothing " +
-                    $"for '{group.Mirror}' to mirror. It reports " +
+                    $"Windows did not accept the PCMode virtual audio endpoint as the playback device, so " +
+                    $"'{target.Name}' has nothing to play. It reports " +
                     (now is null ? "no default playback device." : $"'{now.Name}'."));
             }
-
-            if (group.ReferenceVolume is not null)
-            {
-                SetVolume(group.Reference, group.ReferenceVolume);
-                referenceVolumeChanged = true;
-            }
-
-            if (group.MirrorVolume is not null)
-            {
-                SetVolume(group.Mirror, group.MirrorVolume);
-                mirrorVolumeChanged = true;
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _party.Start(request);
         }
         catch
         {
-            RollBackPartyStart(
-                reference, mirror,
-                defaultChanged, previousDefault,
-                referenceVolumeChanged, previousReferenceVolume,
-                mirrorVolumeChanged, previousMirrorVolume);
+            // The routes are running and the engine keeps them; only the
+            // playback device is put back, so that Windows is not left pointing
+            // at an endpoint this attempt could not finish setting up.
+            if (previousDefault is not null)
+            {
+                TryRestore(() => _endpoints.MakeDefault(previousDefault.Id));
+            }
 
+            RollBackVolumes(restore);
             throw;
         }
     }
 
     /// <summary>
-    /// Puts back whatever a failed Party start had already changed, best-effort.
+    /// Nudges one running route's delay, gain, endpoint volume and processing
+    /// profile, without reapplying the whole target.
     /// </summary>
     /// <remarks>
-    /// Each thing is restored independently, and a failure restoring one does
-    /// not stop the others: the exception this is called from is what the
-    /// caller needs to see, and there is nothing more useful to do about an
-    /// endpoint that will not take its own former value back.
+    /// A thin adapter over <see cref="IAudioRuntime.Recalibrate"/>, exactly
+    /// like <see cref="StartTarget"/> is over <see cref="IAudioRuntime.Apply"/>:
+    /// this resolves the route's alias to the live endpoint it names right
+    /// now, and hands the rest to the Host. Whether the target is actually
+    /// running to be calibrated is the Host's own answer, not a guess made
+    /// here from a stale snapshot.
     /// </remarks>
-    private void RollBackPartyStart(
-        string reference,
-        string mirror,
-        bool defaultChanged,
-        AudioEndpoint? previousDefault,
-        bool referenceVolumeChanged,
-        double? previousReferenceVolume,
-        bool mirrorVolumeChanged,
-        double? previousMirrorVolume)
+    /// <exception cref="ArgumentException">
+    /// <paramref name="targetName"/> is not a configured Audio Target, or
+    /// <paramref name="routeOutput"/> is not one of its outputs.
+    /// </exception>
+    public void Recalibrate(
+        string targetName,
+        string routeOutput,
+        TimeSpan delay,
+        double gain,
+        double? volume,
+        string? profileName,
+        CancellationToken cancellationToken)
     {
-        if (referenceVolumeChanged && previousReferenceVolume is double referenceLevel)
+        if (Target(targetName) is not AudioTargetSettings target)
         {
-            TryRestore(() => _endpoints.SetVolume(reference, referenceLevel));
+            throw new ArgumentException($"'{targetName}' is not a configured audio target.", nameof(targetName));
         }
 
-        if (mirrorVolumeChanged && previousMirrorVolume is double mirrorLevel)
+        if (!target.Uses(routeOutput))
         {
-            TryRestore(() => _endpoints.SetVolume(mirror, mirrorLevel));
+            throw new ArgumentException($"'{routeOutput}' is not one of '{targetName}''s outputs.", nameof(routeOutput));
         }
 
-        if (defaultChanged && previousDefault is not null)
-        {
-            TryRestore(() => _endpoints.MakeDefault(previousDefault.Id));
-        }
+        ParametricEqProfile? parametricEq = profileName is null ? null : _profiles[profileName].ToProfile();
 
-        static void TryRestore(Action restore)
+        string endpointId = Resolve(_devices[routeOutput], _endpoints.ActivePlayback());
+
+        _runtime.Recalibrate(
+            new AudioEndpointId(endpointId),
+            volume is double level ? (float)level : 1.0f,
+            muted: gain <= 0,
+            delay,
+            new AudioProcessingProfile(AudioTargetSettings.GainDecibels(gain), parametricEq),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Puts back whichever endpoint volumes a failed start had changed,
+    /// best-effort.
+    /// </summary>
+    /// <remarks>
+    /// Each is restored independently, and a failure restoring one does not stop
+    /// the others: the exception this is called from is what the caller needs to
+    /// see, and there is nothing more useful to do about an endpoint that will
+    /// not take its own former value back.
+    /// </remarks>
+    private void RollBackVolumes(IReadOnlyList<(string EndpointId, double Level)> restore)
+    {
+        foreach ((string endpointId, double level) in restore)
         {
-            try
-            {
-                restore();
-            }
-            catch (Exception)
-            {
-            }
+            TryRestore(() => _endpoints.SetVolume(endpointId, level));
+        }
+    }
+
+    private static void TryRestore(Action restore)
+    {
+        try
+        {
+            restore();
+        }
+        catch (Exception)
+        {
         }
     }
 
@@ -630,20 +772,12 @@ public sealed class AudioProvider :
         }
     }
 
-    /// <summary>Moves one endpoint's volume slider, when the group asked for one.</summary>
-    private void SetVolume(string logical, double? level)
+    /// <summary>Moves one endpoint's volume slider, when the route asked for one.</summary>
+    private void SetVolume(string logical, string endpointId, double level)
     {
-        if (level is not double wanted)
-        {
-            // Omission means "leave it alone". A group that silently normalised
-            // every endpoint it touched would undo whatever the user last did
-            // with their own volume keys.
-            return;
-        }
-
         try
         {
-            _endpoints.SetVolume(Resolve(_devices[logical]), wanted);
+            _endpoints.SetVolume(endpointId, level);
         }
         catch (Exception exception)
         {
@@ -652,70 +786,64 @@ public sealed class AudioProvider :
         }
     }
 
-    /// <summary>Whether the mirror running right now is this group's.</summary>
-    private bool Running(PartySettings group) =>
-        _party.Current is AudioMirrorRequest current &&
-        string.Equals(current.ReferenceName, group.Reference, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(current.MirrorName, group.Mirror, StringComparison.OrdinalIgnoreCase);
-
-    private bool IsParty(string? value) =>
-        _group is not null &&
-        !string.IsNullOrWhiteSpace(value) &&
-        string.Equals(value.Trim(), _group.Name, StringComparison.OrdinalIgnoreCase);
-
     /// <summary>
-    /// Changes a running Party group's delay and gain without restarting it.
+    /// The audio engine's own report, for a health page.
     /// </summary>
     /// <remarks>
-    /// For calibration: two speakers are aligned by ear, in small steps, while
-    /// something is playing. The configured values stay as they are -- this
-    /// moves what is running, and nothing here writes to the document.
+    /// Null for a target that is not a configured Audio Target -- an ordinary
+    /// device has nothing this provider's <see cref="Read"/> answer does not
+    /// already say.
     /// </remarks>
-    /// <returns>Whether there was a running group to adjust.</returns>
-    public bool AdjustParty(TimeSpan delay, double gain) =>
-        _party.Adjust(
-            TimeSpan.FromMilliseconds(Math.Clamp(delay.TotalMilliseconds, 0, PartySettings.MaxDelayMs)),
-            Math.Clamp(gain, 0, PartySettings.MaxGain));
-
-    /// <summary>Stops the Party mirror if one is running.</summary>
-    public void StopParty() => _party.Stop();
-
-    /// <summary>
-    /// The Party group's own report, for a health page. Null for a target that
-    /// is not the configured Party group -- an ordinary device has nothing this
-    /// provider's <see cref="Read"/> answer does not already say.
-    /// </summary>
     public string? HealthDetail(string target)
     {
-        if (!IsParty(target))
+        if (Target(target) is not AudioTargetSettings configured)
         {
             return null;
         }
 
-        AudioPartyStatus? status = PartyStatus();
+        AudioRuntimeStatus runtime = _runtime.Status;
 
-        if (status is null)
+        if (!runtime.Reachable)
         {
-            return null;
+            return $"Audio target '{configured.Name}': the PCMode audio Host is not running. {runtime.Problem}";
         }
 
-        if (status.Health is not AudioMirrorHealth health)
+        if (runtime.Health is not AudioEngineHealth health)
         {
-            return status.Problem is null
-                ? $"Party '{status.Name}' is not running."
-                : $"Party '{status.Name}' is not running. {status.Problem}";
+            return $"Audio target '{configured.Name}': the PCMode audio Host is running and reported no Health.";
         }
 
-        return
-            $"Party '{status.Name}': reference '{status.Members.ElementAtOrDefault(0)}', " +
-            $"mirror '{status.Members.ElementAtOrDefault(1)}'. " +
-            $"Capturing={health.Capturing}, Rendering={health.Rendering}, " +
-            $"Delay={health.DelayMs}ms, Gain={health.Gain:0.00}, " +
-            $"ClockOffset={health.ClockOffsetMs:0.0}ms, DriftCorrections={health.DriftCorrections}, " +
-            $"Resyncs={health.Resyncs}, Underruns={health.Underruns}, " +
-            $"Buffer(ref={health.ReferenceBuffer.ActualMs:0.0}ms, mirror={health.MirrorBuffer.ActualMs:0.0}ms, " +
-            $"cushion={health.CushionMs:0.0}ms), EffectiveLatency={health.EffectiveLatencyMs:0.0}ms" +
-            (health.LastFailure is null ? "." : $". Last failure: {health.LastFailure}");
+        var written = new List<string>
+        {
+            $"Audio target '{configured.Name}': {health.State}, engine {health.EngineState}",
+            $"Host pid {runtime.Host?.ProcessId.ToString(CultureInfo.InvariantCulture) ?? "?"}",
+            $"Active '{health.ActiveTargetName ?? "none"}'",
+        };
+
+        if (health.Input is AudioInputHealth input)
+        {
+            written.Add($"Input {input.Kind}/{input.State}" + (input.Format is AudioFormat format
+                ? $" {format.SampleRate} Hz x{format.ChannelCount}"
+                : string.Empty));
+        }
+
+        foreach (AudioRouteHealth route in health.Routes)
+        {
+            written.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Route {route.EndpointId} {route.State}/{route.EndpointState} " +
+                $"({route.Requirement}), delay {route.ConfiguredDelay.TotalMilliseconds:0} ms, " +
+                $"offset {route.ClockOffsetMilliseconds ?? 0:0.0} ms, drift {route.DriftCorrectionPpm:0.0} ppm, " +
+                $"underruns {route.UnderrunCount}, resyncs {route.ResyncCount}") +
+                (route.LastFailure is null ? string.Empty : $", last failure: {route.LastFailure.Message}"));
+        }
+
+        if (health.LastFailure is AudioFailure failure)
+        {
+            written.Add($"Last failure: {failure.Type} {failure.Message}");
+        }
+
+        return string.Join(". ", written) + ".";
     }
 
     /// <summary>
@@ -731,6 +859,8 @@ public sealed class AudioProvider :
     /// </remarks>
     public AudioSnapshot Discover()
     {
+        AudioRuntimeStatus runtime = _runtime.Refresh();
+
         IReadOnlyList<AudioEndpoint> live;
         AudioEndpoint? current;
 
@@ -744,13 +874,18 @@ public sealed class AudioProvider :
             // Unavailable, and said so. Reporting the configured devices as
             // missing here would be a claim about the machine that nothing
             // actually checked.
+            var unknown = _devices.ToDictionary(
+                device => device.Key,
+                device => new AudioDeviceMapping(device.Key, device.Value, AudioMappingState.Unknown, Matches: 0),
+                StringComparer.OrdinalIgnoreCase);
+
             return new AudioSnapshot(
                 Available: false,
                 exception.Message,
                 [],
-                [.. _devices.Select(device =>
-                    new AudioDeviceMapping(device.Key, device.Value, AudioMappingState.Unknown, Matches: 0))],
-                PartyStatus());
+                [.. unknown.Values],
+                [.. Targets.Select(target => Describe(target, unknown, runtime))],
+                runtime);
         }
 
         var endpoints = new List<AudioEndpointInfo>(live.Count);
@@ -759,17 +894,18 @@ public sealed class AudioProvider :
         {
             endpoints.Add(new AudioEndpointInfo(
                 endpoint.Name,
-                current is not null && string.Equals(endpoint.Id, current.Id, StringComparison.Ordinal)));
+                current is not null && string.Equals(endpoint.Id, current.Id, StringComparison.Ordinal),
+                AudioVirtualEndpoint.IsVirtualEndpointName(endpoint.Name, _virtualEndpointName)));
         }
 
-        var mappings = new List<AudioDeviceMapping>(_devices.Count);
+        var mappings = new Dictionary<string, AudioDeviceMapping>(StringComparer.OrdinalIgnoreCase);
 
         foreach ((string logical, string endpoint) in _devices)
         {
             int matches = live.Count(candidate =>
                 string.Equals(candidate.Name, endpoint, StringComparison.OrdinalIgnoreCase));
 
-            mappings.Add(new AudioDeviceMapping(
+            mappings[logical] = new AudioDeviceMapping(
                 logical,
                 endpoint,
                 matches switch
@@ -778,56 +914,96 @@ public sealed class AudioProvider :
                     0 => AudioMappingState.Missing,
                     _ => AudioMappingState.Ambiguous,
                 },
-                matches));
+                matches);
         }
 
-        return new AudioSnapshot(Available: true, Problem: null, endpoints, mappings, PartyStatus());
+        return new AudioSnapshot(
+            Available: true,
+            Problem: null,
+            endpoints,
+            [.. mappings.Values],
+            [.. Targets.Select(target => Describe(target, mappings, runtime))],
+            runtime);
     }
 
     /// <summary>
-    /// What the Party group is doing, in the terms a fault report needs.
+    /// One configured target as it stands, in the terms a fault report needs.
     /// </summary>
     /// <remarks>
-    /// Failed is reported as failed. A mirror whose endpoint was unplugged has
-    /// stopped, and reporting that as "not running" would make an unnoticed
-    /// fault look like a mode nobody selected.
+    /// Failed is reported as failed, and degraded as degraded. A target whose
+    /// optional route was unplugged is still playing through the other one, and
+    /// calling that either "running" or "stopped" would hide the half of it that
+    /// somebody needs to fix.
     /// </remarks>
-    public AudioPartyStatus? PartyStatus()
+    private AudioTargetStatus Describe(
+        AudioTargetSettings target,
+        IReadOnlyDictionary<string, AudioDeviceMapping> mappings,
+        AudioRuntimeStatus runtime)
     {
-        if (_group is not PartySettings group)
+        bool active = runtime.IsRunning(target.Name);
+
+        IReadOnlyList<AudioRouteHealth> routeHealth =
+            active && runtime.Health is AudioEngineHealth reported ? reported.Routes : [];
+
+        var routes = new List<AudioTargetRouteStatus>(target.Routes.Count);
+
+        for (int index = 0; index < target.Routes.Count; index++)
         {
-            return null;
+            AudioRouteSettings route = target.Routes[index];
+
+            AudioDeviceMapping? mapping = mappings.GetValueOrDefault(route.Output);
+
+            // Positional, because a target's routes are handed to the engine in
+            // configuration order and come back in it. Matching on endpoint ID
+            // would be stronger and is not available here: this side deliberately
+            // never stores one.
+            AudioRouteHealth? health = index < routeHealth.Count ? routeHealth[index] : null;
+
+            routes.Add(new AudioTargetRouteStatus(
+                route.Output,
+                mapping?.EndpointName ?? string.Empty,
+                mapping?.State ?? AudioMappingState.Unknown,
+                route.DelayMs,
+                route.Gain,
+                route.Volume,
+                route.Required,
+                route.Profile,
+                health?.State,
+                health?.LastFailure?.Message));
         }
 
-        AudioMirrorHealth? health = _party.Health;
+        AudioTargetState state = !runtime.Reachable
+            ? AudioTargetState.Unavailable
+            : !active
+                ? AudioTargetState.Stopped
+                : runtime.Health?.State switch
+                {
+                    AudioHealthState.Healthy => AudioTargetState.Running,
+                    AudioHealthState.Degraded => AudioTargetState.Degraded,
+                    AudioHealthState.Failed => AudioTargetState.Failed,
+                    _ => AudioTargetState.Stopped,
+                };
 
-        PartyState state = health switch
+        string? problem = state switch
         {
-            null => PartyState.Stopped,
-            { Healthy: true } => PartyState.Running,
-            _ => PartyState.Failed,
+            AudioTargetState.Unavailable => runtime.Problem,
+            AudioTargetState.Failed or AudioTargetState.Degraded =>
+                runtime.Health?.LastFailure?.Message ??
+                routes.FirstOrDefault(route => route.Problem is not null)?.Problem,
+            _ => null,
         };
 
-        return new AudioPartyStatus(
-            group.Name,
-            group.Members,
-            state,
-            group.DelayMs,
-            group.Gain,
-            health,
-            state == PartyState.Running ? null : _party.LastFailure);
+        return new AudioTargetStatus(target.Name, routes, state, problem, active ? HealthDetail(target.Name) : null);
     }
 
     /// <summary>
     /// Turns a configured name into a live endpoint ID, or refuses to guess.
     /// </summary>
-    private string Resolve(string endpointName)
+    private static string Resolve(string endpointName, IReadOnlyList<AudioEndpoint> active)
     {
-        IReadOnlyList<AudioEndpoint> live = _endpoints.ActivePlayback();
-
         List<AudioEndpoint> matches =
         [
-            .. live.Where(endpoint =>
+            .. active.Where(endpoint =>
                 string.Equals(endpoint.Name, endpointName, StringComparison.OrdinalIgnoreCase)),
         ];
 
@@ -838,9 +1014,9 @@ public sealed class AudioProvider :
             // one character out, and the list tells the two apart at a glance.
             throw new InvalidOperationException(
                 $"No active playback device is named '{endpointName}'. " +
-                (live.Count == 0
+                (active.Count == 0
                     ? "Windows reports no active playback devices at all."
-                    : $"Active right now: {string.Join(", ", live.Select(endpoint => $"'{endpoint.Name}'"))}."));
+                    : $"Active right now: {string.Join(", ", active.Select(endpoint => $"'{endpoint.Name}'"))}."));
         }
 
         if (matches.Count > 1)

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
+using PCMode.Audio.Core.Interop;
 
 namespace PCMode.Engine;
 
@@ -39,7 +40,7 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
         try
         {
             Check(
-                enumerator.EnumAudioEndpoints(DataFlowRender, DeviceStateActive, out IMMDeviceCollection? collection),
+                enumerator.EnumAudioEndpoints(EDataFlow.Render, DeviceState.Active, out IMMDeviceCollection? collection),
                 "list the playback devices");
 
             if (collection is null)
@@ -49,11 +50,11 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
 
             try
             {
-                Check(collection.GetCount(out int count), "count the playback devices");
+                Check(collection.GetCount(out uint count), "count the playback devices");
 
-                var endpoints = new List<AudioEndpoint>(count);
+                var endpoints = new List<AudioEndpoint>((int)count);
 
-                for (int index = 0; index < count; index++)
+                for (uint index = 0; index < count; index++)
                 {
                     Check(collection.Item(index, out IMMDevice? device), "read a playback device");
 
@@ -99,7 +100,7 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
             // Not checked: a machine with no active playback device has no default
             // and says so with an error code. That is a state, not a fault, and the
             // interface answers null for it.
-            int hr = enumerator.GetDefaultAudioEndpoint(DataFlowRender, RoleConsole, out IMMDevice? device);
+            int hr = enumerator.GetDefaultAudioEndpoint(EDataFlow.Render, ERole.Console, out IMMDevice? device);
 
             if (hr != 0 || device is null)
             {
@@ -141,9 +142,9 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
 
         try
         {
-            Check(policy.SetDefaultEndpoint(endpointId, RoleConsole), "change the default playback device");
-            Check(policy.SetDefaultEndpoint(endpointId, RoleMultimedia), "change the default device for media");
-            Check(policy.SetDefaultEndpoint(endpointId, RoleCommunications), "change the default device for calls");
+            Check(policy.SetDefaultEndpoint(endpointId, ERole.Console), "change the default playback device");
+            Check(policy.SetDefaultEndpoint(endpointId, ERole.Multimedia), "change the default device for media");
+            Check(policy.SetDefaultEndpoint(endpointId, ERole.Communications), "change the default device for calls");
         }
         finally
         {
@@ -205,14 +206,14 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
     {
         what = "that playback device";
 
-        Wasapi.IMMDeviceEnumerator enumerator = Wasapi.CreateEnumerator();
-        Wasapi.IMMDevice device = Wasapi.OpenDevice(enumerator, endpointId, what);
+        IMMDeviceEnumerator enumerator = Wasapi.CreateEnumerator();
+        IMMDevice device = Wasapi.OpenDevice(enumerator, endpointId, what);
 
         try
         {
             Guid iid = Wasapi.AudioEndpointVolumeIid;
 
-            return device.Activate(ref iid, Wasapi.ClsCtxAll, nint.Zero, out object? instance) == 0
+            return device.Activate(ref iid, ClsCtx.All, nint.Zero, out object? instance) == 0
                 ? instance as Wasapi.IAudioEndpointVolume
                 : null;
         }
@@ -223,40 +224,17 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
         }
     }
 
-    private static string ReadFriendlyName(IMMDevice device)
-    {
-        // A device whose name cannot be read is still a device, and returning
-        // empty rather than throwing keeps one odd endpoint from making the
-        // whole list unavailable. It simply matches nothing, which is exactly
-        // what an unnamed device should do.
-        if (device.OpenPropertyStore(StorageRead, out IPropertyStore? store) != 0 || store is null)
-        {
-            return string.Empty;
-        }
-
-        PropertyKey key = FriendlyNameKey;
-
-        if (store.GetValue(ref key, out PropVariant value) != 0)
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            return value.Pointer == nint.Zero
-                ? string.Empty
-                : Marshal.PtrToStringUni(value.Pointer) ?? string.Empty;
-        }
-        finally
-        {
-            // The string belongs to COM. Without this every enumeration leaks
-            // one allocation per device, and modes are switched all day.
-            _ = PropVariantClear(ref value);
-        }
-    }
+    /// <summary>
+    /// A device whose name cannot be read is still a device, and returning
+    /// empty rather than throwing keeps one odd endpoint from making the whole
+    /// list unavailable. It simply matches nothing, which is exactly what an
+    /// unnamed device should do.
+    /// </summary>
+    private static string ReadFriendlyName(IMMDevice device) =>
+        CoreAudioEndpointInterop.GetFriendlyName(device);
 
     private static IMMDeviceEnumerator CreateEnumerator() =>
-        Create<IMMDeviceEnumerator>(DeviceEnumeratorClsid, "Windows Core Audio");
+        CoreAudioEndpointInterop.CreateEnumerator();
 
     private static IPolicyConfig CreatePolicyConfig() =>
         Create<IPolicyConfig>(PolicyConfigClsid, "the Windows audio policy service");
@@ -290,105 +268,7 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
         }
     }
 
-    private const int DataFlowRender = 0;
-    private const int RoleConsole = 0;
-    private const int RoleMultimedia = 1;
-    private const int RoleCommunications = 2;
-
-    /// <summary>DEVICE_STATE_ACTIVE. See <see cref="IAudioEndpoints.ActivePlayback"/>.</summary>
-    private const int DeviceStateActive = 0x1;
-
-    private const int StorageRead = 0;
-
-    private static readonly Guid DeviceEnumeratorClsid = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
     private static readonly Guid PolicyConfigClsid = new("870AF99C-171D-4F9E-AF0D-E63DF40C2BC9");
-
-    /// <summary>PKEY_Device_FriendlyName: the name Sound settings shows.</summary>
-    private static readonly PropertyKey FriendlyNameKey = new()
-    {
-        FormatId = new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"),
-        PropertyId = 14,
-    };
-
-    [DllImport("ole32.dll")]
-    private static extern int PropVariantClear(ref PropVariant value);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct PropertyKey
-    {
-        public Guid FormatId;
-        public int PropertyId;
-    }
-
-    /// <summary>
-    /// Enough of a PROPVARIANT to read a string.
-    /// </summary>
-    /// <remarks>
-    /// The tag and the first slot of the union, which is all a VT_LPWSTR value
-    /// needs. The union begins eight bytes in on both 32 and 64 bit, after the
-    /// tag and its three reserved fields.
-    /// </remarks>
-    [StructLayout(LayoutKind.Explicit)]
-    private struct PropVariant
-    {
-        [FieldOffset(0)]
-        public short Type;
-
-        [FieldOffset(8)]
-        public nint Pointer;
-    }
-
-    [ComImport]
-    [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDeviceEnumerator
-    {
-        int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection? devices);
-
-        int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice? device);
-
-        int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice? device);
-    }
-
-    [ComImport]
-    [Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDeviceCollection
-    {
-        int GetCount(out int count);
-
-        int Item(int index, out IMMDevice? device);
-    }
-
-    [ComImport]
-    [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IMMDevice
-    {
-        int Activate(ref Guid iid, int classContext, nint activationParameters, [MarshalAs(UnmanagedType.IUnknown)] out object? instance);
-
-        int OpenPropertyStore(int access, out IPropertyStore? properties);
-
-        int GetId([MarshalAs(UnmanagedType.LPWStr)] out string? id);
-
-        int GetState(out int state);
-    }
-
-    [ComImport]
-    [Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IPropertyStore
-    {
-        int GetCount(out int count);
-
-        int GetAt(int index, out PropertyKey key);
-
-        int GetValue(ref PropertyKey key, out PropVariant value);
-
-        int SetValue(ref PropertyKey key, ref PropVariant value);
-
-        int Commit();
-    }
 
     /// <summary>
     /// The undocumented one. See the class remarks: there is no supported way to
@@ -427,7 +307,7 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
 
         int SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string id, ref PropertyKey key, ref PropVariant value);
 
-        int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, int role);
+        int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, ERole role);
 
         int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string id, [MarshalAs(UnmanagedType.Bool)] bool visible);
     }

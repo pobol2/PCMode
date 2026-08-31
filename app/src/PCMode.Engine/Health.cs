@@ -233,9 +233,9 @@ public sealed record ModeHealth(
 /// </summary>
 /// <remarks>
 /// For a resource whose ordinary Read/Apply answers are too narrow for a health
-/// page to be worth much -- Party mode's endpoint, capture/render state, delay,
-/// clock offset, drift correction, buffering and last failure are not
-/// expressible as a single current value, and asking <see cref="AudioProvider"/>
+/// page to be worth much -- an audio target's route states, endpoint states,
+/// formats, delays, clock offsets, drift corrections, underruns and last failure
+/// are not expressible as a single current value, and asking <see cref="AudioProvider"/>
 /// to fold all of that into <see cref="IModeResourceProvider.Read"/> would ruin
 /// the one thing <c>Read</c> is for: a short answer convergence can compare
 /// against a target.

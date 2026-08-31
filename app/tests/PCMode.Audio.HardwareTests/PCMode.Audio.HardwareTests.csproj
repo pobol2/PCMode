@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Every test in this project drives the one real PCMode virtual audio
+      endpoint, which the driver enforces as single-consumer. xUnit's default
+      is to run different test classes in parallel, so without this, two
+      hardware tests racing for the same physical device fail each other
+      with "the requested resource is in use", a false negative that has
+      nothing to do with either test's own correctness.
+    -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PCMode.Audio.Core\PCMode.Audio.Core.csproj" />
+    <ProjectReference Include="..\..\src\PCMode.Audio.Engine\PCMode.Audio.Engine.csproj" />
+    <ProjectReference Include="..\..\src\PCMode.Audio.Windows\PCMode.Audio.Windows.csproj" />
+    <ProjectReference Include="..\..\src\PCMode.Audio.DriverClient\PCMode.Audio.DriverClient.csproj" />
+    <ProjectReference Include="..\..\src\PCMode.Audio.Client\PCMode.Audio.Client.csproj" />
+    <ProjectReference Include="..\..\src\PCMode.Audio.Protocol\PCMode.Audio.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>

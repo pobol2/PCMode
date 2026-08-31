@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
+using PCMode.Audio.Core.Interop;
 
 namespace PCMode.Engine;
 
@@ -27,14 +28,6 @@ namespace PCMode.Engine;
 /// </remarks>
 internal static class Wasapi
 {
-    public const int DataFlowRender = 0;
-
-    public const int RoleConsole = 0;
-    public const int RoleMultimedia = 1;
-    public const int RoleCommunications = 2;
-
-    public const int DeviceStateActive = 0x1;
-
     public const int ShareModeShared = 0;
 
     public const int StreamFlagsCrossProcess = 0x00010000;
@@ -56,8 +49,6 @@ internal static class Wasapi
 
     public const int BufferFlagsDataDiscontinuity = 0x1;
     public const int BufferFlagsSilent = 0x2;
-
-    public const int ClsCtxAll = 0x17;
 
     /// <summary>The device is gone: unplugged, disabled, or its driver restarted.</summary>
     public const int DeviceInvalidated = unchecked((int)0x88890004);
@@ -83,48 +74,28 @@ internal static class Wasapi
     public static readonly Guid AudioRenderClientIid = new("F294ACFC-3146-4483-A7BF-ADDCA7C260E2");
     public static readonly Guid AudioEndpointVolumeIid = new("5CDF2C82-841E-4546-9722-0CF74078229A");
 
-    public static readonly Guid DeviceEnumeratorClsid = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
-
     /// <summary>KSDATAFORMAT_SUBTYPE_PCM.</summary>
     public static readonly Guid SubtypePcm = new("00000001-0000-0010-8000-00aa00389b71");
 
     /// <summary>KSDATAFORMAT_SUBTYPE_IEEE_FLOAT.</summary>
     public static readonly Guid SubtypeFloat = new("00000003-0000-0010-8000-00aa00389b71");
 
-    public static IMMDeviceEnumerator CreateEnumerator()
-    {
-        Type? type = Type.GetTypeFromCLSID(DeviceEnumeratorClsid);
-        object? instance = type is null ? null : Activator.CreateInstance(type);
+    /// <summary>
+    /// Enumerating and opening the endpoint itself is shared with
+    /// <see cref="CoreAudioEndpoints"/> through <see cref="CoreAudioEndpointInterop"/>;
+    /// only opening a stream on it is specific to this file.
+    /// </summary>
+    public static IMMDeviceEnumerator CreateEnumerator() =>
+        CoreAudioEndpointInterop.CreateEnumerator();
 
-        return instance as IMMDeviceEnumerator
-            ?? throw new InvalidOperationException("Windows Core Audio is not available on this machine.");
-    }
-
-    /// <summary>Opens one endpoint by its Core Audio ID.</summary>
-    /// <exception cref="InvalidOperationException">
-    /// The ID names nothing Windows currently has. That is the ordinary state of
-    /// an endpoint somebody has just unplugged, so it is a sentence rather than
-    /// an HRESULT.
-    /// </exception>
-    public static IMMDevice OpenDevice(IMMDeviceEnumerator enumerator, string endpointId, string what)
-    {
-        int hr = enumerator.GetDevice(endpointId, out IMMDevice? device);
-
-        if (hr != 0 || device is null)
-        {
-            throw new InvalidOperationException(
-                $"Windows could not open {what}. It may have been unplugged or disabled " +
-                $"({Hresult(hr)}).");
-        }
-
-        return device;
-    }
+    public static IMMDevice OpenDevice(IMMDeviceEnumerator enumerator, string endpointId, string what) =>
+        CoreAudioEndpointInterop.OpenDevice(enumerator, endpointId, what);
 
     public static IAudioClient ActivateClient(IMMDevice device, string what)
     {
         Guid iid = AudioClientIid;
 
-        int hr = device.Activate(ref iid, ClsCtxAll, nint.Zero, out object? instance);
+        int hr = device.Activate(ref iid, ClsCtx.All, nint.Zero, out object? instance);
 
         if (hr != 0 || instance is not IAudioClient client)
         {
@@ -161,39 +132,6 @@ internal static class Wasapi
 
     [DllImport("ole32.dll")]
     public static extern void CoTaskMemFree(nint memory);
-
-    [ComImport]
-    [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    public interface IMMDeviceEnumerator
-    {
-        [PreserveSig]
-        int EnumAudioEndpoints(int dataFlow, int stateMask, out nint devices);
-
-        [PreserveSig]
-        int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice? device);
-
-        [PreserveSig]
-        int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice? device);
-    }
-
-    [ComImport]
-    [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    public interface IMMDevice
-    {
-        [PreserveSig]
-        int Activate(ref Guid iid, int classContext, nint activationParameters, [MarshalAs(UnmanagedType.IUnknown)] out object? instance);
-
-        [PreserveSig]
-        int OpenPropertyStore(int access, out nint properties);
-
-        [PreserveSig]
-        int GetId([MarshalAs(UnmanagedType.LPWStr)] out string? id);
-
-        [PreserveSig]
-        int GetState(out int state);
-    }
 
     [ComImport]
     [Guid("1CB9AD4C-DBFA-4c32-B178-C2F568A703B2")]
@@ -271,11 +209,9 @@ internal static class Wasapi
     /// <remarks>
     /// Introduced in Windows 10 to give a shared-mode stream a period close to
     /// what exclusive mode gets, without exclusive mode's "nobody else may use
-    /// this endpoint" cost. <see cref="WasapiAudioMirror"/> tries this for the
+    /// this endpoint" cost. <see cref="WasapiTestSignal"/> tries this for the
     /// render endpoint and falls back to plain <see cref="IAudioClient"/> at the
-    /// device's own default period when the driver does not support it. Loopback
-    /// capture uses IAudioClient directly because this initializer does not
-    /// accept the loopback stream flag.
+    /// device's own default period when the driver does not support it.
     ///
     /// Declared with every <see cref="IAudioClient"/> and IAudioClient2 method
     /// ahead of the three this file actually calls, because C# COM interop walks

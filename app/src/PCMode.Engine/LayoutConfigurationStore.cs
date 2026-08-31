@@ -13,7 +13,20 @@ namespace PCMode.Engine;
 /// </param>
 /// <param name="Anchor">The other included monitor this one is placed against. Required alongside <see cref="Direction"/>.</param>
 /// <param name="RefreshHz">The rate to request, or null to accept whatever Windows chooses.</param>
-public sealed record LayoutMonitorEdit(string Monitor, bool Primary, string? Direction, string? Anchor, double? RefreshHz);
+/// <param name="Alignment">
+/// Where along the shared edge this monitor sits -- "Start", "Center" or
+/// "End" -- or null to mean "Start", the same default <see cref="DisplayLayout"/>
+/// itself uses for an entry that omits it.
+/// </param>
+/// <param name="Offset">A further pixel nudge past <paramref name="Alignment"/>, or null for none.</param>
+public sealed record LayoutMonitorEdit(
+    string Monitor,
+    bool Primary,
+    string? Direction,
+    string? Anchor,
+    double? RefreshHz,
+    string? Alignment = null,
+    int? Offset = null);
 
 /// <summary>
 /// Creates, renames and deletes display layouts in the same configuration file
@@ -44,7 +57,22 @@ public static class LayoutConfigurationStore
     /// Creates a new layout, or replaces an existing one of the same name,
     /// under 'providers.display.layouts'.
     /// </summary>
-    public static ModeSaveOutcome Save(string? root, string layoutName, IReadOnlyList<LayoutMonitorEdit> monitors)
+    /// <param name="requires">
+    /// The layout's 'requires' block -- see <see cref="DisplayLayout.Requires"/>
+    /// and <see cref="TargetRequirements"/> -- written through unchanged. Null
+    /// or empty omits the field entirely. A caller that read an existing
+    /// layout's requirements and is only changing one of several keys is
+    /// responsible for carrying the rest forward itself; this does not merge
+    /// against whatever the document already had. Never a cursor position:
+    /// <see cref="DisplayLayout.TryParse"/> refuses that by name, since the
+    /// cursor always runs after the display. That association belongs on
+    /// whichever Space, Activity or Source sets this layout instead.
+    /// </param>
+    public static ModeSaveOutcome Save(
+        string? root,
+        string layoutName,
+        IReadOnlyList<LayoutMonitorEdit> monitors,
+        IReadOnlyDictionary<string, string>? requires = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(layoutName);
         ArgumentNullException.ThrowIfNull(monitors);
@@ -83,7 +111,27 @@ public static class LayoutConfigurationStore
                         $"'{monitor.Monitor}' needs a placement relative to another included monitor.");
                 }
 
-                placement.Add(JsonValue.Create($"{monitor.Monitor} {monitor.Direction} {monitor.Anchor}"));
+                string entry = $"{monitor.Monitor} {monitor.Direction} {monitor.Anchor}";
+
+                // "Start" and 0 are exactly what an entry without either token
+                // already means, so a layout nobody has dragged off its default
+                // alignment still round-trips through this store byte-for-byte.
+                bool hasAlignment = !string.IsNullOrWhiteSpace(monitor.Alignment) &&
+                    !string.Equals(monitor.Alignment, "Start", StringComparison.OrdinalIgnoreCase);
+                bool hasOffset = monitor.Offset is not (null or 0);
+
+                if (hasAlignment || hasOffset)
+                {
+                    entry += $" {monitor.Alignment ?? "Start"}";
+                }
+
+                if (hasOffset)
+                {
+                    entry += $" {(monitor.Offset!.Value >= 0 ? "+" : string.Empty)}" +
+                        monitor.Offset.Value.ToString(CultureInfo.InvariantCulture);
+                }
+
+                placement.Add(JsonValue.Create(entry));
             }
 
             if (placement.Count > 0)
@@ -102,6 +150,18 @@ public static class LayoutConfigurationStore
             if (refresh.Count > 0)
             {
                 body["refresh"] = refresh;
+            }
+
+            if (requires is { Count: > 0 })
+            {
+                var requiresObject = new JsonObject();
+
+                foreach ((string key, string target) in requires)
+                {
+                    requiresObject[key] = target;
+                }
+
+                body[TargetRequirements.FieldName] = requiresObject;
             }
 
             HardwareConfigurationStore.RemoveCaseInsensitive(layouts, trimmed);

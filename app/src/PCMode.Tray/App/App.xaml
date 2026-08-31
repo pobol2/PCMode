@@ -1,0 +1,56 @@
+﻿<Application x:Class="PCMode.Tray.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:appModel="clr-namespace:PCMode.Tray"
+             xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree"
+            ShutdownMode="OnMainWindowClose">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <!--
+                Assembly-qualified pack URIs, not app-relative ones: an
+                app-relative source resolves against whichever assembly is the
+                entry point, which is not this one when the test host builds
+                the same Application.
+            -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Theme.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Framework/Framework.xaml" />
+                
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/PageLayoutResources.xaml" />
+
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Components.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Migration/MigrationComponents.xaml" />
+
+                <!--
+                    The tree itself: the root, and the kinds every page is an
+                    instance of. Merged before the pages, which hang below them.
+                -->
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/ApplicationLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/AppShellLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/NavigationRegion/PageNavigation/PageNavigationLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ListPage/ListPageLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/ConfigurationPageLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/SelectorRegion/ConfigurationSelectorLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/EditorRegion/ConfigurationEditorLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/EditorRegion/EditorSectionLayout.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/ApplicationBindings.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/NavigationRegion/PageNavigation/PageNavigationBindings.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ListPage/ListPageBindings.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/ConfigurationPageBindings.xaml" />
+
+                <!--
+                    One Layout dictionary per tree. Each holds its page block's
+                    ControlTemplate and the implicit view-model-to-block
+                    templates below it, which must be merged at application
+                    scope because implicit template lookup walks the element
+                    tree and stops there.
+                -->
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Light.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Dark.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+        </ResourceDictionary>
+    </Application.Resources>
+
+</Application>

@@ -1,0 +1,52 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:diagnostics="clr-namespace:PCMode.Tray.Elements.Diagnostics"
+    xmlns:home="clr-namespace:PCMode.Tray.Elements.Home"
+    xmlns:migration="clr-namespace:PCMode.Tray.UI.Components.Migration"
+    xmlns:settings="clr-namespace:PCMode.Tray.Elements.Settings"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
+
+    <!--
+        Element-to-tree bindings belong with the Elements: they select a
+        legal structural kind and supply its inputs, but do not define that
+        kind's title/header/content/footer arrangement. ListPageBlock owns
+        that structure and terminates each supplied value at its declared
+        FinalUiComponent boundary.
+
+        The small bodies below are deliberately opaque migration content.
+        They keep the three pages reachable while UI/Components is completed;
+        replacing them must not change the ListPageBlock selection.
+    -->
+
+    <DataTemplate DataType="{x:Type home:HomeViewModel}">
+        <tree:ListPageBlock Title="Home">
+            <tree:ListPageBlock.Content>
+                <migration:MigrationContent
+                    Description="Home terminal components are ready to migrate."
+                    Source="{Binding}" />
+            </tree:ListPageBlock.Content>
+        </tree:ListPageBlock>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type settings:SettingsViewModel}">
+        <tree:ListPageBlock Title="Settings">
+            <tree:ListPageBlock.Content>
+                <migration:MigrationContent
+                    Description="Settings terminal components are ready to migrate."
+                    Source="{Binding}" />
+            </tree:ListPageBlock.Content>
+        </tree:ListPageBlock>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type diagnostics:DiagnosticsViewModel}">
+        <tree:ListPageBlock Title="Diagnostics">
+            <tree:ListPageBlock.Content>
+                <migration:MigrationContent
+                    Description="Diagnostics terminal components are ready to migrate."
+                    Source="{Binding}" />
+            </tree:ListPageBlock.Content>
+        </tree:ListPageBlock>
+    </DataTemplate>
+
+</ResourceDictionary>

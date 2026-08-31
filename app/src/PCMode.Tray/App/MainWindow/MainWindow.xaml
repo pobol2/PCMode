@@ -1,0 +1,15 @@
+<Window
+    x:Class="PCMode.Tray.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree"
+    Title="PCMode"
+    Width="1280"
+    Height="720"
+    MinWidth="1100"
+    MinHeight="520"
+    Style="{StaticResource MainWindowStyle}">
+
+    <tree:ApplicationBlock MainWindow="{Binding}" />
+
+</Window>

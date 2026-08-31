@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     Target's own architecture, kept honest: navigation validity, page
@@ -14,12 +14,25 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <IsPackable>false</IsPackable>
+
+    <!--
+      This project must produce its own apphost.
+
+      It references PCMode.Tray, which is a WinExe, so PCMode.Tray.exe is
+      copied into this output folder. Without an apphost of its own, the test
+      runner looks for a native host beside the test assembly and finds that
+      one: it launches the tray with the runner's own port/endpoint/role
+      arguments, the tray reports it cannot read its command line, and the run
+      aborts partway with no obvious cause.
+    -->
+    <UseAppHost>true</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="DependencyPropertyGenerator" Version="1.5.1" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

@@ -41,11 +41,35 @@ public sealed class LgTvConfigurationStoreTests
     }
 
     [Fact]
+    public void Saves_and_reads_back_which_physical_display_a_television_is_connected_as()
+    {
+        using var root = new TemporaryRoot("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{}}]}]}""");
+
+        ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
+            root.Path,
+            new LgTvEdit(
+                true,
+                "192.0.2.31",
+                "00:00:5E:00:53:31",
+                SafeDisplayTarget: null,
+                Inputs: [],
+                Profiles: [],
+                DisplayMonitor: "\\\\?\\DISPLAY#LGD1234#01#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}"));
+
+        Assert.True(outcome.Success, outcome.Problem);
+
+        TvPowerProvider power = Load(root);
+        Assert.Equal(
+            "\\\\?\\DISPLAY#LGD1234#01#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+            power.Settings.DisplayMonitor);
+    }
+
+    [Fact]
     public void Saves_a_profile_naming_its_own_input_and_resolves_the_right_socket()
     {
+        using var root = new TemporaryRoot("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{}}]}]}""");
         // Two inputs, two profiles, each naming its own -- the replacement for
         // the single television-wide 'profileInput'.
-        using var root = new TemporaryRoot("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{}}]}]}""");
 
         ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
             root.Path,
@@ -158,10 +182,10 @@ public sealed class LgTvConfigurationStoreTests
     [Fact]
     public void An_unrecognised_signal_key_is_refused_by_the_same_pipeline_a_real_startup_uses()
     {
+        using var root = new TemporaryRoot("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{}}]}]}""");
         // The store makes no separate claim about which signal keys exist --
         // that stays LgTvProfile's alone, exercised here through the shared
         // validation path so the two can never disagree.
-        using var root = new TemporaryRoot("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{}}]}]}""");
 
         ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
             root.Path,

@@ -4,9 +4,27 @@
     <Project Path="src/PCMode.Picker/PCMode.Picker.csproj" />
     <Project Path="src/PCMode.Tray/PCMode.Tray.csproj" />
   </Folder>
+  <Folder Name="/src/audio/">
+    <Project Path="src/PCMode.Audio.Core/PCMode.Audio.Core.csproj" />
+    <Project Path="src/PCMode.Audio.Engine/PCMode.Audio.Engine.csproj" />
+    <Project Path="src/PCMode.Audio.Windows/PCMode.Audio.Windows.csproj" />
+    <Project Path="src/PCMode.Audio.DriverClient/PCMode.Audio.DriverClient.csproj" />
+    <Project Path="src/PCMode.Audio.Protocol/PCMode.Audio.Protocol.csproj" />
+    <Project Path="src/PCMode.Audio.Client/PCMode.Audio.Client.csproj" />
+    <Project Path="src/PCMode.Audio.Host/PCMode.Audio.Host.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PCMode.Engine.Tests/PCMode.Engine.Tests.csproj" />
     <Project Path="tests/PCMode.Picker.Tests/PCMode.Picker.Tests.csproj" />
     <Project Path="tests/PCMode.Tray.Tests/PCMode.Tray.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/audio/">
+    <Project Path="tests/PCMode.Audio.Core.Tests/PCMode.Audio.Core.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.Engine.Tests/PCMode.Audio.Engine.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.Windows.Tests/PCMode.Audio.Windows.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.DriverClient.Tests/PCMode.Audio.DriverClient.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.Protocol.Tests/PCMode.Audio.Protocol.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.Integration.Tests/PCMode.Audio.Integration.Tests.csproj" />
+    <Project Path="tests/PCMode.Audio.HardwareTests/PCMode.Audio.HardwareTests.csproj" />
   </Folder>
 </Solution>

@@ -93,29 +93,28 @@
     // that only asks for TV sound fails several times over and then reports,
     // truthfully and uselessly, that no device has that name.
     //
-    // "party" is the two-output group: the same Windows audio through both the
-    // soundbar and the speakers. It is a value of the audio resource like any
-    // device, so a mode says "audio": "Party" and the two are mutually exclusive
-    // without anything having to arrange it.
+    // An audio target is one or more outputs playing the same sound at once.
+    // It is a value of the audio resource like any device, so a mode says
+    // "audio": "Party" and the two are mutually exclusive without anything
+    // having to arrange it.
     //
-    // "outputs" just lists the two members -- in whichever order reads best --
-    // and decides nothing on its own. "delay.output" is what decides: it names
-    // the output that gets delayed (the "mirror"), and the OTHER one becomes the
-    // Windows default that gets captured back (the "reference"). Get this
-    // backwards and swap the two names in "delay", not in "outputs".
+    // A target plays through the PCMode audio engine: applications render into
+    // PCMode's own virtual endpoint, and the engine sends that to every output
+    // listed here. Each output is a route with its own delay, gain and Windows
+    // volume, and they are peers -- nothing is captured back off anything.
     //
     // A soundbar or TV over HDMI/eARC is almost always the slower path in the
-    // room, so it is usually the one that should NOT appear in "delay" -- the
-    // speakers are what get delayed to meet it. "delay.ms" is found by ear:
-    // raise it until the two stop sounding like an echo.
+    // room, so it is the one left at "delayMs": 0, and the speakers are what get
+    // delayed to meet it. The number is found by ear: raise it until the two
+    // stop sounding like an echo, then save and activate again to hear it.
     //
-    // "gain" is a digital level on the delayed copy only, which is why its
-    // "output" must be the same one named in "delay". "volumes" moves the
-    // endpoints' own Windows sliders, and an output left out of it is left alone.
+    // "gain" is a digital level applied inside that route. "volume" moves that
+    // endpoint's own Windows slider, and an output that omits it is left alone.
+    // "required" defaults to true; an optional output that fails degrades the
+    // target instead of failing it.
     //
-    // The older "reference"/"mirror"/"delayMs"/"referenceVolume"/"mirrorVolume"
-    // form still works unchanged -- see docs/party-mode.md -- but new
-    // configurations should prefer this one.
+    // Audio targets need the PCMode audio subsystem installed. Plain device
+    // aliases do not, and go on working without it.
     // ------------------------------------------------------------------------
     "audio": {
       "devices": {
@@ -128,12 +127,13 @@
         }
       },
 
-      "party": {
-        "name": "Party",
-        "outputs": ["Speakers", "Soundbar"],
-        "delay": { "output": "Speakers", "ms": 40 },
-        "gain": { "output": "Speakers", "value": 0.85 },
-        "volumes": { "Speakers": 0.35, "Soundbar": 0.5 }
+      "targets": {
+        "Party": {
+          "outputs": [
+            { "output": "Soundbar", "delayMs": 0, "gain": 1, "volume": 0.5 },
+            { "output": "Speakers", "delayMs": 40, "gain": 0.85, "volume": 0.35 }
+          ]
+        }
       }
     },
 

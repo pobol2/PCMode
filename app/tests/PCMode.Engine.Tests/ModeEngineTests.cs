@@ -310,9 +310,9 @@ public sealed class ModeEngineTests
     [Fact]
     public async Task Applies_a_resource_that_cannot_say_where_it_is()
     {
+        using var world = new World();
         // Null from Read means "apply it anyway". A provider that cannot report
         // itself is not a broken one.
-        using var world = new World();
         world.Theme.Current = null;
 
         await world.Engine.ApplyAsync("Movie");
@@ -364,10 +364,10 @@ public sealed class ModeEngineTests
     [Fact]
     public async Task Reports_a_converged_transition_it_could_not_record_as_uncertain()
     {
+        using var world = new World();
         // The machine really did change, so this is not a failure -- but what a
         // UI would display as current is no longer trustworthy, which is a
         // different thing and has to be shown as one.
-        using var world = new World();
 
         Directory.CreateDirectory(world.Root.StateFile);
 
@@ -551,11 +551,11 @@ public sealed class ModeEngineTests
     [Fact]
     public async Task Reports_a_transition_cancelled_part_way_as_uncertain()
     {
+        using var cancellation = new CancellationTokenSource();
         // The rule that makes cancellation survivable: what was already applied
         // stands, the rest is not reached, and nothing claims to know the
         // result. Recording a mode here would be a straight lie.
         var order = new List<string>();
-        using var cancellation = new CancellationTokenSource();
 
         var first = new RecordingProvider("first", order) { OnApply = cancellation.Cancel };
         var second = new RecordingProvider("second", order);
@@ -702,10 +702,10 @@ public sealed class ModeEngineTests
     [Fact]
     public async Task Repair_is_available_even_when_nothing_has_recently_failed()
     {
+        using var world = new World();
         // A repair chases whatever is currently recorded, whether or not any
         // transition has recently run -- unlike a retry, which has nothing to
         // aim at until something has actually been requested and gone wrong.
-        using var world = new World();
 
         await world.Engine.ApplyAsync("Movie");
         world.Theme.Current = "Light"; // drifted after the fact

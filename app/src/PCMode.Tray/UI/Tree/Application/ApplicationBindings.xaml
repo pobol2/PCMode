@@ -1,0 +1,12 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:appModel="clr-namespace:PCMode.Tray"
+    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
+
+    <DataTemplate DataType="{x:Type appModel:AppViewModel}">
+        <tree:AppShellBlock
+            Navigation="{Binding Navigation}"
+                MainContent="{Binding CurrentPage}" />
+    </DataTemplate>
+</ResourceDictionary>

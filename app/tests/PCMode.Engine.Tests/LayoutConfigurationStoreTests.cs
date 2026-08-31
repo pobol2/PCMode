@@ -90,6 +90,61 @@ public sealed class LayoutConfigurationStoreTests
     }
 
     [Fact]
+    public void Saves_and_round_trips_a_requires_block()
+    {
+        using var root = new TemporaryRoot();
+        root.Write(Document);
+
+        ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
+            root.Path,
+            "Dual",
+            [
+                new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
+            ],
+            requires: new Dictionary<string, string> { ["tvPower"] = "On" });
+
+        Assert.True(outcome.Success, outcome.Problem);
+
+        var provider = new DisplayProvider();
+        (string json, _) = ModeConfiguration.ReadOrCreate(root.Path);
+        ModeConfiguration.Parse(json, [provider]);
+
+        DisplayLayout layout = Assert.Single(provider.Layouts);
+        ResourceRequirement requirement = Assert.Single(layout.Requires);
+        Assert.Equal("tvPower", requirement.Key);
+        Assert.Equal("On", requirement.Target);
+    }
+
+    [Fact]
+    public void Refuses_a_requires_block_that_names_the_cursor()
+    {
+        using var root = new TemporaryRoot();
+        // The exact shape that used to create a display <-> cursor cycle: the
+        // cursor always runs after the display (CursorProvider.RunsAfter), so
+        // a layout requiring it would need it ordered both before and after
+        // itself. Refused here, at save time, rather than only once something
+        // tries to activate a mode that uses this layout.
+        root.Write(Document);
+
+        ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
+            root.Path,
+            "Dual",
+            [
+                new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
+            ],
+            requires: new Dictionary<string, string> { ["cursor"] = "Center" });
+
+        Assert.False(outcome.Success);
+        Assert.Contains("cursor", outcome.Problem, StringComparison.OrdinalIgnoreCase);
+
+        // And nothing was written: the file still describes no layouts.
+        var provider = new DisplayProvider();
+        (string json, _) = ModeConfiguration.ReadOrCreate(root.Path);
+        ModeConfiguration.Parse(json, [provider]);
+        Assert.Empty(provider.LayoutNames);
+    }
+
+    [Fact]
     public void Deleting_a_layout_still_referenced_by_a_mode_is_refused()
     {
         using var root = new TemporaryRoot();
