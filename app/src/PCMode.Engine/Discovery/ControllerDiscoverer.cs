@@ -52,7 +52,8 @@ public sealed class ControllerDiscoverer(IGamepadCapabilitiesSource source) : IH
                     "XInput controllers",
                     HardwareItemStatus.NotDetected,
                     "XInput is not available on this machine.",
-                    []),
+                    []
+                ),
             ];
         }
 
@@ -63,21 +64,25 @@ public sealed class ControllerDiscoverer(IGamepadCapabilitiesSource source) : IH
             string name = $"Controller {slot + 1}";
             GamepadCapabilities? capabilities = _source.Read(slot);
 
-            items.Add(capabilities is null
-                ? new HardwareItem(
-                    name,
-                    HardwareItemStatus.NotDetected,
-                    "Not connected.",
-                    [new("Slot", slot.ToString())])
-                : new HardwareItem(
-                    name,
-                    HardwareItemStatus.Ok,
-                    capabilities.Wireless ? $"{capabilities.SubType}, wireless." : $"{capabilities.SubType}.",
-                    [
-                        new("Slot", slot.ToString()),
-                        new("Type", capabilities.SubType),
-                        new("Wireless", capabilities.Wireless ? "Yes" : "No"),
-                    ]));
+            items.Add(
+                capabilities is null
+                    ? new HardwareItem(
+                        name,
+                        HardwareItemStatus.NotDetected,
+                        "Not connected.",
+                        [new("Slot", slot.ToString())]
+                    )
+                    : new HardwareItem(
+                        name,
+                        HardwareItemStatus.Ok,
+                        capabilities.Wireless ? $"{capabilities.SubType}, wireless." : $"{capabilities.SubType}.",
+                        [
+                            new("Slot", slot.ToString()),
+                            new("Type", capabilities.SubType),
+                            new("Wireless", capabilities.Wireless ? "Yes" : "No"),
+                        ]
+                    )
+            );
         }
 
         return items;

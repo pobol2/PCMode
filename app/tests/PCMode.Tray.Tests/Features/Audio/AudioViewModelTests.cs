@@ -319,9 +319,7 @@ public sealed class AudioViewModelTests
         AudioViewModel viewModel = Load(root);
         int resourceCount = viewModel.SelectorItems.Count;
 
-        Assert.Equal(
-            "Give the audio target a name.",
-            viewModel.CreateTarget("   "));
+        Assert.Equal("Give the audio target a name.", viewModel.CreateTarget("   "));
 
         Assert.False(viewModel.IsNewTarget);
         Assert.Equal(resourceCount, viewModel.SelectorItems.Count);
@@ -430,9 +428,7 @@ public sealed class AudioViewModelTests
         Assert.True(viewModel.IsNewTarget);
         Assert.Equal("Kitchen", viewModel.TargetName);
         Assert.Single(viewModel.Routes);
-        Assert.Contains(
-            viewModel.SelectorItems,
-            item => item.Title == "Kitchen");
+        Assert.Contains(viewModel.SelectorItems, item => item.Title == "Kitchen");
     }
 
     [Fact]

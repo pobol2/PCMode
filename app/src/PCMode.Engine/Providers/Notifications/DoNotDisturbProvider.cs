@@ -130,11 +130,13 @@ public sealed class DoNotDisturbProvider : IConfigurableProvider, IConvergentPro
     /// one is a machine that cannot do this, the other is a machine that has been
     /// told not to, and only the second is fixed by editing a file.
     /// </remarks>
-    public ResourceAvailability AvailabilityOf(string target) => _enabled
-        ? ResourceAvailability.Available
-        : ResourceAvailability.Disabled(
-            $"Do Not Disturb is switched off. It writes a Windows notification setting that " +
-            $"Microsoft does not document, so it stays off until '{SettingsPath}.enabled' says otherwise.");
+    public ResourceAvailability AvailabilityOf(string target) =>
+        _enabled
+            ? ResourceAvailability.Available
+            : ResourceAvailability.Disabled(
+                $"Do Not Disturb is switched off. It writes a Windows notification setting that "
+                    + $"Microsoft does not document, so it stays off until '{SettingsPath}.enabled' says otherwise."
+            );
 
     /// <summary>
     /// Written once, and confirmed, with a second attempt for a value that did
@@ -147,13 +149,14 @@ public sealed class DoNotDisturbProvider : IConfigurableProvider, IConvergentPro
     /// second attempt exists only for a write that lost a race with whatever else
     /// was touching the same value.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 2,
-        RetryInterval = TimeSpan.FromMilliseconds(500),
-        PollInterval = TimeSpan.FromMilliseconds(100),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 2,
+            RetryInterval = TimeSpan.FromMilliseconds(500),
+            PollInterval = TimeSpan.FromMilliseconds(100),
+        };
 
     public bool IsValidValue(string value, out string? problem)
     {
@@ -204,7 +207,8 @@ public sealed class DoNotDisturbProvider : IConfigurableProvider, IConvergentPro
             // while planning. Kept because the whole point of this one being
             // opt-in is that nothing writes the value without being asked.
             throw new InvalidOperationException(
-                $"Do Not Disturb is switched off on this machine. Set '{SettingsPath}.enabled' to true first.");
+                $"Do Not Disturb is switched off on this machine. Set '{SettingsPath}.enabled' to true first."
+            );
         }
 
         bool quiet = IsOn(value);

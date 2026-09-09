@@ -36,7 +36,8 @@ public static class CursorPositionConfigurationStore
         double? xPercent,
         int? xFromRight,
         double? yPercent,
-        int? yFromBottom)
+        int? yFromBottom
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(positionName);
 
@@ -44,44 +45,51 @@ public static class CursorPositionConfigurationStore
 
         if (xPercent is null == xFromRight is null)
         {
-            return ModeSaveOutcome.Failed("Choose either a percentage or a distance from the right for X, not both or neither.");
+            return ModeSaveOutcome.Failed(
+                "Choose either a percentage or a distance from the right for X, not both or neither."
+            );
         }
 
         if (yPercent is null == yFromBottom is null)
         {
-            return ModeSaveOutcome.Failed("Choose either a percentage or a distance from the bottom for Y, not both or neither.");
+            return ModeSaveOutcome.Failed(
+                "Choose either a percentage or a distance from the bottom for Y, not both or neither."
+            );
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            JsonObject cursor = HardwareConfigurationStore.AsObject(providers, "cursor");
-            JsonObject positions = HardwareConfigurationStore.AsObject(cursor, "positions");
-
-            var body = new JsonObject();
-
-            if (xPercent is not null)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                body["xPercent"] = xPercent.Value;
-            }
-            else
-            {
-                body["xFromRight"] = xFromRight!.Value;
-            }
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                JsonObject cursor = HardwareConfigurationStore.AsObject(providers, "cursor");
+                JsonObject positions = HardwareConfigurationStore.AsObject(cursor, "positions");
 
-            if (yPercent is not null)
-            {
-                body["yPercent"] = yPercent.Value;
-            }
-            else
-            {
-                body["yFromBottom"] = yFromBottom!.Value;
-            }
+                var body = new JsonObject();
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(positions, trimmed);
-            positions.Add(trimmed, body);
-            return null;
-        });
+                if (xPercent is not null)
+                {
+                    body["xPercent"] = xPercent.Value;
+                }
+                else
+                {
+                    body["xFromRight"] = xFromRight!.Value;
+                }
+
+                if (yPercent is not null)
+                {
+                    body["yPercent"] = yPercent.Value;
+                }
+                else
+                {
+                    body["yFromBottom"] = yFromBottom!.Value;
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(positions, trimmed);
+                positions.Add(trimmed, body);
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -94,34 +102,46 @@ public static class CursorPositionConfigurationStore
 
         string trimmedNew = newName.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, "cursor") is not JsonObject cursor ||
-                HardwareConfigurationStore.FindProperty(cursor, "positions") is not JsonObject positions)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{oldName}' is not a configured cursor position.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, "cursor") is not JsonObject cursor
+                    || HardwareConfigurationStore.FindProperty(cursor, "positions") is not JsonObject positions
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{oldName}' is not a configured cursor position.");
+                }
+
+                JsonNode? existing = HardwareConfigurationStore.FindProperty(positions, oldName);
+
+                if (existing is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{oldName}' is not a configured cursor position.");
+                }
+
+                if (
+                    !string.Equals(oldName, trimmedNew, StringComparison.OrdinalIgnoreCase)
+                    && HardwareConfigurationStore.FindProperty(positions, trimmedNew) is not null
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured cursor position.");
+                }
+
+                positions.Remove(FindKey(positions, oldName)!);
+                positions.Add(trimmedNew, existing.DeepClone());
+
+                LayoutConfigurationStore.RenameModeReferences(
+                    document,
+                    CursorProvider.ResourceKey,
+                    oldName,
+                    trimmedNew
+                );
+                return null;
             }
-
-            JsonNode? existing = HardwareConfigurationStore.FindProperty(positions, oldName);
-
-            if (existing is null)
-            {
-                return ModeSaveOutcome.Failed($"'{oldName}' is not a configured cursor position.");
-            }
-
-            if (!string.Equals(oldName, trimmedNew, StringComparison.OrdinalIgnoreCase) &&
-                HardwareConfigurationStore.FindProperty(positions, trimmedNew) is not null)
-            {
-                return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured cursor position.");
-            }
-
-            positions.Remove(FindKey(positions, oldName)!);
-            positions.Add(trimmedNew, existing.DeepClone());
-
-            LayoutConfigurationStore.RenameModeReferences(document, CursorProvider.ResourceKey, oldName, trimmedNew);
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -132,36 +152,46 @@ public static class CursorPositionConfigurationStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, "cursor") is not JsonObject cursor ||
-                HardwareConfigurationStore.FindProperty(cursor, "positions") is not JsonObject positions)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{name}' is not a configured cursor position.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, "cursor") is not JsonObject cursor
+                    || HardwareConfigurationStore.FindProperty(cursor, "positions") is not JsonObject positions
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{name}' is not a configured cursor position.");
+                }
+
+                string? key = FindKey(positions, name);
+
+                if (key is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{name}' is not a configured cursor position.");
+                }
+
+                IReadOnlyList<string> referencing = LayoutConfigurationStore.ModesReferencing(
+                    document,
+                    CursorProvider.ResourceKey,
+                    name
+                );
+
+                if (referencing.Count > 0)
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{name}' is used by {string.Join(", ", referencing)}. Change those first."
+                    );
+                }
+
+                positions.Remove(key);
+                return null;
             }
-
-            string? key = FindKey(positions, name);
-
-            if (key is null)
-            {
-                return ModeSaveOutcome.Failed($"'{name}' is not a configured cursor position.");
-            }
-
-            IReadOnlyList<string> referencing =
-                LayoutConfigurationStore.ModesReferencing(document, CursorProvider.ResourceKey, name);
-
-            if (referencing.Count > 0)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{name}' is used by {string.Join(", ", referencing)}. Change those first.");
-            }
-
-            positions.Remove(key);
-            return null;
-        });
+        );
     }
 
     private static string? FindKey(JsonObject obj, string name) =>
-        obj.Select(pair => pair.Key).FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        obj.Select(pair => pair.Key)
+            .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 }

@@ -22,7 +22,11 @@ public sealed record CaseRgbSceneEdit(string Name, IReadOnlyList<CaseRgbSceneDev
 
 /// <summary>The whole of 'providers.caseRgb', as a settings screen has it.</summary>
 public sealed record CaseRgbEdit(
-    bool Enabled, string Executable, IReadOnlyList<CaseRgbDeviceEdit> Devices, int WithinMs)
+    bool Enabled,
+    string Executable,
+    IReadOnlyList<CaseRgbDeviceEdit> Devices,
+    int WithinMs
+)
 {
     /// <summary>
     /// Null preserves an existing scenes section for compatibility with older callers.
@@ -54,12 +58,16 @@ public static class CaseRgbConfigurationStore
         {
             if (device.Index < 0)
             {
-                return ModeSaveOutcome.Failed("A device number cannot be negative. OpenRGB numbers its devices from 0.");
+                return ModeSaveOutcome.Failed(
+                    "A device number cannot be negative. OpenRGB numbers its devices from 0."
+                );
             }
 
             if (string.IsNullOrWhiteSpace(device.Mode))
             {
-                return ModeSaveOutcome.Failed($"Device {device.Index} needs a lighting mode, such as 'Direct' or 'Static'.");
+                return ModeSaveOutcome.Failed(
+                    $"Device {device.Index} needs a lighting mode, such as 'Direct' or 'Static'."
+                );
             }
 
             if (device.Identity is not null && string.IsNullOrWhiteSpace(device.Identity))
@@ -78,119 +86,120 @@ public static class CaseRgbConfigurationStore
             return ModeSaveOutcome.Failed("The OpenRGB SDK timeout must be between 500 and 60000 milliseconds.");
         }
 
-        if (edit.Scenes is not null &&
-            ValidateSceneEdits(edit.Scenes, seenDevices, out string? sceneProblem) is false)
+        if (edit.Scenes is not null && ValidateSceneEdits(edit.Scenes, seenDevices, out string? sceneProblem) is false)
         {
             return ModeSaveOutcome.Failed(sceneProblem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            IReadOnlyDictionary<int, string> existingIdentities = ReadExistingIdentities(providers);
-            JsonNode? existingScenes = ReadExistingScenes(providers);
-
-            if (edit.SceneRenames is { Count: > 0 })
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                foreach ((string oldName, string newName) in edit.SceneRenames)
-                {
-                    LayoutConfigurationStore.RenameModeReferences(
-                        document,
-                        CaseRgbProvider.ResourceKey,
-                        oldName,
-                        newName);
-                }
-            }
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                IReadOnlyDictionary<int, string> existingIdentities = ReadExistingIdentities(providers);
+                JsonNode? existingScenes = ReadExistingScenes(providers);
 
-            if (edit.Scenes is not null && existingScenes is JsonObject existingSceneObject)
-            {
-                var kept = new HashSet<string>(
-                    edit.Scenes.Select(scene => scene.Name.Trim()),
-                    StringComparer.OrdinalIgnoreCase);
-
-                foreach (string oldName in existingSceneObject.Select(pair => pair.Key))
+                if (edit.SceneRenames is { Count: > 0 })
                 {
-                    if (kept.Contains(oldName) ||
-                        edit.SceneRenames?.ContainsKey(oldName) == true)
+                    foreach ((string oldName, string newName) in edit.SceneRenames)
                     {
-                        continue;
-                    }
-
-                    IReadOnlyList<string> referencing =
-                        LayoutConfigurationStore.ModesReferencing(
+                        LayoutConfigurationStore.RenameModeReferences(
                             document,
                             CaseRgbProvider.ResourceKey,
-                            oldName);
-
-                    if (referencing.Count > 0)
-                    {
-                        return ModeSaveOutcome.Failed(
-                            $"Lighting scene '{oldName}' is used by {string.Join(", ", referencing)}. Change those first.");
+                            oldName,
+                            newName
+                        );
                     }
                 }
-            }
 
-            var body = new JsonObject
-            {
-                ["enabled"] = edit.Enabled,
-                ["within"] = edit.WithinMs,
-            };
-
-            if (executable.Length > 0)
-            {
-                body["executable"] = executable;
-            }
-
-            if (edit.Scenes is null)
-            {
-                if (existingScenes is not null)
+                if (edit.Scenes is not null && existingScenes is JsonObject existingSceneObject)
                 {
-                    body["scenes"] = existingScenes;
-                }
-            }
-            else if (edit.Scenes.Count > 0)
-            {
-                body["scenes"] = WriteScenes(edit.Scenes);
-            }
+                    var kept = new HashSet<string>(
+                        edit.Scenes.Select(scene => scene.Name.Trim()),
+                        StringComparer.OrdinalIgnoreCase
+                    );
 
-            if (edit.Devices.Count > 0)
-            {
-                var devices = new JsonObject();
-
-                foreach (CaseRgbDeviceEdit device in edit.Devices)
-                {
-                    string? identity = string.IsNullOrWhiteSpace(device.Identity)
-                        ? existingIdentities.GetValueOrDefault(device.Index)
-                        : device.Identity.Trim();
-
-                    if (identity is null)
+                    foreach (string oldName in existingSceneObject.Select(pair => pair.Key))
                     {
-                        devices[device.Index.ToString(CultureInfo.InvariantCulture)] = device.Mode.Trim();
-                    }
-                    else
-                    {
-                        devices[device.Index.ToString(CultureInfo.InvariantCulture)] = new JsonObject
+                        if (kept.Contains(oldName) || edit.SceneRenames?.ContainsKey(oldName) == true)
                         {
-                            ["mode"] = device.Mode.Trim(),
-                            ["identity"] = identity,
-                        };
+                            continue;
+                        }
+
+                        IReadOnlyList<string> referencing = LayoutConfigurationStore.ModesReferencing(
+                            document,
+                            CaseRgbProvider.ResourceKey,
+                            oldName
+                        );
+
+                        if (referencing.Count > 0)
+                        {
+                            return ModeSaveOutcome.Failed(
+                                $"Lighting scene '{oldName}' is used by {string.Join(", ", referencing)}. Change those first."
+                            );
+                        }
                     }
                 }
 
-                body["devices"] = devices;
+                var body = new JsonObject { ["enabled"] = edit.Enabled, ["within"] = edit.WithinMs };
+
+                if (executable.Length > 0)
+                {
+                    body["executable"] = executable;
+                }
+
+                if (edit.Scenes is null)
+                {
+                    if (existingScenes is not null)
+                    {
+                        body["scenes"] = existingScenes;
+                    }
+                }
+                else if (edit.Scenes.Count > 0)
+                {
+                    body["scenes"] = WriteScenes(edit.Scenes);
+                }
+
+                if (edit.Devices.Count > 0)
+                {
+                    var devices = new JsonObject();
+
+                    foreach (CaseRgbDeviceEdit device in edit.Devices)
+                    {
+                        string? identity = string.IsNullOrWhiteSpace(device.Identity)
+                            ? existingIdentities.GetValueOrDefault(device.Index)
+                            : device.Identity.Trim();
+
+                        if (identity is null)
+                        {
+                            devices[device.Index.ToString(CultureInfo.InvariantCulture)] = device.Mode.Trim();
+                        }
+                        else
+                        {
+                            devices[device.Index.ToString(CultureInfo.InvariantCulture)] = new JsonObject
+                            {
+                                ["mode"] = device.Mode.Trim(),
+                                ["identity"] = identity,
+                            };
+                        }
+                    }
+
+                    body["devices"] = devices;
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(providers, "caseRgb");
+                providers.Add("caseRgb", body);
+
+                return null;
             }
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(providers, "caseRgb");
-            providers.Add("caseRgb", body);
-
-            return null;
-        });
+        );
     }
 
     private static bool ValidateSceneEdits(
         IReadOnlyList<CaseRgbSceneEdit> scenes,
         IReadOnlySet<int> configuredDevices,
-        out string? problem)
+        out string? problem
+    )
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -242,8 +251,7 @@ public static class CaseRgbConfigurationStore
 
                 if (!IsRgb(color))
                 {
-                    problem =
-                        $"RGB scene '{name}' needs a six-digit RGB colour for controller {device.Index}.";
+                    problem = $"RGB scene '{name}' needs a six-digit RGB colour for controller {device.Index}.";
                     return false;
                 }
 
@@ -325,19 +333,23 @@ public static class CaseRgbConfigurationStore
     {
         var identities = new Dictionary<int, string>();
 
-        if (HardwareConfigurationStore.FindProperty(providers, "caseRgb") is not JsonObject caseRgb ||
-            HardwareConfigurationStore.FindProperty(caseRgb, "devices") is not JsonObject devices)
+        if (
+            HardwareConfigurationStore.FindProperty(providers, "caseRgb") is not JsonObject caseRgb
+            || HardwareConfigurationStore.FindProperty(caseRgb, "devices") is not JsonObject devices
+        )
         {
             return identities;
         }
 
         foreach ((string key, JsonNode? value) in devices)
         {
-            if (!int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out int index) ||
-                value is not JsonObject detailed ||
-                HardwareConfigurationStore.FindProperty(detailed, "identity") is not JsonValue identityValue ||
-                !identityValue.TryGetValue(out string? identity) ||
-                string.IsNullOrWhiteSpace(identity))
+            if (
+                !int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out int index)
+                || value is not JsonObject detailed
+                || HardwareConfigurationStore.FindProperty(detailed, "identity") is not JsonValue identityValue
+                || !identityValue.TryGetValue(out string? identity)
+                || string.IsNullOrWhiteSpace(identity)
+            )
             {
                 continue;
             }
@@ -348,6 +360,5 @@ public static class CaseRgbConfigurationStore
         return identities;
     }
 
-    private static bool IsRgb(string value) =>
-        value.Length == 6 && value.All(char.IsAsciiHexDigit);
+    private static bool IsRgb(string value) => value.Length == 6 && value.All(char.IsAsciiHexDigit);
 }

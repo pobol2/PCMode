@@ -8,10 +8,7 @@ public sealed class AudioTarget
 
     public IReadOnlyList<AudioRoute> Routes { get; }
 
-    public AudioTarget(
-        string id,
-        string name,
-        params AudioRoute[] routes)
+    public AudioTarget(string id, string name, params AudioRoute[] routes)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -19,19 +16,14 @@ public sealed class AudioTarget
 
         if (routes.Length == 0)
         {
-            throw new ArgumentException(
-                "An audio target must contain at least one route.",
-                nameof(routes));
+            throw new ArgumentException("An audio target must contain at least one route.", nameof(routes));
         }
 
         var routeCopy = new AudioRoute[routes.Length];
 
         for (int i = 0; i < routes.Length; i++)
         {
-            routeCopy[i] = routes[i]
-                ?? throw new ArgumentException(
-                    $"Route {i} cannot be null.",
-                    nameof(routes));
+            routeCopy[i] = routes[i] ?? throw new ArgumentException($"Route {i} cannot be null.", nameof(routes));
         }
 
         Id = id;

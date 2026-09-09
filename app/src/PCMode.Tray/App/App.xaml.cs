@@ -27,7 +27,8 @@ public partial class App : System.Windows.Application
             _log?.Error(
                 "Unhandled",
                 "An unhandled application exception occurred.",
-                args.ExceptionObject as Exception ?? new Exception(args.ExceptionObject?.ToString()));
+                args.ExceptionObject as Exception ?? new Exception(args.ExceptionObject?.ToString())
+            );
 
         TaskScheduler.UnobservedTaskException += (_, args) =>
             _log?.Error("Unhandled", "An unobserved task exception occurred.", args.Exception);
@@ -43,7 +44,8 @@ public partial class App : System.Windows.Application
                 $"PCMode could not start.\n\n{Describe(exception)}",
                 "PCMode",
                 MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                MessageBoxImage.Error
+            );
 
             Shutdown(1);
         }
@@ -59,7 +61,8 @@ public partial class App : System.Windows.Application
                 $"PCMode could not read its command line.\n\n{options.Error}",
                 "PCMode",
                 MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                MessageBoxImage.Warning
+            );
 
             Shutdown(1);
             return;

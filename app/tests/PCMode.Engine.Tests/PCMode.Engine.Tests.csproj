@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!--
     The engine's rules, with no UI and no machine in them.
 
@@ -42,5 +41,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PCMode.Audio.DriverClient\PCMode.Audio.DriverClient.csproj" />
   </ItemGroup>
-
 </Project>

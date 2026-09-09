@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Applications;
 
@@ -10,10 +10,7 @@ public sealed class ApplicationConfigurationEntry : ObservableObject
 {
     private string _statusText;
 
-    public ApplicationConfigurationEntry(
-        string name,
-        ApplicationDefinition definition,
-        HardwareItem status)
+    public ApplicationConfigurationEntry(string name, ApplicationDefinition definition, HardwareItem status)
     {
         Name = name;
         Definition = definition;
@@ -96,19 +93,27 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
 
     private string? _availabilityMessage;
 
-    public ApplicationsViewModel(
-        IConfigurationWorkspace workspace,
-        IConfigurationPrompts? prompts = null)
+    public ApplicationsViewModel(IConfigurationWorkspace workspace, IConfigurationPrompts? prompts = null)
         : base(workspace, prompts)
     {
         _session = new ConfigurationEditingSession<string, ApplicationConfigurationEntry>(
             keyOf: application => application.Name,
             titleOf: application => application.Name,
-            summaryOf: application => application.StatusText);
+            summaryOf: application => application.StatusText
+        );
+
+        AddRequirementCommand = new RelayCommand(AddRequirement);
+        RemoveRequirementCommand = new RelayCommand<RequirementRowViewModel>(RemoveRequirement);
 
         TreePresentation = new ConfigurationPagePresentation(
             "Applications",
-            new ConfigurationSelectorPresentation("Applications", SelectorItems, Commands.Create, Commands.ShowCreate, SelectItemCommand),
+            new ConfigurationSelectorPresentation(
+                "Applications",
+                SelectorItems,
+                Commands.Create,
+                Commands.ShowCreate,
+                SelectItemCommand
+            ),
             ConfigurationEditorPresentation.Create(
                 essential:
                 [
@@ -116,21 +121,27 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
                 ],
                 advanced:
                 [
-                    new("Readiness and dependencies", new TerminalElementContent("Readiness rules and resource requirements", this), IsCollapsible: true),
-                ]));
+                    new(
+                        "Readiness and dependencies",
+                        new TerminalElementContent("Readiness rules and resource requirements", this),
+                        IsCollapsible: true
+                    ),
+                ]
+            )
+        );
     }
 
     public ObservableCollection<ConfigurationEntityListItem<string>> SelectorItems => _session.SelectorItems;
 
     public ObservableCollection<RequirementRowViewModel> Requires { get; } = [];
 
+    public System.Windows.Input.ICommand AddRequirementCommand { get; }
+
+    public System.Windows.Input.ICommand RemoveRequirementCommand { get; }
+
     public void AddRequirement()
     {
-        Requires.Add(
-            new RequirementRowViewModel(
-                string.Empty,
-                string.Empty,
-                OnRequirementsChanged));
+        Requires.Add(new RequirementRowViewModel(string.Empty, string.Empty, OnRequirementsChanged));
 
         OnRequirementsChanged();
     }
@@ -186,9 +197,8 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
 
     public string ActivateActionLabel => IsLaunchOnly ? "Launch" : "Activate";
 
-    public string ActivateActionToolTip => IsLaunchOnly
-        ? "Launch this application now"
-        : "Start or stop this application now without switching spaces";
+    public string ActivateActionToolTip =>
+        IsLaunchOnly ? "Launch this application now" : "Start or stop this application now without switching spaces";
 
     /// <summary>The process name Windows reports, without ".exe".</summary>
     public string ProcessName
@@ -426,39 +436,39 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
         }
     }
 
-    public override bool CanSave =>
-        HasSelectedApplication &&
-        HasUnsavedChanges &&
-        !IsBusy &&
-        ValidationProblem is null;
+    public override bool CanSave => HasSelectedApplication && HasUnsavedChanges && !IsBusy && ValidationProblem is null;
 
     public bool HasSelectedApplication => SelectedApplication is not null;
 
-    public string? SelectedApplicationStatus => _session.IsDraft
-        ? "Not yet saved."
-        : _session.Items
-            .FirstOrDefault(item => string.Equals(item.Name, _session.Selected?.Name, StringComparison.OrdinalIgnoreCase))
-            ?.StatusText;
+    public string? SelectedApplicationStatus =>
+        _session.IsDraft
+            ? "Not yet saved."
+            : _session
+                .Items.FirstOrDefault(item =>
+                    string.Equals(item.Name, _session.Selected?.Name, StringComparison.OrdinalIgnoreCase)
+                )
+                ?.StatusText;
 
     public bool CanActivate =>
-        SelectedApplication is not null &&
-        !_session.IsDraft &&
-        !HasUnsavedChanges &&
-        !IsBusy &&
-        ValidationProblem is null;
+        SelectedApplication is not null
+        && !_session.IsDraft
+        && !HasUnsavedChanges
+        && !IsBusy
+        && ValidationProblem is null;
 
-    public override EntityActions Actions => new()
-    {
-        EntityNoun = "application",
-        CurrentDisplayName = SelectedApplication,
-        Create = CreateApplication,
-        Rename = HasSelectedApplication ? RenameSelected : null,
-        Duplicate = HasSelectedApplication ? DuplicateSelected : null,
-        Delete = HasSelectedApplication ? () => DeleteSelected() : null,
-        Activate = HasSelectedApplication ? ActivateSelectedForShellAsync : null,
-        ActivateLabel = ActivateActionLabel,
-        CanActivateNow = CanActivate,
-    };
+    public override EntityActions Actions =>
+        new()
+        {
+            EntityNoun = "application",
+            CurrentDisplayName = SelectedApplication,
+            Create = CreateApplication,
+            Rename = HasSelectedApplication ? RenameSelected : null,
+            Duplicate = HasSelectedApplication ? DuplicateSelected : null,
+            Delete = HasSelectedApplication ? () => DeleteSelected() : null,
+            Activate = HasSelectedApplication ? ActivateSelectedForShellAsync : null,
+            ActivateLabel = ActivateActionLabel,
+            CanActivateNow = CanActivate,
+        };
 
     public override void Refresh()
     {
@@ -486,8 +496,10 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
                 .Select(provider => new ApplicationConfigurationEntry(
                     provider.Key,
                     provider.Definition,
-                    statuses.GetValueOrDefault(provider.Key) ?? UnknownStatus(provider.Key))),
-            keep);
+                    statuses.GetValueOrDefault(provider.Key) ?? UnknownStatus(provider.Key)
+                )),
+            keep
+        );
         SelectedKey = _session.SelectedKey;
 
         if (!preserveOverlayEditor && SelectedApplication is not null)
@@ -511,8 +523,8 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
             return;
         }
 
-        IReadOnlyDictionary<string, HardwareItem>? statuses =
-            await Task.Run(CaptureApplicationStatuses).ConfigureAwait(true);
+        IReadOnlyDictionary<string, HardwareItem>? statuses = await Task.Run(CaptureApplicationStatuses)
+            .ConfigureAwait(true);
 
         if (statuses is null || IsBusy)
         {
@@ -544,7 +556,8 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
     }
 
     private static IReadOnlyDictionary<string, HardwareItem> DiscoverApplications(
-        IReadOnlyList<ApplicationProvider> providers) =>
+        IReadOnlyList<ApplicationProvider> providers
+    ) =>
         new ApplicationDiscoverer([.. providers])
             .Discover()
             .ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
@@ -614,9 +627,7 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
         return Persist(previousName, BuildEdit(selectedName), selectedName, $"'{selectedName}' saved.");
     }
 
-
-    private async Task ActivateSelectedForShellAsync() =>
-        await ActivateSelectedAsync().ConfigureAwait(true);
+    private async Task ActivateSelectedForShellAsync() => await ActivateSelectedAsync().ConfigureAwait(true);
 
     public async Task<string?> ActivateSelectedAsync(CancellationToken cancellationToken = default)
     {
@@ -642,7 +653,8 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
         }
 
         ApplicationProvider? provider = providers.FirstOrDefault(candidate =>
-            string.Equals(candidate.Key, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Key, name, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (provider is null)
         {
@@ -673,45 +685,54 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
         }
 
         bool starting = string.Equals(target, ApplicationProvider.Running, StringComparison.OrdinalIgnoreCase);
-        string activatingStatus = !provider.Definition.CanObserve
-            ? $"Launching '{name}'..."
-            : starting ? $"Starting '{name}'..." : $"Stopping '{name}'...";
+        string activatingStatus =
+            !provider.Definition.CanObserve ? $"Launching '{name}'..."
+            : starting ? $"Starting '{name}'..."
+            : $"Stopping '{name}'...";
 
         await RunActivationAsync(
-            Category,
-            activatingStatus,
-            async token =>
-            {
-                if (starting)
+                Category,
+                activatingStatus,
+                async token =>
                 {
-                    ResourceAvailability availability = provider.AvailabilityOf(ApplicationProvider.Running);
-                    AvailabilityMessage = Describe(availability);
-
-                    if (availability.State == AvailabilityState.Unavailable)
+                    if (starting)
                     {
-                        return new ActivationOutcome(false, availability.Explain());
+                        ResourceAvailability availability = provider.AvailabilityOf(ApplicationProvider.Running);
+                        AvailabilityMessage = Describe(availability);
+
+                        if (availability.State == AvailabilityState.Unavailable)
+                        {
+                            return new ActivationOutcome(false, availability.Explain());
+                        }
                     }
-                }
 
-                await Task.Run(() => provider.Apply(target, token), token).ConfigureAwait(true);
+                    await Task.Run(() => provider.Apply(target, token), token).ConfigureAwait(true);
 
-                string? observed = SafeRead(provider);
-                UpdateApplicationStatus(name);
-                AvailabilityMessage = Describe(provider.AvailabilityOf(ApplicationProvider.Running));
+                    string? observed = SafeRead(provider);
+                    UpdateApplicationStatus(name);
+                    AvailabilityMessage = Describe(provider.AvailabilityOf(ApplicationProvider.Running));
 
-                if (!provider.Definition.CanObserve)
-                {
-                    return new ActivationOutcome(true, $"Launch requested for '{name}'. Runtime is not monitored.");
-                }
+                    if (!provider.Definition.CanObserve)
+                    {
+                        return new ActivationOutcome(true, $"Launch requested for '{name}'. Runtime is not monitored.");
+                    }
 
-                bool reachedTarget = string.Equals(observed, target, StringComparison.OrdinalIgnoreCase);
-                return reachedTarget
-                    ? new ActivationOutcome(true, starting ? $"'{name}' started and verified." : $"'{name}' stopped and verified.")
-                    : new ActivationOutcome(false, starting
-                        ? $"Start requested for '{name}', but the running state could not be verified."
-                        : $"Stop requested for '{name}', but the stopped state could not be verified.");
-            },
-            cancellationToken).ConfigureAwait(true);
+                    bool reachedTarget = string.Equals(observed, target, StringComparison.OrdinalIgnoreCase);
+                    return reachedTarget
+                        ? new ActivationOutcome(
+                            true,
+                            starting ? $"'{name}' started and verified." : $"'{name}' stopped and verified."
+                        )
+                        : new ActivationOutcome(
+                            false,
+                            starting
+                                ? $"Start requested for '{name}', but the running state could not be verified."
+                                : $"Stop requested for '{name}', but the stopped state could not be verified."
+                        );
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(true);
 
         return ErrorMessage;
     }
@@ -853,19 +874,15 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
             ProcessName = definition.ProcessName;
             IsStartUri = definition.Start.Uri is not null;
             StartPath = definition.Start.Executable ?? string.Empty;
-            StartArgumentsText =
-                string.Join(Environment.NewLine, definition.Start.Arguments);
+            StartArgumentsText = string.Join(Environment.NewLine, definition.Start.Arguments);
             StartUri = definition.Start.Uri ?? string.Empty;
 
             HasStop = definition.Stop is not null;
             IsStopUri = definition.Stop?.Uri is not null;
             StopPath = definition.Stop?.Executable ?? string.Empty;
-            StopArgumentsText =
-                definition.Stop is null
-                    ? string.Empty
-                    : string.Join(
-                        Environment.NewLine,
-                        definition.Stop.Arguments);
+            StopArgumentsText = definition.Stop is null
+                ? string.Empty
+                : string.Join(Environment.NewLine, definition.Stop.Arguments);
             StopUri = definition.Stop?.Uri ?? string.Empty;
 
             Reactivate = definition.Reactivate;
@@ -874,38 +891,31 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
 
             foreach (ResourceRequirement requirement in definition.Requires)
             {
-                Requires.Add(
-                    new RequirementRowViewModel(
-                        requirement.Key,
-                        requirement.Target,
-                        OnRequirementsChanged));
+                Requires.Add(new RequirementRowViewModel(requirement.Key, requirement.Target, OnRequirementsChanged));
             }
 
-            RestartWhenText =
-                string.Join(", ", definition.RestartWhen);
+            RestartWhenText = string.Join(", ", definition.RestartWhen);
 
             ReadyEnabled = definition.Ready is not null;
             ReadyActivate = definition.Ready?.Activate ?? false;
             ReadyKeys = definition.Ready?.Keys ?? string.Empty;
-            ReadyWithinMs =
-                (int)(
-                    definition.Ready?.Within.TotalMilliseconds
-                    ?? DefaultReadyWithinMs);
+            ReadyWithinMs = (int)(definition.Ready?.Within.TotalMilliseconds ?? DefaultReadyWithinMs);
 
-            StartWithinMs =
-                (int)definition.StartWithin.TotalMilliseconds;
+            StartWithinMs = (int)definition.StartWithin.TotalMilliseconds;
 
-            StopWithinMs =
-                (int)definition.StopWithin.TotalMilliseconds;
+            StopWithinMs = (int)definition.StopWithin.TotalMilliseconds;
         });
 
         ClearDirtyState();
 
         UpdateApplicationStatus(found.Name);
-        AvailabilityMessage = ReadProviders<ApplicationProvider>().Providers
-            .FirstOrDefault(provider => string.Equals(provider.Key, found.Name, StringComparison.OrdinalIgnoreCase)) is { } provider
-                ? Describe(provider.AvailabilityOf(ApplicationProvider.Running))
-                : null;
+        AvailabilityMessage = ReadProviders<ApplicationProvider>()
+            .Providers.FirstOrDefault(provider =>
+                string.Equals(provider.Key, found.Name, StringComparison.OrdinalIgnoreCase)
+            )
+            is { } provider
+            ? Describe(provider.AvailabilityOf(ApplicationProvider.Running))
+            : null;
 
         NotifySelectionChanged();
         RaiseValidation();
@@ -954,26 +964,32 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
         RaiseValidation();
     }
 
-    private ApplicationEdit BuildEdit(string name) => new(
-        name,
-        IsLaunchOnly ? ApplicationObservationKind.None : ApplicationObservationKind.Process,
-        ProcessName.Trim(),
-        new LaunchCommandEdit(
-            IsStartUri ? null : StartPath.Trim(),
-            IsStartUri ? [] : SplitLines(StartArgumentsText),
-            IsStartUri ? StartUri.Trim() : null),
-        HasStop
-            ? new LaunchCommandEdit(
-                IsStopUri ? null : StopPath.Trim(),
-                IsStopUri ? [] : SplitLines(StopArgumentsText),
-                IsStopUri ? StopUri.Trim() : null)
-            : null,
-        Reactivate,
-        [.. Requires.Select(row => new ApplicationRequirementEdit(row.ResourceKey.Trim(), row.Value.Trim()))],
-        SplitList(RestartWhenText),
-        ReadyEnabled ? new ReadinessEdit(ReadyActivate, string.IsNullOrEmpty(ReadyKeys) ? null : ReadyKeys, ReadyWithinMs) : null,
-        StartWithinMs,
-        StopWithinMs);
+    private ApplicationEdit BuildEdit(string name) =>
+        new(
+            name,
+            IsLaunchOnly ? ApplicationObservationKind.None : ApplicationObservationKind.Process,
+            ProcessName.Trim(),
+            new LaunchCommandEdit(
+                IsStartUri ? null : StartPath.Trim(),
+                IsStartUri ? [] : SplitLines(StartArgumentsText),
+                IsStartUri ? StartUri.Trim() : null
+            ),
+            HasStop
+                ? new LaunchCommandEdit(
+                    IsStopUri ? null : StopPath.Trim(),
+                    IsStopUri ? [] : SplitLines(StopArgumentsText),
+                    IsStopUri ? StopUri.Trim() : null
+                )
+                : null,
+            Reactivate,
+            [.. Requires.Select(row => new ApplicationRequirementEdit(row.ResourceKey.Trim(), row.Value.Trim()))],
+            SplitList(RestartWhenText),
+            ReadyEnabled
+                ? new ReadinessEdit(ReadyActivate, string.IsNullOrEmpty(ReadyKeys) ? null : ReadyKeys, ReadyWithinMs)
+                : null,
+            StartWithinMs,
+            StopWithinMs
+        );
 
     /// <summary>
     /// A freshly built provider's own read of the machine, or null when the
@@ -982,14 +998,15 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
     private void UpdateApplicationStatus(string name)
     {
         ApplicationConfigurationEntry? item = _session.Items.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (item is not null)
         {
-            HardwareItem current = new ApplicationDiscoverer(
-                    [.. ReadProviders<ApplicationProvider>().Providers])
-                .Discover()
-                .FirstOrDefault(status => string.Equals(status.Name, name, StringComparison.OrdinalIgnoreCase))
+            HardwareItem current =
+                new ApplicationDiscoverer([.. ReadProviders<ApplicationProvider>().Providers])
+                    .Discover()
+                    .FirstOrDefault(status => string.Equals(status.Name, name, StringComparison.OrdinalIgnoreCase))
                 ?? UnknownStatus(name);
 
             item.Update(current);
@@ -1015,9 +1032,12 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
             return "Give the application a name.";
         }
 
-        if (SelectorItems.Any(item =>
-                !string.Equals(item.Title, allowedExisting, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(item.Title, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (
+            SelectorItems.Any(item =>
+                !string.Equals(item.Title, allowedExisting, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(item.Title, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return $"An application named '{trimmed}' already exists.";
         }
@@ -1026,9 +1046,7 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
     }
 
     private static string? Describe(ResourceAvailability availability) =>
-        availability.State == AvailabilityState.Available
-            ? null
-            : availability.Explain();
+        availability.State == AvailabilityState.Available ? null : availability.Explain();
 
     private static IReadOnlyList<string> SplitLines(string text) =>
         [.. text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
@@ -1044,10 +1062,7 @@ public sealed class ApplicationsViewModel : ConfigurationPageViewModelBase
 
     private void RaiseValidation()
     {
-        NotifyValidationChanged(
-            nameof(ValidationProblem),
-            nameof(CanSave),
-            nameof(CanActivate));
+        NotifyValidationChanged(nameof(ValidationProblem), nameof(CanSave), nameof(CanActivate));
     }
 
     private void NotifySelectionChanged()

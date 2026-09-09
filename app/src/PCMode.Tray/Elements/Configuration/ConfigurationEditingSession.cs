@@ -42,7 +42,8 @@ public sealed class ConfigurationEditingSession<TKey, TEntity>
     public ConfigurationEditingSession(
         Func<TEntity, TKey> keyOf,
         Func<TEntity, string> titleOf,
-        Func<TEntity, string?>? summaryOf = null)
+        Func<TEntity, string?>? summaryOf = null
+    )
     {
         ArgumentNullException.ThrowIfNull(keyOf);
         ArgumentNullException.ThrowIfNull(titleOf);
@@ -78,13 +79,9 @@ public sealed class ConfigurationEditingSession<TKey, TEntity>
     {
         get
         {
-            TKey? lookupKey = _overlay is { } overlay
-                ? (overlay.HasOrigin ? overlay.OriginKey : default)
-                : SelectedKey;
+            TKey? lookupKey = _overlay is { } overlay ? (overlay.HasOrigin ? overlay.OriginKey : default) : SelectedKey;
 
-            return lookupKey is null
-                ? default
-                : Items.FirstOrDefault(entity => Equals(_keyOf(entity), lookupKey));
+            return lookupKey is null ? default : Items.FirstOrDefault(entity => Equals(_keyOf(entity), lookupKey));
         }
     }
 
@@ -110,9 +107,10 @@ public sealed class ConfigurationEditingSession<TKey, TEntity>
         }
         else
         {
-            SelectedKey = keep is not null && Items.Any(entity => Equals(_keyOf(entity), keep))
-                ? keep
-                : Items.Count > 0 ? _keyOf(Items[0]) : default;
+            SelectedKey =
+                keep is not null && Items.Any(entity => Equals(_keyOf(entity), keep)) ? keep
+                : Items.Count > 0 ? _keyOf(Items[0])
+                : default;
         }
 
         RebuildSelectorItems();
@@ -145,7 +143,11 @@ public sealed class ConfigurationEditingSession<TKey, TEntity>
     public void RenameCurrent(TKey key, string title)
     {
         _overlay = _overlay is { } existing
-            ? existing with { Key = key, Title = title }
+            ? existing with
+            {
+                Key = key,
+                Title = title,
+            }
             : new Overlay(HasOrigin: true, OriginKey: SelectedKey!, key, title);
 
         SelectedKey = key;

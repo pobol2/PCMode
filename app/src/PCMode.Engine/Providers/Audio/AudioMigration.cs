@@ -84,17 +84,29 @@ public static class AudioMigration
             return false;
         }
 
-        if (document is null ||
-            HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-            HardwareConfigurationStore.FindProperty(providers, "audio") is not JsonObject audio ||
-            HardwareConfigurationStore.FindProperty(audio, "party") is not JsonObject party)
+        if (
+            document is null
+            || HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+            || HardwareConfigurationStore.FindProperty(providers, "audio") is not JsonObject audio
+            || HardwareConfigurationStore.FindProperty(audio, "party") is not JsonObject party
+        )
         {
             return false;
         }
 
-        if (!TryRead(party, out string name, out string reference, out string delayed,
-                out int delayMs, out double gain, out double? referenceVolume, out double? delayedVolume,
-                out string? note))
+        if (
+            !TryRead(
+                party,
+                out string name,
+                out string reference,
+                out string delayed,
+                out int delayMs,
+                out double gain,
+                out double? referenceVolume,
+                out double? delayedVolume,
+                out string? note
+            )
+        )
         {
             // A group this build cannot make sense of is left exactly where it
             // is. The loader then refuses the document by name, which is a far
@@ -111,21 +123,27 @@ public static class AudioMigration
             return false;
         }
 
-        targets.Add(name, new JsonObject
-        {
-            ["outputs"] = new JsonArray(
-                Route(reference, 0, 1.0, referenceVolume),
-                Route(delayed, delayMs, gain, delayedVolume)),
-        });
+        targets.Add(
+            name,
+            new JsonObject
+            {
+                ["outputs"] = new JsonArray(
+                    Route(reference, 0, 1.0, referenceVolume),
+                    Route(delayed, delayMs, gain, delayedVolume)
+                ),
+            }
+        );
 
         HardwareConfigurationStore.RemoveCaseInsensitive(audio, "party");
 
         migrated = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
 
-        summary = string.Create(
-            CultureInfo.InvariantCulture,
-            $"Converted the Party group '{name}' into an audio target: '{reference}' and '{delayed}' " +
-            $"delayed by {delayMs} ms at gain {gain:0.00}.") + (note is null ? string.Empty : $" {note}");
+        summary =
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Converted the Party group '{name}' into an audio target: '{reference}' and '{delayed}' "
+                    + $"delayed by {delayMs} ms at gain {gain:0.00}."
+            ) + (note is null ? string.Empty : $" {note}");
 
         return true;
     }
@@ -164,7 +182,8 @@ public static class AudioMigration
         out double gain,
         out double? referenceVolume,
         out double? delayedVolume,
-        out string? note)
+        out string? note
+    )
     {
         name = Text(party, "name") ?? DefaultTargetName;
         reference = string.Empty;
@@ -178,18 +197,24 @@ public static class AudioMigration
         if (HardwareConfigurationStore.FindProperty(party, "outputs") is JsonArray outputs)
         {
             List<string> members =
-                [.. outputs
-                    .Select(output => output is JsonValue value && value.TryGetValue(out string? text)
-                        ? text?.Trim()
-                        : null)
+            [
+                .. outputs
+                    .Select(output =>
+                        output is JsonValue value && value.TryGetValue(out string? text) ? text?.Trim() : null
+                    )
                     .Where(text => !string.IsNullOrWhiteSpace(text))
-                    .Select(text => text!)];
+                    .Select(text => text!),
+            ];
 
-            if (members.Count != 2 ||
-                HardwareConfigurationStore.FindProperty(party, "delay") is not JsonObject delay ||
-                Text(delay, "output") is not string delayedOutput ||
-                members.FirstOrDefault(member =>
-                    string.Equals(member, delayedOutput, StringComparison.OrdinalIgnoreCase)) is not string chosen)
+            if (
+                members.Count != 2
+                || HardwareConfigurationStore.FindProperty(party, "delay") is not JsonObject delay
+                || Text(delay, "output") is not string delayedOutput
+                || members.FirstOrDefault(member =>
+                    string.Equals(member, delayedOutput, StringComparison.OrdinalIgnoreCase)
+                )
+                    is not string chosen
+            )
             {
                 return false;
             }
@@ -213,9 +238,11 @@ public static class AudioMigration
         }
         else
         {
-            if (Text(party, "reference") is not string legacyReference ||
-                Text(party, "mirror") is not string legacyMirror ||
-                string.Equals(legacyReference, legacyMirror, StringComparison.OrdinalIgnoreCase))
+            if (
+                Text(party, "reference") is not string legacyReference
+                || Text(party, "mirror") is not string legacyMirror
+                || string.Equals(legacyReference, legacyMirror, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return false;
             }
@@ -236,8 +263,8 @@ public static class AudioMigration
         if (delayMs > AudioTargetSettings.MaxDelayMs)
         {
             note =
-                $"The configured delay of {delayMs} ms was above the audio engine's limit and was reduced to " +
-                $"{AudioTargetSettings.MaxDelayMs} ms.";
+                $"The configured delay of {delayMs} ms was above the audio engine's limit and was reduced to "
+                + $"{AudioTargetSettings.MaxDelayMs} ms.";
 
             delayMs = AudioTargetSettings.MaxDelayMs;
         }
@@ -246,17 +273,21 @@ public static class AudioMigration
     }
 
     private static string? Text(JsonObject written, string field) =>
-        HardwareConfigurationStore.FindProperty(written, field) is JsonValue value &&
-        value.TryGetValue(out string? text) && !string.IsNullOrWhiteSpace(text)
+        HardwareConfigurationStore.FindProperty(written, field) is JsonValue value
+        && value.TryGetValue(out string? text)
+        && !string.IsNullOrWhiteSpace(text)
             ? text.Trim()
             : null;
 
     private static double? Number(JsonObject written, string field) =>
-        HardwareConfigurationStore.FindProperty(written, field) is JsonValue value &&
-        value.TryGetValue(out double number) && !double.IsNaN(number) && !double.IsInfinity(number)
+        HardwareConfigurationStore.FindProperty(written, field) is JsonValue value
+        && value.TryGetValue(out double number)
+        && !double.IsNaN(number)
+        && !double.IsInfinity(number)
             ? number
             : null;
 
     private static string? FindKey(JsonObject obj, string name) =>
-        obj.Select(pair => pair.Key).FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        obj.Select(pair => pair.Key)
+            .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 }

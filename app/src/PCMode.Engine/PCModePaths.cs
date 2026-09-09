@@ -20,10 +20,12 @@ public static class PCModePaths
     public const string NativeFolderName = "Native";
 
     /// <summary>The real per-user root.</summary>
-    public static string DefaultRoot => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        FolderName,
-        NativeFolderName);
+    public static string DefaultRoot =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            FolderName,
+            NativeFolderName
+        );
 
     /// <summary>The versioned mode configuration.</summary>
     public static string ConfigurationFile(string root) => Path.Combine(root, "config.json");

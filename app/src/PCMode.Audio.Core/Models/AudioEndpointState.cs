@@ -8,5 +8,5 @@ public enum AudioEndpointState
     Unplugged,
     NotPresent,
     Unavailable,
-    Failed
+    Failed,
 }

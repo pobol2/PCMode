@@ -33,7 +33,8 @@ public readonly record struct HotkeyBinding(
     HotkeyModifiers Modifiers,
     uint VirtualKey,
     string Description,
-    string? ModeName = null);
+    string? ModeName = null
+);
 
 /// <summary>The Win32 calls, behind an interface so a test can refuse one.</summary>
 public interface IHotkeyRegistrar

@@ -54,7 +54,8 @@ internal sealed record ConvergenceResult(
     string? Observed,
     int Attempts,
     bool Mutated,
-    string? Problem);
+    string? Problem
+);
 
 /// <summary>
 /// Getting one resource to one target, and knowing when it is there.
@@ -116,7 +117,8 @@ internal static class ResourceConvergence
         PlannedResource planned,
         TransitionBudget budget,
         Func<string?>? beforeMutating,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         IModeResourceProvider provider = planned.Provider;
         string target = planned.Target;
@@ -148,29 +150,48 @@ internal static class ResourceConvergence
             if (!policy.Verify || policy.Settle <= TimeSpan.Zero)
             {
                 return new ConvergenceResult(
-                    ConvergenceStatus.AlreadyCorrect, before, observed, Attempts: 0, Mutated: false, Problem: null);
+                    ConvergenceStatus.AlreadyCorrect,
+                    before,
+                    observed,
+                    Attempts: 0,
+                    Mutated: false,
+                    Problem: null
+                );
             }
 
             (Verification held, observed) = await WatchAsync(
-                provider, target, policy, budget, window: TimeSpan.Zero, before, cancellationToken)
+                    provider,
+                    target,
+                    policy,
+                    budget,
+                    window: TimeSpan.Zero,
+                    before,
+                    cancellationToken
+                )
                 .ConfigureAwait(false);
 
             switch (held)
             {
                 case Verification.Verified:
                     return new ConvergenceResult(
-                        ConvergenceStatus.AlreadyCorrect, before, observed, Attempts: 0, Mutated: false, Problem: null);
+                        ConvergenceStatus.AlreadyCorrect,
+                        before,
+                        observed,
+                        Attempts: 0,
+                        Mutated: false,
+                        Problem: null
+                    );
 
                 case Verification.Cancelled:
-                    return Stopped(
-                        ConvergenceStatus.Cancelled, before, "Cancelled before it was applied.", observed);
+                    return Stopped(ConvergenceStatus.Cancelled, before, "Cancelled before it was applied.", observed);
 
                 case Verification.TimedOut:
                     return Stopped(
                         ConvergenceStatus.TimedOut,
                         before,
                         $"The transition ran out of time while checking that it was still '{target}'.",
-                        observed);
+                        observed
+                    );
 
                 default:
                     // It drifted. It was never where it looked, so it is applied
@@ -196,7 +217,8 @@ internal static class ResourceConvergence
                     observed,
                     attempt - 1,
                     mutated,
-                    mutated ? "Cancelled between attempts." : "Cancelled before it was applied.");
+                    mutated ? "Cancelled between attempts." : "Cancelled before it was applied."
+                );
             }
 
             if (budget.Expired)
@@ -210,8 +232,9 @@ internal static class ResourceConvergence
                     observed,
                     attempt - 1,
                     mutated,
-                    $"The transition ran out of time before it could be applied again; " +
-                    $"it reads '{Describe(observed)}' rather than '{target}'.");
+                    $"The transition ran out of time before it could be applied again; "
+                        + $"it reads '{Describe(observed)}' rather than '{target}'."
+                );
             }
 
             if (!mutated)
@@ -230,7 +253,13 @@ internal static class ResourceConvergence
                 if (beforeMutating?.Invoke() is string refused)
                 {
                     return new ConvergenceResult(
-                        ConvergenceStatus.Blocked, before, observed, Attempts: 0, Mutated: false, refused);
+                        ConvergenceStatus.Blocked,
+                        before,
+                        observed,
+                        Attempts: 0,
+                        Mutated: false,
+                        refused
+                    );
                 }
 
                 mutated = true;
@@ -248,7 +277,8 @@ internal static class ResourceConvergence
                     observed,
                     attempt,
                     mutated,
-                    "Cancelled while it was being applied.");
+                    "Cancelled while it was being applied."
+                );
             }
             catch (Exception exception)
             {
@@ -267,7 +297,8 @@ internal static class ResourceConvergence
                         observed,
                         attempt,
                         mutated,
-                        "Cancelled while it was being applied.");
+                        "Cancelled while it was being applied."
+                    );
                 }
 
                 if (budget.Expired)
@@ -278,14 +309,21 @@ internal static class ResourceConvergence
                         observed,
                         attempt,
                         mutated,
-                        $"The transition ran out of time while it was being applied. " +
-                        $"Last failure: {exception.Message}");
+                        $"The transition ran out of time while it was being applied. "
+                            + $"Last failure: {exception.Message}"
+                    );
                 }
 
                 if (attempt >= policy.MaxAttempts)
                 {
                     return new ConvergenceResult(
-                        ConvergenceStatus.Failed, before, observed, attempt, mutated, exception.Message);
+                        ConvergenceStatus.Failed,
+                        before,
+                        observed,
+                        attempt,
+                        mutated,
+                        exception.Message
+                    );
                 }
 
                 // The command itself refused -- the endpoint is not there yet,
@@ -304,7 +342,8 @@ internal static class ResourceConvergence
                         mutated,
                         pause is WaitOutcome.Cancelled
                             ? "Cancelled between attempts."
-                            : $"The transition ran out of time. Last failure: {exception.Message}");
+                            : $"The transition ran out of time. Last failure: {exception.Message}"
+                    );
                 }
 
                 continue;
@@ -320,7 +359,8 @@ internal static class ResourceConvergence
                     observed,
                     attempt,
                     mutated,
-                    "Cancelled while it was being applied.");
+                    "Cancelled while it was being applied."
+                );
             }
 
             if (!policy.Verify)
@@ -337,16 +377,15 @@ internal static class ResourceConvergence
                     if (spread is not WaitOutcome.Elapsed)
                     {
                         return new ConvergenceResult(
-                            spread is WaitOutcome.Cancelled
-                                ? ConvergenceStatus.Cancelled
-                                : ConvergenceStatus.TimedOut,
+                            spread is WaitOutcome.Cancelled ? ConvergenceStatus.Cancelled : ConvergenceStatus.TimedOut,
                             before,
                             Observed: null,
                             attempt,
                             mutated,
                             spread is WaitOutcome.Cancelled
                                 ? "Cancelled while it was taking effect."
-                                : "The transition ran out of time while it was taking effect.");
+                                : "The transition ran out of time while it was taking effect."
+                        );
                     }
                 }
                 else if (budget.Expired)
@@ -359,24 +398,44 @@ internal static class ResourceConvergence
                         Observed: null,
                         attempt,
                         mutated,
-                        "The transition ran out of time while it was being applied.");
+                        "The transition ran out of time while it was being applied."
+                    );
                 }
 
                 return new ConvergenceResult(
-                    ConvergenceStatus.Converged, before, Observed: null, attempt, mutated, Problem: null);
+                    ConvergenceStatus.Converged,
+                    before,
+                    Observed: null,
+                    attempt,
+                    mutated,
+                    Problem: null
+                );
             }
 
             observed = SafeRead(provider);
 
             (Verification verification, observed) = await WatchAsync(
-                provider, target, policy, budget, policy.RetryInterval, observed, cancellationToken)
+                    provider,
+                    target,
+                    policy,
+                    budget,
+                    policy.RetryInterval,
+                    observed,
+                    cancellationToken
+                )
                 .ConfigureAwait(false);
 
             switch (verification)
             {
                 case Verification.Verified:
                     return new ConvergenceResult(
-                        ConvergenceStatus.Converged, before, observed, attempt, mutated, Problem: null);
+                        ConvergenceStatus.Converged,
+                        before,
+                        observed,
+                        attempt,
+                        mutated,
+                        Problem: null
+                    );
 
                 case Verification.Cancelled:
                     return new ConvergenceResult(
@@ -385,7 +444,8 @@ internal static class ResourceConvergence
                         observed,
                         attempt,
                         mutated,
-                        "Cancelled while it was settling.");
+                        "Cancelled while it was settling."
+                    );
 
                 case Verification.TimedOut:
                     return new ConvergenceResult(
@@ -394,8 +454,9 @@ internal static class ResourceConvergence
                         observed,
                         attempt,
                         mutated,
-                        $"The transition ran out of time; it still reads " +
-                        $"'{Describe(observed)}' rather than '{target}'.");
+                        $"The transition ran out of time; it still reads "
+                            + $"'{Describe(observed)}' rather than '{target}'."
+                    );
 
                 default:
                     if (attempt >= policy.MaxAttempts)
@@ -406,8 +467,9 @@ internal static class ResourceConvergence
                             observed,
                             attempt,
                             mutated,
-                            $"Applied {attempt} time(s), but it still reads " +
-                            $"'{Describe(observed)}' rather than '{target}'.");
+                            $"Applied {attempt} time(s), but it still reads "
+                                + $"'{Describe(observed)}' rather than '{target}'."
+                        );
                     }
 
                     // Straight back round without a further pause: the readback
@@ -449,7 +511,8 @@ internal static class ResourceConvergence
         TransitionBudget budget,
         TimeSpan window,
         string? observed,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         long attemptStart = budget.Mark();
         long? agreeingSince = null;
@@ -523,7 +586,8 @@ internal static class ResourceConvergence
     private static async Task<WaitOutcome> WaitAsync(
         TimeSpan interval,
         TransitionBudget budget,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (cancellationToken.IsCancellationRequested)
         {
@@ -570,8 +634,8 @@ internal static class ResourceConvergence
         ConvergenceStatus status,
         string? before,
         string problem,
-        string? observed = null) =>
-        new(status, before, observed ?? before, Attempts: 0, Mutated: false, problem);
+        string? observed = null
+    ) => new(status, before, observed ?? before, Attempts: 0, Mutated: false, problem);
 
     private static bool Matches(string? current, string target) =>
         current is not null && string.Equals(current, target, StringComparison.OrdinalIgnoreCase);

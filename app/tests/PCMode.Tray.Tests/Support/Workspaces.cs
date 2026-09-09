@@ -31,7 +31,8 @@ internal static class Workspaces
 /// </summary>
 internal sealed class FakeWorkspace(
     (ModeConfiguration Configuration, IReadOnlyList<IModeResourceProvider> Providers)? snapshot = null,
-    Func<string, string>? apply = null) : IConfigurationWorkspace
+    Func<string, string>? apply = null
+) : IConfigurationWorkspace
 {
     public string? Root => null;
 
@@ -82,7 +83,10 @@ internal sealed class TemporaryConfigurationRoot : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(Path, recursive: true); }
+        try
+        {
+            Directory.Delete(Path, recursive: true);
+        }
         catch (IOException) { }
     }
 }

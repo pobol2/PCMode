@@ -1,0 +1,59 @@
+{
+    // Formatting policy lives in .editorconfig, .clang-format and
+    // Settings.XamlStyler. This file only tells the editor to run the same
+    // formatters the repository already uses, so saving a file and running the
+    // formatter from the command line produce the same bytes.
+    "editor.formatOnSave": true,
+    "editor.rulers": [120],
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+
+    "[csharp]": {
+        "editor.defaultFormatter": "csharpier.csharpier-vscode"
+    },
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "[powershell]": {
+        "editor.defaultFormatter": "ms-vscode.powershell"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    // XAML is formatted by XAML Styler (Settings.XamlStyler), run as the xstyler
+    // CLI. No editor formatter is selected for .xaml on purpose: a second
+    // formatter with its own idea of attribute layout would flip every file back
+    // and forth on each save. Run `xstyler -d app -r -c Settings.XamlStyler`.
+    "[xaml]": {
+        "editor.formatOnSave": false
+    },
+    "[xml]": {
+        "editor.formatOnSave": false
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+        // Markdown uses two trailing spaces as a hard line break.
+        "files.trimTrailingWhitespace": false
+    },
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+
+    "C_Cpp.formatting": "clangFormat",
+    "C_Cpp.clang_format_style": "file",
+
+    "powershell.codeFormatting.preset": "Allman",
+    "powershell.codeFormatting.autoCorrectAliases": true,
+    "powershell.codeFormatting.useCorrectCasing": true,
+    "powershell.codeFormatting.trimWhitespaceAroundPipe": true,
+
+    "claudeCode.preferredLocation": "sidebar",
+    "claudeCode.useTerminal": true
+}

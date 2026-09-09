@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Displays.Sections;
 
@@ -82,8 +82,9 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
     /// </summary>
     private string _loadedCursorPositionName = NoCursorPosition;
 
-    private IReadOnlyDictionary<string, string> _otherRequirements =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, string> _otherRequirements = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <param name="onCursorLinkChanged">
     /// Called whenever <see cref="CursorPositionName"/> changes to a
@@ -106,7 +107,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         IConfigurationWorkspace workspace,
         Action onChanged,
         Action onCursorLinkChanged,
-        Action<LayoutMonitorRow?> onSelectedMonitorChanged)
+        Action<LayoutMonitorRow?> onSelectedMonitorChanged
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(onChanged);
@@ -237,12 +239,16 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         foreach (LayoutMonitorRow row in Rows)
         {
             DisplayMonitorMapping? mapping = snapshot.Mappings.FirstOrDefault(candidate =>
-                string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase)
+            );
 
             DisplayMonitorInfo? monitorInfo = snapshot.Monitors.FirstOrDefault(candidate =>
-                string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase) ||
-                (mapping is not null &&
-                 string.Equals(candidate.DevicePath, mapping.DevicePath, StringComparison.OrdinalIgnoreCase)));
+                string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase)
+                || (
+                    mapping is not null
+                    && string.Equals(candidate.DevicePath, mapping.DevicePath, StringComparison.OrdinalIgnoreCase)
+                )
+            );
 
             row.SetDisplayDetails(monitorInfo, mapping);
         }
@@ -291,7 +297,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         }
 
         DisplayLayout? layout = display.Layouts.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase)
+        );
 
         LoadRequirements(layout);
         LoadCursorLink(name);
@@ -310,7 +317,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
                 row.Primary ? null : row.Anchor,
                 row.RefreshHz,
                 row.Primary ? null : row.Alignment,
-                row.Primary ? null : row.Offset))
+                row.Primary ? null : row.Offset
+            )),
         ];
 
         return (monitors, _otherRequirements);
@@ -336,21 +344,24 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
 
         (ModeConfiguration configuration, _) = _workspace.Read();
 
-        IReadOnlyList<NodeAddress> addresses =
-            DisplayLayoutCursorLink.AddressesFor(configuration.Spaces, layoutName);
+        IReadOnlyList<NodeAddress> addresses = DisplayLayoutCursorLink.AddressesFor(configuration.Spaces, layoutName);
 
         if (addresses.Count == 0)
         {
             return string.Equals(_cursorPositionName, NoCursorPosition, StringComparison.Ordinal)
                 ? null
-                : $"'{layoutName}' is not yet set as the display for any Space, Activity or Source, so " +
-                  $"'{_cursorPositionName}' could not be linked to it. Set '{layoutName}' as the display " +
-                  "somewhere first, then link the cursor position again.";
+                : $"'{layoutName}' is not yet set as the display for any Space, Activity or Source, so "
+                    + $"'{_cursorPositionName}' could not be linked to it. Set '{layoutName}' as the display "
+                    + "somewhere first, then link the cursor position again.";
         }
 
         var edit = new Dictionary<string, ResourceEdit>
         {
-            [CursorProvider.ResourceKey] = string.Equals(_cursorPositionName, NoCursorPosition, StringComparison.Ordinal)
+            [CursorProvider.ResourceKey] = string.Equals(
+                _cursorPositionName,
+                NoCursorPosition,
+                StringComparison.Ordinal
+            )
                 ? ResourceEdit.Cleared
                 : ResourceEdit.Of(_cursorPositionName, optional: true),
         };
@@ -393,15 +404,24 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
             return "Give the cursor position a name.";
         }
 
-        if (CursorPositionChoices.Any(existing =>
-            !string.Equals(existing, NoCursorPosition, StringComparison.Ordinal) &&
-            string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (
+            CursorPositionChoices.Any(existing =>
+                !string.Equals(existing, NoCursorPosition, StringComparison.Ordinal)
+                && string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return $"'{trimmed}' is already a configured cursor position.";
         }
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Save(
-            _workspace.Root, trimmed, xPercent: 50, xFromRight: null, yPercent: 50, yFromBottom: null);
+            _workspace.Root,
+            trimmed,
+            xPercent: 50,
+            xFromRight: null,
+            yPercent: 50,
+            yFromBottom: null
+        );
 
         if (!outcome.Success)
         {
@@ -440,8 +460,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         LayoutMonitorRow[] anchors =
         [
             .. Rows.Where(candidate =>
-                candidate != monitor &&
-                (monitor.Primary || !WouldCreateCycle(monitor, candidate)))
+                candidate != monitor && (monitor.Primary || !WouldCreateCycle(monitor, candidate))
+            ),
         ];
 
         if (anchors.Length == 0)
@@ -450,11 +470,16 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         }
 
         (LayoutMonitorRow Anchor, string Direction, double Distance) best = anchors
-            .SelectMany(anchor => CandidateDrops(monitor, anchor)
-                .Select(candidate => (
-                    Anchor: anchor,
-                    candidate.Direction,
-                    Distance: DistanceSquared(droppedLeft, droppedTop, candidate.Left, candidate.Top))))
+            .SelectMany(anchor =>
+                CandidateDrops(monitor, anchor)
+                    .Select(candidate =>
+                        (
+                            Anchor: anchor,
+                            candidate.Direction,
+                            Distance: DistanceSquared(droppedLeft, droppedTop, candidate.Left, candidate.Top)
+                        )
+                    )
+            )
             .MinBy(candidate => candidate.Distance);
 
         _suppressRecompute = true;
@@ -470,7 +495,13 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         }
         else
         {
-            (string alignment, int offset) = ResolveAlignment(best.Direction, best.Anchor, monitor, droppedLeft, droppedTop);
+            (string alignment, int offset) = ResolveAlignment(
+                best.Direction,
+                best.Anchor,
+                monitor,
+                droppedLeft,
+                droppedTop
+            );
             monitor.SetPlacement(best.Direction, best.Anchor.MonitorName, alignment, offset);
         }
 
@@ -494,7 +525,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         LayoutMonitorRow anchor,
         LayoutMonitorRow monitor,
         double droppedLeft,
-        double droppedTop)
+        double droppedTop
+    )
     {
         const double snapPreviewPixels = 14;
 
@@ -512,7 +544,9 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
             (LayoutAlignmentChoice.End, anchorStart + anchorSize - monitorSize),
         ];
 
-        (string Alignment, double Position) nearest = candidates.MinBy(candidate => Math.Abs(candidate.Position - dropped));
+        (string Alignment, double Position) nearest = candidates.MinBy(candidate =>
+            Math.Abs(candidate.Position - dropped)
+        );
 
         if (Math.Abs(nearest.Position - dropped) <= snapPreviewPixels)
         {
@@ -617,8 +651,7 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         {
             row.Primary = string.Equals(layout?.Primary, row.MonitorName, StringComparison.OrdinalIgnoreCase);
 
-            if (layout is not null &&
-                layout.Placements.TryGetValue(row.MonitorName, out DisplayPlacement? placement))
+            if (layout is not null && layout.Placements.TryGetValue(row.MonitorName, out DisplayPlacement? placement))
             {
                 row.Direction = placement.Direction.ToString();
                 row.Anchor = placement.Anchor;
@@ -626,16 +659,15 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
                 row.Offset = placement.Offset;
             }
 
-            double? configuredHz =
-                layout?.Refresh.TryGetValue(row.MonitorName, out double hz) == true ? hz : null;
+            double? configuredHz = layout?.Refresh.TryGetValue(row.MonitorName, out double hz) == true ? hz : null;
 
             PopulateRefreshChoices(row, _snapshot, row.MonitorName, configuredHz);
         }
 
         _suppressRecompute = false;
         RecomputeAnchorChoices();
-        SelectedMonitor = Rows.FirstOrDefault(row =>
-                string.Equals(row.MonitorName, keepMonitor, StringComparison.OrdinalIgnoreCase))
+        SelectedMonitor =
+            Rows.FirstOrDefault(row => string.Equals(row.MonitorName, keepMonitor, StringComparison.OrdinalIgnoreCase))
             ?? Rows.FirstOrDefault(row => row.Primary)
             ?? Rows.FirstOrDefault();
         RecomputePreview();
@@ -663,12 +695,16 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
     private void ResolveRow(LayoutMonitorRow row, double? configuredHz)
     {
         DisplayMonitorMapping? mapping = _snapshot?.Mappings.FirstOrDefault(candidate =>
-            string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase)
+        );
 
         DisplayMonitorInfo? monitorInfo = _snapshot?.Monitors.FirstOrDefault(candidate =>
-            string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase) ||
-            (mapping is not null &&
-             string.Equals(candidate.DevicePath, mapping.DevicePath, StringComparison.OrdinalIgnoreCase)));
+            string.Equals(candidate.LogicalName, row.MonitorName, StringComparison.OrdinalIgnoreCase)
+            || (
+                mapping is not null
+                && string.Equals(candidate.DevicePath, mapping.DevicePath, StringComparison.OrdinalIgnoreCase)
+            )
+        );
 
         // DevicePath first: the monitor-scoped DDC/CI and television sections
         // re-resolve against it, so it has to already name the new monitor by
@@ -699,14 +735,22 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
     }
 
     private static void PopulateRefreshChoices(
-        LayoutMonitorRow row, DisplaySnapshot? snapshot, string monitor, double? configuredHz)
+        LayoutMonitorRow row,
+        DisplaySnapshot? snapshot,
+        string monitor,
+        double? configuredHz
+    )
     {
         row.RefreshChoices.Clear();
         row.RefreshChoices.Add(LayoutMonitorRow.NoPreference);
 
-        IReadOnlyList<int> discovered = snapshot?.Monitors
-            .FirstOrDefault(info => string.Equals(info.LogicalName, monitor, StringComparison.OrdinalIgnoreCase))
-            ?.SupportedRefreshHz ?? [];
+        IReadOnlyList<int> discovered =
+            snapshot
+                ?.Monitors.FirstOrDefault(info =>
+                    string.Equals(info.LogicalName, monitor, StringComparison.OrdinalIgnoreCase)
+                )
+                ?.SupportedRefreshHz
+            ?? [];
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
@@ -739,7 +783,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
 
     private static IEnumerable<(string Direction, double Left, double Top)> CandidateDrops(
         LayoutMonitorRow monitor,
-        LayoutMonitorRow anchor)
+        LayoutMonitorRow anchor
+    )
     {
         yield return (LayoutDirectionChoice.LeftOf, anchor.PreviewLeft - monitor.PreviewWidth, anchor.PreviewTop);
         yield return (LayoutDirectionChoice.RightOf, anchor.PreviewLeft + anchor.PreviewWidth, anchor.PreviewTop);
@@ -760,7 +805,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
             }
 
             current = Rows.FirstOrDefault(row =>
-                string.Equals(row.MonitorName, current.Anchor, StringComparison.OrdinalIgnoreCase));
+                string.Equals(row.MonitorName, current.Anchor, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
         return false;
@@ -804,8 +850,7 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         // A renamed row can leave others anchored to a monitor no longer in
         // the layout; RecomputeAnchorChoices repairs those the same way it
         // does after a Remove.
-        RecomputeAnchorChoices(
-            propertyName == nameof(LayoutMonitorRow.Primary) && changed.Primary ? changed : null);
+        RecomputeAnchorChoices(propertyName == nameof(LayoutMonitorRow.Primary) && changed.Primary ? changed : null);
         RecomputePreview();
     }
 
@@ -845,7 +890,9 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         foreach (LayoutMonitorRow row in Rows)
         {
             IReadOnlyList<string> choices =
-                [.. included.Where(other => other != row).Select(other => other.MonitorName)];
+            [
+                .. included.Where(other => other != row).Select(other => other.MonitorName),
+            ];
 
             row.AnchorChoices.Clear();
 
@@ -886,10 +933,7 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
         if (included.Count > 0)
         {
             LayoutMonitorRow origin = included.FirstOrDefault(row => row.Primary) ?? included[0];
-            var positions = new Dictionary<LayoutMonitorRow, (double X, double Y)>
-            {
-                [origin] = (0, 0),
-            };
+            var positions = new Dictionary<LayoutMonitorRow, (double X, double Y)> { [origin] = (0, 0) };
             List<LayoutMonitorRow> remaining = [.. included.Where(row => row != origin)];
 
             while (remaining.Count > 0)
@@ -899,30 +943,40 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
                 foreach (LayoutMonitorRow row in remaining.ToList())
                 {
                     LayoutMonitorRow? anchor = included.FirstOrDefault(candidate =>
-                        string.Equals(candidate.MonitorName, row.Anchor, StringComparison.OrdinalIgnoreCase));
+                        string.Equals(candidate.MonitorName, row.Anchor, StringComparison.OrdinalIgnoreCase)
+                    );
 
                     if (anchor is null || !positions.TryGetValue(anchor, out (double X, double Y) anchorPosition))
                     {
                         continue;
                     }
 
-                    double along(int anchorSize, int monitorSize) => row.Alignment switch
-                    {
-                        LayoutAlignmentChoice.Center => (anchorSize - monitorSize) / 2.0,
-                        LayoutAlignmentChoice.End => anchorSize - monitorSize,
-                        _ => 0,
-                    } + row.Offset;
+                    double along(int anchorSize, int monitorSize) =>
+                        row.Alignment switch
+                        {
+                            LayoutAlignmentChoice.Center => (anchorSize - monitorSize) / 2.0,
+                            LayoutAlignmentChoice.End => anchorSize - monitorSize,
+                            _ => 0,
+                        } + row.Offset;
 
                     positions[row] = row.Direction switch
                     {
-                        LayoutDirectionChoice.LeftOf =>
-                            (anchorPosition.X - row.LayoutWidth, anchorPosition.Y + along(anchor.LayoutHeight, row.LayoutHeight)),
-                        LayoutDirectionChoice.Above =>
-                            (anchorPosition.X + along(anchor.LayoutWidth, row.LayoutWidth), anchorPosition.Y - row.LayoutHeight),
-                        LayoutDirectionChoice.Below =>
-                            (anchorPosition.X + along(anchor.LayoutWidth, row.LayoutWidth), anchorPosition.Y + anchor.LayoutHeight),
-                        _ =>
-                            (anchorPosition.X + anchor.LayoutWidth, anchorPosition.Y + along(anchor.LayoutHeight, row.LayoutHeight)),
+                        LayoutDirectionChoice.LeftOf => (
+                            anchorPosition.X - row.LayoutWidth,
+                            anchorPosition.Y + along(anchor.LayoutHeight, row.LayoutHeight)
+                        ),
+                        LayoutDirectionChoice.Above => (
+                            anchorPosition.X + along(anchor.LayoutWidth, row.LayoutWidth),
+                            anchorPosition.Y - row.LayoutHeight
+                        ),
+                        LayoutDirectionChoice.Below => (
+                            anchorPosition.X + along(anchor.LayoutWidth, row.LayoutWidth),
+                            anchorPosition.Y + anchor.LayoutHeight
+                        ),
+                        _ => (
+                            anchorPosition.X + anchor.LayoutWidth,
+                            anchorPosition.Y + along(anchor.LayoutHeight, row.LayoutHeight)
+                        ),
                     };
 
                     remaining.Remove(row);
@@ -935,9 +989,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
                 }
             }
 
-            double fallbackX = positions.Count == 0
-                ? 0
-                : positions.Max(entry => entry.Value.X + entry.Key.LayoutWidth) + 160;
+            double fallbackX =
+                positions.Count == 0 ? 0 : positions.Max(entry => entry.Value.X + entry.Key.LayoutWidth) + 160;
 
             foreach (LayoutMonitorRow row in remaining)
             {
@@ -951,7 +1004,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
             double maxY = positions.Max(entry => entry.Value.Y + entry.Key.LayoutHeight);
             double scale = Math.Min(
                 (canvasWidth - (padding * 2)) / Math.Max(1, maxX - minX),
-                (arrangementHeight - (padding * 2)) / Math.Max(1, maxY - minY));
+                (arrangementHeight - (padding * 2)) / Math.Max(1, maxY - minY)
+            );
             scale = Math.Min(scale, 0.15);
             _previewScale = scale;
 
@@ -966,7 +1020,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
                     offsetX + (x * scale),
                     offsetY + (y * scale),
                     Math.Max(100, row.LayoutWidth * scale),
-                    Math.Max(64, row.LayoutHeight * scale));
+                    Math.Max(64, row.LayoutHeight * scale)
+                );
             }
         }
     }
@@ -1033,9 +1088,8 @@ public sealed class LayoutSectionViewModel : ObservableObject, IConfigurationSec
 
             if (!progressed)
             {
-                return
-                    $"{string.Join(", ", remaining.Select(row => $"'{row.MonitorName}'"))} cannot be placed -- " +
-                    $"their placements form a loop, or a chain that never reaches the primary ('{primary}').";
+                return $"{string.Join(", ", remaining.Select(row => $"'{row.MonitorName}'"))} cannot be placed -- "
+                    + $"their placements form a loop, or a chain that never reaches the primary ('{primary}').";
             }
         }
 

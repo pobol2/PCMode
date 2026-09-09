@@ -7,8 +7,7 @@ using PCMode.Audio.Windows.Interop;
 
 namespace PCMode.Audio.Windows.Streams;
 
-public sealed class WasapiLoopbackInput :
-    IAudioInputStream
+public sealed class WasapiLoopbackInput : IAudioInputStream
 {
     private readonly IMMDevice _device;
     private readonly IAudioClient _audioClient;
@@ -72,14 +71,11 @@ public sealed class WasapiLoopbackInput :
 
     private bool _hasDevicePosition;
 
-    public WasapiLoopbackInput(
-        AudioEndpointId endpointId)
+    public WasapiLoopbackInput(AudioEndpointId endpointId)
     {
         if (endpointId == default)
         {
-            throw new ArgumentException(
-                "A loopback endpoint is required.",
-                nameof(endpointId));
+            throw new ArgumentException("A loopback endpoint is required.", nameof(endpointId));
         }
 
         EndpointId = endpointId;
@@ -93,93 +89,66 @@ public sealed class WasapiLoopbackInput :
 
         try
         {
-            IMMDeviceEnumerator enumerator =
-                CoreAudioInterop.CreateEnumerator();
+            IMMDeviceEnumerator enumerator = CoreAudioInterop.CreateEnumerator();
 
             try
             {
                 WasapiError.ThrowIfFailed(
-                    enumerator.GetDevice(
-                        endpointId.Value,
-                        out device),
-                    "IMMDeviceEnumerator.GetDevice");
+                    enumerator.GetDevice(endpointId.Value, out device),
+                    "IMMDeviceEnumerator.GetDevice"
+                );
             }
             finally
             {
-                CoreAudioInterop.Release(
-                    enumerator);
+                CoreAudioInterop.Release(enumerator);
             }
 
-            Guid audioClientId =
-                typeof(IAudioClient).GUID;
+            Guid audioClientId = typeof(IAudioClient).GUID;
 
             WasapiError.ThrowIfFailed(
-                device!.Activate(
-                    ref audioClientId,
-                    ClsCtx.All,
-                    IntPtr.Zero,
-                    out object? audioClientObject),
-                "IMMDevice.Activate(IAudioClient)");
+                device!.Activate(ref audioClientId, ClsCtx.All, IntPtr.Zero, out object? audioClientObject),
+                "IMMDevice.Activate(IAudioClient)"
+            );
 
-            audioClient =
-                (IAudioClient)audioClientObject!;
+            audioClient = (IAudioClient)audioClientObject!;
 
-            WasapiError.ThrowIfFailed(
-                audioClient.GetMixFormat(
-                    out formatPointer),
-                "IAudioClient.GetMixFormat");
+            WasapiError.ThrowIfFailed(audioClient.GetMixFormat(out formatPointer), "IAudioClient.GetMixFormat");
 
-            _nativeFormat =
-                WaveFormatAdapter.Read(
-                    formatPointer);
+            _nativeFormat = WaveFormatAdapter.Read(formatPointer);
 
-            Format =
-                WaveFormatAdapter.ToAudioFormat(
-                    _nativeFormat);
+            Format = WaveFormatAdapter.ToAudioFormat(_nativeFormat);
 
-            bufferEvent =
-                new AutoResetEvent(false);
+            bufferEvent = new AutoResetEvent(false);
 
             WasapiError.ThrowIfFailed(
                 audioClient.Initialize(
                     AudioClientShareMode.Shared,
-                    AudioClientStreamFlags.Loopback |
-                    AudioClientStreamFlags.EventCallback,
+                    AudioClientStreamFlags.Loopback | AudioClientStreamFlags.EventCallback,
                     0,
                     0,
                     formatPointer,
-                    IntPtr.Zero),
-                "IAudioClient.Initialize(loopback)");
+                    IntPtr.Zero
+                ),
+                "IAudioClient.Initialize(loopback)"
+            );
 
             WasapiError.ThrowIfFailed(
-                audioClient.SetEventHandle(
-                    bufferEvent
-                        .SafeWaitHandle
-                        .DangerousGetHandle()),
-                "IAudioClient.SetEventHandle");
+                audioClient.SetEventHandle(bufferEvent.SafeWaitHandle.DangerousGetHandle()),
+                "IAudioClient.SetEventHandle"
+            );
+
+            WasapiError.ThrowIfFailed(audioClient.GetBufferSize(out uint bufferFrames), "IAudioClient.GetBufferSize");
+
+            Guid captureClientId = typeof(IAudioCaptureClient).GUID;
 
             WasapiError.ThrowIfFailed(
-                audioClient.GetBufferSize(
-                    out uint bufferFrames),
-                "IAudioClient.GetBufferSize");
+                audioClient.GetService(ref captureClientId, out object captureObject),
+                "IAudioClient.GetService(IAudioCaptureClient)"
+            );
 
-            Guid captureClientId =
-                typeof(IAudioCaptureClient).GUID;
+            captureClient = (IAudioCaptureClient)captureObject;
 
-            WasapiError.ThrowIfFailed(
-                audioClient.GetService(
-                    ref captureClientId,
-                    out object captureObject),
-                "IAudioClient.GetService(IAudioCaptureClient)");
-
-            captureClient =
-                (IAudioCaptureClient)captureObject;
-
-            _packetSamples =
-                new float[
-                    checked(
-                        (int)bufferFrames *
-                        Format.ChannelCount)];
+            _packetSamples = new float[checked((int)bufferFrames * Format.ChannelCount)];
 
             _device = device;
             _audioClient = audioClient;
@@ -195,14 +164,11 @@ public sealed class WasapiLoopbackInput :
         {
             bufferEvent?.Dispose();
 
-            CoreAudioInterop.Release(
-                captureClient);
+            CoreAudioInterop.Release(captureClient);
 
-            CoreAudioInterop.Release(
-                audioClient);
+            CoreAudioInterop.Release(audioClient);
 
-            CoreAudioInterop.Release(
-                device);
+            CoreAudioInterop.Release(device);
 
             throw;
         }
@@ -210,8 +176,7 @@ public sealed class WasapiLoopbackInput :
         {
             if (formatPointer != IntPtr.Zero)
             {
-                Marshal.FreeCoTaskMem(
-                    formatPointer);
+                Marshal.FreeCoTaskMem(formatPointer);
             }
         }
     }
@@ -225,33 +190,25 @@ public sealed class WasapiLoopbackInput :
             return;
         }
 
-        _hasDevicePosition =
-            false;
+        _hasDevicePosition = false;
 
-        WasapiError.ThrowIfFailed(
-            _audioClient.Start(),
-            "IAudioClient.Start(loopback)");
+        WasapiError.ThrowIfFailed(_audioClient.Start(), "IAudioClient.Start(loopback)");
 
         _started = true;
     }
 
-    public int Read(
-        Span<float> destination)
+    public int Read(Span<float> destination)
     {
         ThrowIfDisposed();
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "Loopback capture is not started.");
+            throw new InvalidOperationException("Loopback capture is not started.");
         }
 
-        if (destination.Length %
-            Format.ChannelCount != 0)
+        if (destination.Length % Format.ChannelCount != 0)
         {
-            throw new ArgumentException(
-                "Destination must contain complete frames.",
-                nameof(destination));
+            throw new ArgumentException("Destination must contain complete frames.", nameof(destination));
         }
 
         if (destination.IsEmpty)
@@ -259,16 +216,15 @@ public sealed class WasapiLoopbackInput :
             return 0;
         }
 
-        if (_pendingSampleCount >
-            _pendingSampleOffset)
+        if (_pendingSampleCount > _pendingSampleOffset)
         {
             return CopyPending(destination);
         }
 
         WasapiError.ThrowIfFailed(
-            _captureClient.GetNextPacketSize(
-                out uint packetFrames),
-            "IAudioCaptureClient.GetNextPacketSize");
+            _captureClient.GetNextPacketSize(out uint packetFrames),
+            "IAudioCaptureClient.GetNextPacketSize"
+        );
 
         if (packetFrames == 0)
         {
@@ -282,9 +238,9 @@ public sealed class WasapiLoopbackInput :
             }
 
             WasapiError.ThrowIfFailed(
-                _captureClient.GetNextPacketSize(
-                    out packetFrames),
-                "IAudioCaptureClient.GetNextPacketSize");
+                _captureClient.GetNextPacketSize(out packetFrames),
+                "IAudioCaptureClient.GetNextPacketSize"
+            );
 
             if (packetFrames == 0)
             {
@@ -304,58 +260,39 @@ public sealed class WasapiLoopbackInput :
                     out acquiredFrames,
                     out AudioClientBufferFlags flags,
                     out ulong devicePosition,
-                    out _),
-                "IAudioCaptureClient.GetBuffer");
+                    out _
+                ),
+                "IAudioCaptureClient.GetBuffer"
+            );
 
-            if (_hasDevicePosition &&
-                devicePosition >
-                _expectedDevicePosition)
+            if (_hasDevicePosition && devicePosition > _expectedDevicePosition)
             {
                 PositionGapCount++;
 
-                MissingFrameCount +=
-                    checked(
-                        (long)(devicePosition -
-                               _expectedDevicePosition));
+                MissingFrameCount += checked((long)(devicePosition - _expectedDevicePosition));
             }
 
-            _expectedDevicePosition =
-                devicePosition +
-                acquiredFrames;
+            _expectedDevicePosition = devicePosition + acquiredFrames;
 
-            _hasDevicePosition =
-                true;
+            _hasDevicePosition = true;
 
             acquired = acquiredFrames != 0;
 
-            int sampleCount =
-                checked(
-                    (int)acquiredFrames *
-                    Format.ChannelCount);
+            int sampleCount = checked((int)acquiredFrames * Format.ChannelCount);
 
-            if (sampleCount >
-                _packetSamples.Length)
+            if (sampleCount > _packetSamples.Length)
             {
-                throw new InvalidOperationException(
-                    "WASAPI returned a packet larger than its endpoint buffer.");
+                throw new InvalidOperationException("WASAPI returned a packet larger than its endpoint buffer.");
             }
 
-            bool silent =
-                (flags &
-                 AudioClientBufferFlags.Silent) != 0;
+            bool silent = (flags & AudioClientBufferFlags.Silent) != 0;
 
-            if ((flags &
-                 AudioClientBufferFlags.DataDiscontinuity) != 0)
+            if ((flags & AudioClientBufferFlags.DataDiscontinuity) != 0)
             {
                 DiscontinuityCount++;
             }
 
-            WaveFormatAdapter.NativeToFloat(
-                data,
-                _packetSamples,
-                checked((int)acquiredFrames),
-                _nativeFormat,
-                silent);
+            WaveFormatAdapter.NativeToFloat(data, _packetSamples, checked((int)acquiredFrames), _nativeFormat, silent);
 
             _pendingSampleOffset = 0;
             _pendingSampleCount = sampleCount;
@@ -365,9 +302,9 @@ public sealed class WasapiLoopbackInput :
             if (acquired)
             {
                 WasapiError.ThrowIfFailed(
-                    _captureClient.ReleaseBuffer(
-                        acquiredFrames),
-                    "IAudioCaptureClient.ReleaseBuffer");
+                    _captureClient.ReleaseBuffer(acquiredFrames),
+                    "IAudioCaptureClient.ReleaseBuffer"
+                );
             }
         }
 
@@ -383,9 +320,7 @@ public sealed class WasapiLoopbackInput :
             return;
         }
 
-        WasapiError.ThrowIfFailed(
-            _audioClient.Stop(),
-            "IAudioClient.Stop(loopback)");
+        WasapiError.ThrowIfFailed(_audioClient.Stop(), "IAudioClient.Stop(loopback)");
 
         _started = false;
 
@@ -400,8 +335,7 @@ public sealed class WasapiLoopbackInput :
             return;
         }
 
-        Exception? stopFailure =
-            null;
+        Exception? stopFailure = null;
 
         try
         {
@@ -413,81 +347,56 @@ public sealed class WasapiLoopbackInput :
                 }
                 catch (Exception ex)
                 {
-                    stopFailure =
-                        ex;
+                    stopFailure = ex;
                 }
             }
         }
         finally
         {
-            _started =
-                false;
+            _started = false;
 
-            _pendingSampleOffset =
-                0;
+            _pendingSampleOffset = 0;
 
-            _pendingSampleCount =
-                0;
+            _pendingSampleCount = 0;
 
             _bufferEvent.Dispose();
 
-            CoreAudioInterop.Release(
-                _captureClient);
+            CoreAudioInterop.Release(_captureClient);
 
-            CoreAudioInterop.Release(
-                _audioClient);
+            CoreAudioInterop.Release(_audioClient);
 
-            CoreAudioInterop.Release(
-                _device);
+            CoreAudioInterop.Release(_device);
 
-            _disposed =
-                true;
+            _disposed = true;
         }
 
         if (stopFailure is not null)
         {
-            throw new InvalidOperationException(
-                "WASAPI loopback input failed to stop during disposal.",
-                stopFailure);
+            throw new InvalidOperationException("WASAPI loopback input failed to stop during disposal.", stopFailure);
         }
     }
 
-    private int CopyPending(
-        Span<float> destination)
+    private int CopyPending(Span<float> destination)
     {
-        int availableSamples =
-            _pendingSampleCount -
-            _pendingSampleOffset;
+        int availableSamples = _pendingSampleCount - _pendingSampleOffset;
 
-        int sampleCount =
-            Math.Min(
-                destination.Length,
-                availableSamples);
+        int sampleCount = Math.Min(destination.Length, availableSamples);
 
-        _packetSamples
-            .AsSpan(
-                _pendingSampleOffset,
-                sampleCount)
-            .CopyTo(destination);
+        _packetSamples.AsSpan(_pendingSampleOffset, sampleCount).CopyTo(destination);
 
-        _pendingSampleOffset +=
-            sampleCount;
+        _pendingSampleOffset += sampleCount;
 
-        if (_pendingSampleOffset ==
-            _pendingSampleCount)
+        if (_pendingSampleOffset == _pendingSampleCount)
         {
             _pendingSampleOffset = 0;
             _pendingSampleCount = 0;
         }
 
-        return sampleCount /
-               Format.ChannelCount;
+        return sampleCount / Format.ChannelCount;
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

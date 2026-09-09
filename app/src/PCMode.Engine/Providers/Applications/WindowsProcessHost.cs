@@ -45,11 +45,7 @@ public sealed class WindowsProcessHost : IProcessHost
             // Handed to the shell, which decides what opens it. Whether anything
             // does was answered before the transition started -- see
             // HandlesUriScheme -- because the shell reports success either way.
-            using Process? _ = Process.Start(new ProcessStartInfo
-            {
-                FileName = uri,
-                UseShellExecute = true,
-            });
+            using Process? _ = Process.Start(new ProcessStartInfo { FileName = uri, UseShellExecute = true });
 
             return;
         }
@@ -287,11 +283,7 @@ public sealed class WindowsProcessHost : IProcessHost
                 Type = INPUT_KEYBOARD,
                 Data = new InputUnion
                 {
-                    Keyboard = new KEYBDINPUT
-                    {
-                        VirtualKey = virtualKey,
-                        Flags = down ? 0 : KEYEVENTF_KEYUP,
-                    },
+                    Keyboard = new KEYBDINPUT { VirtualKey = virtualKey, Flags = down ? 0 : KEYEVENTF_KEYUP },
                 },
             },
         ];

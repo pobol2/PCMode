@@ -96,21 +96,22 @@ public sealed class TvPowerProvider : IConfigurableProvider, IDependentProvider,
     /// enough for the television to have actually dropped the HDMI link rather
     /// than merely having been told to.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => IsOff(target)
-        ? new ConvergencePolicy
-        {
-            Verify = false,
-            MaxAttempts = 1,
-            PostDispatchDelay = TimeSpan.FromSeconds(3),
-        }
-        : new ConvergencePolicy
-        {
-            Verify = true,
-            MaxAttempts = 3,
-            RetryInterval = TimeSpan.FromSeconds(12),
-            PollInterval = TimeSpan.FromSeconds(2),
-            Settle = TimeSpan.FromSeconds(1),
-        };
+    public ConvergencePolicy PolicyFor(string target) =>
+        IsOff(target)
+            ? new ConvergencePolicy
+            {
+                Verify = false,
+                MaxAttempts = 1,
+                PostDispatchDelay = TimeSpan.FromSeconds(3),
+            }
+            : new ConvergencePolicy
+            {
+                Verify = true,
+                MaxAttempts = 3,
+                RetryInterval = TimeSpan.FromSeconds(12),
+                PollInterval = TimeSpan.FromSeconds(2),
+                Settle = TimeSpan.FromSeconds(1),
+            };
 
     /// <summary>
     /// Whether there is a television to switch at all. See

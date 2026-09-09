@@ -12,12 +12,9 @@ namespace PCMode.Tray.UI.Tree;
 [Region(HeaderRegion, Terminal = true)]
 [Region(ContentRegion, Terminal = true)]
 [Region(FooterRegion, Terminal = true)]
-[DependencyProperty<string>("Title", DefaultValue = "",
-    Description = "The page title, shown above the body.")]
-[DependencyProperty<object>("Header",
-    Description = "Optional extra content shown to the right of the title.")]
-[DependencyProperty<object>("Content",
-    Description = "The page's scrolling body.")]
+[DependencyProperty<string>("Title", DefaultValue = "", Description = "The page title, shown above the body.")]
+[DependencyProperty<object>("Header", Description = "Optional extra content shown to the right of the title.")]
+[DependencyProperty<object>("Content", Description = "The page's scrolling body.")]
 [DependencyProperty<object>("Footer")]
 public partial class ListPageBlock : FunctionalBlock
 {

@@ -7,7 +7,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using PCMode.Picker;
-using PCMode.Tray.Elements.Settings;
 using PCMode.Tray.Platform.Picker;
 using PCMode.Tray.UI.Components.Picker;
 using PCMode.Tray.UI.Tree;
@@ -81,12 +80,10 @@ public sealed class PickerWindow : Window
         AutomationProperties.SetName(this, "PCMode mode picker");
         AutomationProperties.SetHelpText(
             this,
-            "Choose a mode with the arrow keys or the mouse. Enter applies it, Escape closes without changing anything.");
+            "Choose a mode with the arrow keys or the mouse. Enter applies it, Escape closes without changing anything."
+        );
 
-        _frames = new DispatcherTimer(DispatcherPriority.Render)
-        {
-            Interval = picker.Tuning.FrameInterval,
-        };
+        _frames = new DispatcherTimer(DispatcherPriority.Render) { Interval = picker.Tuning.FrameInterval };
 
         _frames.Tick += (_, _) => Frame();
     }
@@ -109,7 +106,8 @@ public sealed class PickerWindow : Window
             surface.WorkArea,
             surface.Scale,
             _picker.Favorites,
-            _picker.Tuning);
+            _picker.Tuning
+        );
 
         // Before the window appears. A window opening under a resting cursor
         // produces a move message at that same position, and the picker uses
@@ -254,10 +252,7 @@ public sealed class PickerWindow : Window
         // different spaces would make every move look like a real one.
         Point screen = _canvas.PointToScreen(position);
 
-        if (_picker.PointerMoved(
-                new PickerPoint(position.X, position.Y),
-                new PickerPoint(screen.X, screen.Y),
-                Now))
+        if (_picker.PointerMoved(new PickerPoint(position.X, position.Y), new PickerPoint(screen.X, screen.Y), Now))
         {
             _frames.Start();
             Repaint();
@@ -368,24 +363,10 @@ public sealed class PickerWindow : Window
 
         PixelRect bounds = geometry.WindowBounds;
 
-        SetWindowPos(
-            handle,
-            0,
-            bounds.Left,
-            bounds.Top,
-            bounds.Width,
-            bounds.Height,
-            SwpNoActivate | SwpNoZOrder);
+        SetWindowPos(handle, 0, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SwpNoActivate | SwpNoZOrder);
     }
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPos(
-        nint hWnd,
-        nint hWndInsertAfter,
-        int x,
-        int y,
-        int cx,
-        int cy,
-        uint flags);
+    private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
 }

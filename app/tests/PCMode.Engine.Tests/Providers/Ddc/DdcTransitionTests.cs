@@ -32,10 +32,8 @@ public sealed class DdcTransitionTests
         @"\\?\DISPLAY#GSM5B09#5&39b3a707&0&UID4352#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
 
     private static readonly DdcCapabilities BrightnessOnly = new(
-        new Dictionary<DdcVcpCode, DdcVcpCapability>
-        {
-            [DdcVcpCode.Brightness] = new(DdcVcpCode.Brightness, []),
-        });
+        new Dictionary<DdcVcpCode, DdcVcpCapability> { [DdcVcpCode.Brightness] = new(DdcVcpCode.Brightness, []) }
+    );
 
     [Fact]
     public async Task A_configured_monitor_converges_through_a_real_transition_alongside_another_resource()
@@ -45,10 +43,7 @@ public sealed class DdcTransitionTests
 
         var other = new FakeProvider("other", "idle") { Allowed = ["go"] };
 
-        using World world = Build(
-            monitors,
-            resources: """{"other":"go","ddc.Left.brightness":"75"}""",
-            other);
+        using World world = Build(monitors, resources: """{"other":"go","ddc.Left.brightness":"75"}""", other);
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Desktop");
 
@@ -70,10 +65,7 @@ public sealed class DdcTransitionTests
 
         var other = new FakeProvider("other", "idle") { Allowed = ["go"] };
 
-        using World world = Build(
-            monitors,
-            resources: """{"other":"go","ddc.Left.brightness":"90"}""",
-            other);
+        using World world = Build(monitors, resources: """{"other":"go","ddc.Left.brightness":"90"}""", other);
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Desktop");
 
@@ -103,7 +95,8 @@ public sealed class DdcTransitionTests
         using World world = Build(
             monitors,
             resources: """{"ddc.Left.brightness":{"value":"50","optional":true},"other":"go"}""",
-            other);
+            other
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Desktop");
 
@@ -160,8 +153,7 @@ public sealed class DdcTransitionTests
 
             ModeConfiguration configuration = ModeConfiguration.LoadOrCreate(Root.Path, providers);
 
-            Engine = new ModeEngine(
-                configuration, new ModeStateStore(Root.StateFile), providers, new FakeTime());
+            Engine = new ModeEngine(configuration, new ModeStateStore(Root.StateFile), providers, new FakeTime());
         }
 
         public TemporaryRoot Root { get; }

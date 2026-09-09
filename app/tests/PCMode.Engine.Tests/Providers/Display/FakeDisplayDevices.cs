@@ -84,25 +84,30 @@ internal sealed class FakeDisplayDevices : IDisplayDevices
         return this;
     }
 
-    public FakeMonitor this[string path] =>
-        _monitors.First(monitor => monitor.Path == path);
+    public FakeMonitor this[string path] => _monitors.First(monitor => monitor.Path == path);
 
-    public IReadOnlyList<DisplayTarget> KnownTargets() => Fails is not null
-        ? throw Fails
-        : [.. _monitors.Select(monitor => new DisplayTarget(monitor.Path, monitor.Name, monitor.Active))];
+    public IReadOnlyList<DisplayTarget> KnownTargets() =>
+        Fails is not null
+            ? throw Fails
+            : [.. _monitors.Select(monitor => new DisplayTarget(monitor.Path, monitor.Name, monitor.Active))];
 
-    public IReadOnlyList<ActiveDisplay> ActiveDisplays() => Fails is not null
-        ? throw Fails
-        : [.. _monitors
-            .Where(StillDark)
-            .Select(monitor => new ActiveDisplay(
-                monitor.Path,
-                monitor.Name,
-                monitor.X,
-                monitor.Y,
-                monitor.Width,
-                monitor.Height,
-                monitor.Hz))];
+    public IReadOnlyList<ActiveDisplay> ActiveDisplays() =>
+        Fails is not null
+            ? throw Fails
+            :
+            [
+                .. _monitors
+                    .Where(StillDark)
+                    .Select(monitor => new ActiveDisplay(
+                        monitor.Path,
+                        monitor.Name,
+                        monitor.X,
+                        monitor.Y,
+                        monitor.Width,
+                        monitor.Height,
+                        monitor.Hz
+                    )),
+            ];
 
     /// <summary>
     /// Whether this monitor is showing a picture by the time somebody looks.
@@ -128,11 +133,12 @@ internal sealed class FakeDisplayDevices : IDisplayDevices
         return false;
     }
 
-    public IReadOnlyDictionary<string, IReadOnlyList<int>> SupportedRefreshRates() => Fails is not null
-        ? throw Fails
-        : _monitors
-            .Where(monitor => monitor.Active)
-            .ToDictionary(monitor => monitor.Path, monitor => monitor.Supported, StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, IReadOnlyList<int>> SupportedRefreshRates() =>
+        Fails is not null
+            ? throw Fails
+            : _monitors
+                .Where(monitor => monitor.Active)
+                .ToDictionary(monitor => monitor.Path, monitor => monitor.Supported, StringComparer.OrdinalIgnoreCase);
 
     public void Activate(IReadOnlyList<string> devicePaths, IReadOnlyList<int> refreshHz)
     {
@@ -145,14 +151,16 @@ internal sealed class FakeDisplayDevices : IDisplayDevices
 
         foreach (string path in devicePaths)
         {
-            FakeMonitor monitor = _monitors.FirstOrDefault(candidate => candidate.Path == path)
+            FakeMonitor monitor =
+                _monitors.FirstOrDefault(candidate => candidate.Path == path)
                 ?? throw new InvalidOperationException($"Windows has never seen a monitor at '{path}'.");
 
             if (!monitor.Available)
             {
                 throw new InvalidOperationException(
-                    "Windows could not build a valid arrangement from those monitors. " +
-                    "One or more of them may not be connected or awake.");
+                    "Windows could not build a valid arrangement from those monitors. "
+                        + "One or more of them may not be connected or awake."
+                );
             }
         }
 
@@ -181,9 +189,7 @@ internal sealed class FakeDisplayDevices : IDisplayDevices
             // request is accepted and something else is delivered. Reading back
             // is the only way to find out, which is the whole reason the provider
             // verifies rather than trusts.
-            monitor.Hz = refreshHz[index] > 0 && monitor.Supported.Contains(refreshHz[index])
-                ? refreshHz[index]
-                : 60;
+            monitor.Hz = refreshHz[index] > 0 && monitor.Supported.Contains(refreshHz[index]) ? refreshHz[index] : 60;
         }
     }
 
@@ -203,10 +209,11 @@ internal sealed class FakeDisplayDevices : IDisplayDevices
 
         for (int index = 0; index < devicePaths.Count; index++)
         {
-            FakeMonitor monitor = _monitors.FirstOrDefault(candidate =>
-                candidate.Path == devicePaths[index] && candidate.Active)
+            FakeMonitor monitor =
+                _monitors.FirstOrDefault(candidate => candidate.Path == devicePaths[index] && candidate.Active)
                 ?? throw new InvalidOperationException(
-                    "A monitor that was meant to be moved is not showing a picture.");
+                    "A monitor that was meant to be moved is not showing a picture."
+                );
 
             monitor.X = x[index];
             monitor.Y = y[index];

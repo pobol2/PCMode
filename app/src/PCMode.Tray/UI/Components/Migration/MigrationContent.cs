@@ -16,4 +16,3 @@ public partial class MigrationContent : System.Windows.Controls.Control
         DefaultStyleKey = GetType();
     }
 }
-

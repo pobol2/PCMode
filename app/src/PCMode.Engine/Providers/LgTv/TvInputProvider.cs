@@ -58,9 +58,7 @@ public sealed class TvInputProvider : IConfigurableProvider, IDependentProvider,
     /// on.
     /// </remarks>
     public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
-        [new ResourceRequirement(
-            LgTvResourceKeys.Power(_connection.ResourceName),
-            TvPowerProvider.On)];
+        [new ResourceRequirement(LgTvResourceKeys.Power(_connection.ResourceName), TvPowerProvider.On)];
 
     /// <summary>
     /// Quick, but not instant.
@@ -73,14 +71,15 @@ public sealed class TvInputProvider : IConfigurableProvider, IDependentProvider,
     /// layout that is about to be sent down that cable -- wants the input actually
     /// there rather than merely selected.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 3,
-        RetryInterval = TimeSpan.FromSeconds(5),
-        PollInterval = TimeSpan.FromMilliseconds(500),
-        Settle = TimeSpan.FromSeconds(1),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 3,
+            RetryInterval = TimeSpan.FromSeconds(5),
+            PollInterval = TimeSpan.FromMilliseconds(500),
+            Settle = TimeSpan.FromSeconds(1),
+        };
 
     /// <summary>
     /// Whether there is a television to switch inputs on. See
@@ -101,8 +100,8 @@ public sealed class TvInputProvider : IConfigurableProvider, IDependentProvider,
         if (settings.Inputs.Count == 0)
         {
             problem =
-                $"'{value.Trim()}' cannot be applied because no television inputs are defined. " +
-                $"Add one under '{LgTvSettings.SettingsPath}.inputs'.";
+                $"'{value.Trim()}' cannot be applied because no television inputs are defined. "
+                + $"Add one under '{LgTvSettings.SettingsPath}.inputs'.";
 
             return false;
         }
@@ -110,8 +109,8 @@ public sealed class TvInputProvider : IConfigurableProvider, IDependentProvider,
         if (settings.InputIdFor(value) is null)
         {
             problem =
-                $"'{value.Trim()}' is not a television input. " +
-                $"'{LgTvSettings.SettingsPath}.inputs' defines: {string.Join(", ", settings.InputNames)}.";
+                $"'{value.Trim()}' is not a television input. "
+                + $"'{LgTvSettings.SettingsPath}.inputs' defines: {string.Join(", ", settings.InputNames)}.";
 
             return false;
         }
@@ -120,12 +119,12 @@ public sealed class TvInputProvider : IConfigurableProvider, IDependentProvider,
         return true;
     }
 
-    public string? Read() =>
-        LgTvBridge.Wait(_connection.ReadInputAsync);
+    public string? Read() => LgTvBridge.Wait(_connection.ReadInputAsync);
 
     public void Apply(string value, CancellationToken cancellationToken)
     {
-        string inputId = _connection.Settings.InputIdFor(value)
+        string inputId =
+            _connection.Settings.InputIdFor(value)
             ?? throw new ArgumentException($"'{value}' is not a television input.", nameof(value));
 
         LgTvBridge.Wait(token => _connection.SwitchInputAsync(inputId, token), cancellationToken);

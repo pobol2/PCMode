@@ -1,5 +1,7 @@
 using PCMode.Engine;
 using PCMode.Picker;
+using PCMode.Tray.Platform.Picker;
+using PCMode.Tray.Platform.Themes;
 
 namespace PCMode.Tray.Elements.Settings;
 
@@ -9,31 +11,6 @@ public enum LaunchBehavior
     DoNothing,
     RestorePreviousMode,
     SwitchToMode,
-}
-
-/// <summary>How PCMode chooses the colors for its own windows.</summary>
-public enum ApplicationTheme
-{
-    System,
-    Light,
-    Dark,
-}
-
-/// <summary>
-/// Which display the picker appears on.
-/// </summary>
-/// <remarks>
-/// Ported ahead of the picker itself, because <see cref="ApplicationSettings"/>
-/// persists it. Legacy defines this alongside <c>MonitorLayout</c>'s screen
-/// geometry in its own <c>Picker/</c> folder; there is nothing to geometrically
-/// resolve here yet, so this stays a plain enum next to the settings that read
-/// and write it until the picker page gives it a real home.
-/// </remarks>
-public enum PickerMonitorChoice
-{
-    Primary,
-    UnderPointer,
-    WithForegroundWindow,
 }
 
 /// <summary>A direct Ctrl+Alt shortcut to one activatable target.</summary>
@@ -62,12 +39,13 @@ public sealed record ApplicationSettings
 
     public IReadOnlyList<DirectShortcut> DirectShortcuts { get; init; } =
     [
-        .. FavoriteSet.Default.All
-            .Where(favorite => favorite.Hotkey is not null)
+        .. FavoriteSet
+            .Default.All.Where(favorite => favorite.Hotkey is not null)
             .Select(favorite => new DirectShortcut(
                 favorite.ModeName,
                 char.ToLowerInvariant(favorite.Hotkey!.Value),
-                favorite.Label)),
+                favorite.Label
+            )),
     ];
 
     public bool ControllerEnabled { get; init; } = true;
@@ -112,9 +90,10 @@ public sealed record ApplicationSettings
 
         foreach (ModeFavorite favorite in FavoriteSet.Default.All)
         {
-            ConfiguredTarget target = targets.Targets.FirstOrDefault(candidate =>
-                    string.Equals(candidate.DisplayName, favorite.ModeName, StringComparison.OrdinalIgnoreCase))
-                ?? targets.Targets[fallback++ % targets.Targets.Count];
+            ConfiguredTarget target =
+                targets.Targets.FirstOrDefault(candidate =>
+                    string.Equals(candidate.DisplayName, favorite.ModeName, StringComparison.OrdinalIgnoreCase)
+                ) ?? targets.Targets[fallback++ % targets.Targets.Count];
 
             ModeFavorite mapped = favorite with
             {
@@ -132,11 +111,7 @@ public sealed record ApplicationSettings
             }
         }
 
-        return new ApplicationSettings
-        {
-            Favorites = FavoriteSet.Create(favorites),
-            DirectShortcuts = shortcuts,
-        };
+        return new ApplicationSettings { Favorites = FavoriteSet.Create(favorites), DirectShortcuts = shortcuts };
     }
 
     /// <summary>Validates a complete candidate without changing anything.</summary>

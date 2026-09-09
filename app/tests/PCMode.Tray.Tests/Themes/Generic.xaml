@@ -1,9 +1,7 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
-    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
+                    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
     <!--
         The fixture blocks' default Layouts, found by WPF's theme lookup from
         FunctionalBlock's DefaultStyleKey. A Layout names the regions its block
@@ -15,15 +13,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type fixtures:FixtureRootBlock}">
                     <StackPanel>
-                        <controls:Region
-                            x:Name="PART_HeaderRegion"
-                            Content="{TemplateBinding Header}" />
-                        <controls:RepeatedRegion
-                            x:Name="PART_ItemsRegion"
-                            ItemsSource="{TemplateBinding Items}" />
-                        <controls:Region
-                            x:Name="PART_DetailRegion"
-                            Content="{TemplateBinding Detail}" />
+                        <controls:Region x:Name="PART_HeaderRegion" Content="{TemplateBinding Header}" />
+                        <controls:RepeatedRegion x:Name="PART_ItemsRegion" ItemsSource="{TemplateBinding Items}" />
+                        <controls:Region x:Name="PART_DetailRegion" Content="{TemplateBinding Detail}" />
                     </StackPanel>
                 </ControlTemplate>
             </Setter.Value>
@@ -35,12 +27,8 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type fixtures:FixtureDetailBlock}">
                     <StackPanel>
-                        <controls:Region
-                            x:Name="PART_PrimaryRegion"
-                            Content="{TemplateBinding Primary}" />
-                        <controls:Region
-                            x:Name="PART_SecondaryRegion"
-                            Content="{TemplateBinding Secondary}" />
+                        <controls:Region x:Name="PART_PrimaryRegion" Content="{TemplateBinding Primary}" />
+                        <controls:Region x:Name="PART_SecondaryRegion" Content="{TemplateBinding Secondary}" />
                     </StackPanel>
                 </ControlTemplate>
             </Setter.Value>
@@ -51,16 +39,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type fixtures:FixtureStrictBlock}">
-                    <controls:Region
-                        x:Name="PART_OnlyRegion"
-                        Content="{TemplateBinding Only}" />
+                    <controls:Region x:Name="PART_OnlyRegion" Content="{TemplateBinding Only}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- Deliberately supplies nothing: the block declares a region this
-         template never names, which is the missing-region case. -->
+    <!--
+        Deliberately supplies nothing: the block declares a region this
+        template never names, which is the missing-region case.
+    -->
     <Style TargetType="{x:Type fixtures:FixtureUnsatisfiableBlock}">
         <Setter Property="Template">
             <Setter.Value>
@@ -70,5 +58,4 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 </ResourceDictionary>

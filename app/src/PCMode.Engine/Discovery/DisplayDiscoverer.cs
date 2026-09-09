@@ -60,8 +60,9 @@ public sealed class DisplayDiscoverer(DisplayProvider provider) : IHardwareDisco
                 details.Add(new("Primary", monitor.Primary ? "Yes" : "No"));
 
                 status = HardwareItemStatus.Ok;
-                summary = $"{monitor.Width} x {monitor.Height} @ {FormatHz(monitor.RefreshHz)}" +
-                    (monitor.Primary ? ", primary" : string.Empty);
+                summary =
+                    $"{monitor.Width} x {monitor.Height} @ {FormatHz(monitor.RefreshHz)}"
+                    + (monitor.Primary ? ", primary" : string.Empty);
             }
             else
             {
@@ -69,7 +70,9 @@ public sealed class DisplayDiscoverer(DisplayProvider provider) : IHardwareDisco
                 summary = "Not currently showing a picture.";
             }
 
-            items.Add(new HardwareItem(name, status, summary, details, monitor.DevicePath, monitor.LogicalName, CategoryName));
+            items.Add(
+                new HardwareItem(name, status, summary, details, monitor.DevicePath, monitor.LogicalName, CategoryName)
+            );
         }
 
         return HardwareNaming.Disambiguate(items);

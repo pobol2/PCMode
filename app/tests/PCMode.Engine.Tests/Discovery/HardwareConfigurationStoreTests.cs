@@ -20,7 +20,11 @@ public sealed class HardwareConfigurationStoreTests
         using var root = new TemporaryRoot();
         root.Write(Document);
 
-        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "Desk Left");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(
+            root.Path,
+            @"\\?\DISPLAY#1",
+            "Desk Left"
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -37,8 +41,11 @@ public sealed class HardwareConfigurationStoreTests
         using var root = new TemporaryRoot();
         root.Write(Document);
 
-        HardwareAliasOutcome outcome =
-            HardwareConfigurationStore.SetAudioAlias(root.Path, "Speakers (Realtek)", "Headphones");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetAudioAlias(
+            root.Path,
+            "Speakers (Realtek)",
+            "Headphones"
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -53,7 +60,8 @@ public sealed class HardwareConfigurationStoreTests
     public void Preserves_existing_modes_and_other_provider_settings()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "audio": { "devices": { "TV": "Digital Audio (HDMI)" } } },
@@ -61,9 +69,14 @@ public sealed class HardwareConfigurationStoreTests
                 { "id": "movie", "name": "Movie", "resources": { "audio": "TV" } }
               ] } ]
             }
-            """);
+            """
+        );
 
-        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "Desk Left");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(
+            root.Path,
+            @"\\?\DISPLAY#1",
+            "Desk Left"
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         var display = new DisplayProvider();
@@ -84,7 +97,8 @@ public sealed class HardwareConfigurationStoreTests
         // this build has never heard of -- a future one, or one nobody has
         // written a reader for yet -- is not something an alias write is
         // entitled to drop.
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "notes": "do not delete",
@@ -92,9 +106,14 @@ public sealed class HardwareConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": {} }
               ] } ]
             }
-            """);
+            """
+        );
 
-        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "Desk Left");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(
+            root.Path,
+            @"\\?\DISPLAY#1",
+            "Desk Left"
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         string written = File.ReadAllText(root.ConfigurationFile);
@@ -129,7 +148,8 @@ public sealed class HardwareConfigurationStoreTests
     public void Renaming_a_monitor_used_by_a_layout_updates_the_layout_too()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": {
@@ -149,9 +169,14 @@ public sealed class HardwareConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "display": "Desktop" } }
               ] } ]
             }
-            """);
+            """
+        );
 
-        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "Desk Left");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(
+            root.Path,
+            @"\\?\DISPLAY#1",
+            "Desk Left"
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         var provider = new DisplayProvider();
@@ -166,7 +191,8 @@ public sealed class HardwareConfigurationStoreTests
     public void Renaming_an_audio_device_used_by_a_mode_updates_the_mode_too()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "audio": { "devices": { "TV": "Digital Audio (HDMI)" } } },
@@ -174,10 +200,14 @@ public sealed class HardwareConfigurationStoreTests
                 { "id": "movie", "name": "Movie", "resources": { "audio": "TV" } }
               ] } ]
             }
-            """);
+            """
+        );
 
-        HardwareAliasOutcome outcome =
-            HardwareConfigurationStore.SetAudioAlias(root.Path, "Digital Audio (HDMI)", "Living Room TV");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetAudioAlias(
+            root.Path,
+            "Digital Audio (HDMI)",
+            "Living Room TV"
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         var provider = new AudioProvider();
@@ -196,8 +226,11 @@ public sealed class HardwareConfigurationStoreTests
 
         Assert.True(HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "Desk Left").Success);
 
-        HardwareAliasOutcome outcome =
-            HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#2", "Desk Left");
+        HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(
+            root.Path,
+            @"\\?\DISPLAY#2",
+            "Desk Left"
+        );
 
         Assert.False(outcome.Success);
         Assert.NotNull(outcome.Problem);
@@ -218,7 +251,9 @@ public sealed class HardwareConfigurationStoreTests
         HardwareAliasOutcome outcome = HardwareConfigurationStore.SetDisplayAlias(root.Path, @"\\?\DISPLAY#1", "  ");
 
         Assert.False(outcome.Success);
-        Assert.False(File.Exists(root.ConfigurationFile) && File.ReadAllText(root.ConfigurationFile).Contains("monitors"));
+        Assert.False(
+            File.Exists(root.ConfigurationFile) && File.ReadAllText(root.ConfigurationFile).Contains("monitors")
+        );
     }
 
     [Fact]

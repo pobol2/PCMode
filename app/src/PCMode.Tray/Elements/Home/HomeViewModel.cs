@@ -37,16 +37,29 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
 
     public HomeViewModel(EngineRuntime? runtime, ApplicationSettingsStore? settingsStore = null)
     {
-        _liveRefresh = new LiveRefreshTimer(LiveStatusInterval, () => { Refresh(); return Task.CompletedTask; });
+        _liveRefresh = new LiveRefreshTimer(
+            LiveStatusInterval,
+            () =>
+            {
+                Refresh();
+                return Task.CompletedTask;
+            }
+        );
 
         _runtime = runtime;
         _settingsStore = settingsStore;
+        ApplyTargetCommand = new RelayCommand<HomeTargetCard>(
+            async card => await ApplyAsync(card.Key).ConfigureAwait(true),
+            card => card.Enabled && IsIdle && HasRuntime
+        );
     }
 
     public bool HasRuntime => _runtime is not null;
 
     /// <summary>Favorites first, followed by every enabled target grouped by Space.</summary>
     public ObservableCollection<HomeTargetGroup> TargetGroups { get; } = [];
+
+    public System.Windows.Input.ICommand ApplyTargetCommand { get; }
 
     public bool IsBusy
     {
@@ -56,6 +69,7 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
             if (SetProperty(ref _isBusy, value))
             {
                 OnPropertyChanged(nameof(IsIdle));
+                (ApplyTargetCommand as RelayCommand<HomeTargetCard>)?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -98,7 +112,9 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
 
         IReadOnlyList<string> favoriteKeys = _settingsStore is null
             ? []
-            : NormalizeFavoriteKeys(_settingsStore.Load(engine.Catalog).Favorites.All.Select(favorite => favorite.ModeName));
+            : NormalizeFavoriteKeys(
+                _settingsStore.Load(engine.Catalog).Favorites.All.Select(favorite => favorite.ModeName)
+            );
 
         RebuildTargetGroups(engine, favoriteKeys);
     }
@@ -134,7 +150,8 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
         ConfiguredTarget[] enabled = [.. engine.Targets.Where(target => target.Enabled)];
         Dictionary<string, ConfiguredTarget> byKey = enabled.ToDictionary(
             target => target.Key,
-            StringComparer.OrdinalIgnoreCase);
+            StringComparer.OrdinalIgnoreCase
+        );
         var shownFavorites = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         List<ConfiguredTarget> favorites = [];
 
@@ -154,13 +171,18 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
                 "Favorites",
                 BuildCards(favorites, favoritesGroup: true),
                 isFavorite: true,
-                isExpanded: expanded);
+                isExpanded: expanded
+            );
             favoritesGroup.PropertyChanged += OnTargetGroupPropertyChanged;
             TargetGroups.Add(favoritesGroup);
         }
 
-        foreach (IGrouping<string, ConfiguredTarget> space in enabled
-            .GroupBy(target => target.Identity.SpaceId, StringComparer.OrdinalIgnoreCase))
+        foreach (
+            IGrouping<string, ConfiguredTarget> space in enabled.GroupBy(
+                target => target.Identity.SpaceId,
+                StringComparer.OrdinalIgnoreCase
+            )
+        )
         {
             ConfiguredTarget[] targets = [.. space];
             ConfiguredTarget first = targets[0];
@@ -169,7 +191,8 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
                 first.SpaceName ?? first.Identity.SpaceId,
                 BuildCards(targets, favoritesGroup: false),
                 isFavorite: false,
-                isExpanded: _spaceExpansion.TryGetValue(first.Identity.SpaceId, out bool spaceExpanded) && spaceExpanded);
+                isExpanded: _spaceExpansion.TryGetValue(first.Identity.SpaceId, out bool spaceExpanded) && spaceExpanded
+            );
             group.PropertyChanged += OnTargetGroupPropertyChanged;
             TargetGroups.Add(group);
         }
@@ -177,8 +200,7 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
 
     private void OnTargetGroupPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(HomeTargetGroup.IsExpanded) &&
-            sender is HomeTargetGroup group)
+        if (e.PropertyName == nameof(HomeTargetGroup.IsExpanded) && sender is HomeTargetGroup group)
         {
             _spaceExpansion[group.Key] = group.IsExpanded;
         }
@@ -188,15 +210,16 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
     /// Uses no context for a unique name. For collisions, picks the shortest
     /// hierarchy slice that makes every card in that collision unambiguous.
     /// </summary>
-    private IReadOnlyList<HomeTargetCard> BuildCards(
-        IReadOnlyList<ConfiguredTarget> targets,
-        bool favoritesGroup)
+    private IReadOnlyList<HomeTargetCard> BuildCards(IReadOnlyList<ConfiguredTarget> targets, bool favoritesGroup)
     {
         var contexts = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (IGrouping<string, ConfiguredTarget> collision in targets.GroupBy(
-            target => target.DisplayName,
-            StringComparer.OrdinalIgnoreCase))
+        foreach (
+            IGrouping<string, ConfiguredTarget> collision in targets.GroupBy(
+                target => target.DisplayName,
+                StringComparer.OrdinalIgnoreCase
+            )
+        )
         {
             ConfiguredTarget[] sameName = [.. collision];
 
@@ -210,35 +233,35 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
                 ? [SpaceContext, ActivityContext, SpaceAndActivityContext]
                 : [ActivityContext];
             Func<ConfiguredTarget, string>? chosen = candidates.FirstOrDefault(candidate =>
-                IsUnique(sameName.Select(candidate)));
+                IsUnique(sameName.Select(candidate))
+            );
 
             foreach (ConfiguredTarget target in sameName)
             {
-                contexts[target.Key] = chosen is null
-                    ? IdentityContext(target, favoritesGroup)
-                    : chosen(target);
+                contexts[target.Key] = chosen is null ? IdentityContext(target, favoritesGroup) : chosen(target);
             }
         }
 
-        return [.. targets.Select(target => new HomeTargetCard(
-            target,
-            contexts[target.Key],
-            IsCurrent: string.Equals(target.Key, _currentTargetKey, StringComparison.OrdinalIgnoreCase)))];
+        return
+        [
+            .. targets.Select(target => new HomeTargetCard(
+                target,
+                contexts[target.Key],
+                IsCurrent: string.Equals(target.Key, _currentTargetKey, StringComparison.OrdinalIgnoreCase)
+            )),
+        ];
 
         static bool IsUnique(IEnumerable<string> values)
         {
             string[] all = [.. values];
-            return all.All(value => !string.IsNullOrWhiteSpace(value)) &&
-                all.Distinct(StringComparer.OrdinalIgnoreCase).Count() == all.Length;
+            return all.All(value => !string.IsNullOrWhiteSpace(value))
+                && all.Distinct(StringComparer.OrdinalIgnoreCase).Count() == all.Length;
         }
 
-        static string SpaceContext(ConfiguredTarget target) =>
-            target.SpaceName ?? target.Identity.SpaceId;
+        static string SpaceContext(ConfiguredTarget target) => target.SpaceName ?? target.Identity.SpaceId;
 
         static string ActivityContext(ConfiguredTarget target) =>
-            target.SourceName is null
-                ? "Activity"
-                : target.ActivityName ?? target.Identity.ActivityId;
+            target.SourceName is null ? "Activity" : target.ActivityName ?? target.Identity.ActivityId;
 
         static string SpaceAndActivityContext(ConfiguredTarget target) =>
             target.SourceName is null
@@ -256,7 +279,5 @@ public sealed class HomeViewModel : ObservableObject, IPageLifecycle
     }
 
     private static IReadOnlyList<string> NormalizeFavoriteKeys(IEnumerable<string> targetKeys) =>
-        [.. targetKeys
-            .Where(key => !string.IsNullOrWhiteSpace(key))
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        [.. targetKeys.Where(key => !string.IsNullOrWhiteSpace(key)).Distinct(StringComparer.OrdinalIgnoreCase)];
 }

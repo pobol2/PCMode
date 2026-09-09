@@ -6,12 +6,12 @@ public readonly record struct ClockEstimate(
     double DriftPpm,
     double QueuedFrames,
     double TimingErrorFrames,
-    bool HasRateEstimate);
+    bool HasRateEstimate
+);
 
 public sealed class ClockEstimator
 {
-    private const double MaximumObservedDriftPpm =
-        10_000.0;
+    private const double MaximumObservedDriftPpm = 10_000.0;
 
     /// <summary>
     /// How much of the gap between the tracked target and the just-observed
@@ -23,8 +23,7 @@ public sealed class ClockEstimator
     /// stop being permanently wrong -- see the remark on
     /// <see cref="_targetQueuedFrames"/>.
     /// </summary>
-    private const double TargetQueuedFramesTrackingFactor =
-        0.02;
+    private const double TargetQueuedFramesTrackingFactor = 0.02;
 
     private readonly int _estimationWindowFrames;
 
@@ -58,154 +57,92 @@ public sealed class ClockEstimator
 
     private double _estimatedDriftPpm;
 
-    public ClockEstimator(
-        int sampleRate,
-        int? estimationWindowFrames = null,
-        double smoothingFactor = 0.20)
+    public ClockEstimator(int sampleRate, int? estimationWindowFrames = null, double smoothingFactor = 0.20)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            sampleRate);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sampleRate);
 
-        if (!double.IsFinite(
-                smoothingFactor) ||
-            smoothingFactor <= 0.0 ||
-            smoothingFactor > 1.0)
+        if (!double.IsFinite(smoothingFactor) || smoothingFactor <= 0.0 || smoothingFactor > 1.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(smoothingFactor));
+            throw new ArgumentOutOfRangeException(nameof(smoothingFactor));
         }
 
-        _estimationWindowFrames =
-            estimationWindowFrames ??
-            Math.Max(
-                1,
-                sampleRate /
-                10);
+        _estimationWindowFrames = estimationWindowFrames ?? Math.Max(1, sampleRate / 10);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            _estimationWindowFrames);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_estimationWindowFrames);
 
-        _smoothingFactor =
-            smoothingFactor;
+        _smoothingFactor = smoothingFactor;
     }
 
-    public ClockEstimate Update(
-        long sourceFramePosition,
-        AudioOutputClockSnapshot snapshot)
+    public ClockEstimate Update(long sourceFramePosition, AudioOutputClockSnapshot snapshot)
     {
         if (sourceFramePosition < 0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(sourceFramePosition));
+            throw new ArgumentOutOfRangeException(nameof(sourceFramePosition));
         }
 
         if (!_initialized)
         {
-            _initialized =
-                true;
+            _initialized = true;
 
-            _rateAnchorSourceFrame =
-                sourceFramePosition;
+            _rateAnchorSourceFrame = sourceFramePosition;
 
-            _rateAnchorPlayedFrame =
-                snapshot.PlayedFramePosition;
+            _rateAnchorPlayedFrame = snapshot.PlayedFramePosition;
 
-            _targetQueuedFrames =
-                snapshot.QueuedFrameCount;
+            _targetQueuedFrames = snapshot.QueuedFrameCount;
 
-            return new ClockEstimate(
-                0.0,
-                snapshot.QueuedFrameCount,
-                0.0,
-                false);
+            return new ClockEstimate(0.0, snapshot.QueuedFrameCount, 0.0, false);
         }
 
-        long sourceDelta =
-            sourceFramePosition -
-            _rateAnchorSourceFrame;
+        long sourceDelta = sourceFramePosition - _rateAnchorSourceFrame;
 
-        if (sourceDelta >=
-            _estimationWindowFrames)
+        if (sourceDelta >= _estimationWindowFrames)
         {
-            double playedDelta =
-                snapshot.PlayedFramePosition -
-                _rateAnchorPlayedFrame;
+            double playedDelta = snapshot.PlayedFramePosition - _rateAnchorPlayedFrame;
 
             if (playedDelta >= 0.0)
             {
-                double observedRatio =
-                    playedDelta /
-                    sourceDelta;
+                double observedRatio = playedDelta / sourceDelta;
 
-                double observedDriftPpm =
-                    (observedRatio -
-                     1.0) *
-                    1_000_000.0;
+                double observedDriftPpm = (observedRatio - 1.0) * 1_000_000.0;
 
-                observedDriftPpm =
-                    Math.Clamp(
-                        observedDriftPpm,
-                        -MaximumObservedDriftPpm,
-                        MaximumObservedDriftPpm);
+                observedDriftPpm = Math.Clamp(observedDriftPpm, -MaximumObservedDriftPpm, MaximumObservedDriftPpm);
 
                 if (_hasRateEstimate)
                 {
-                    _estimatedDriftPpm +=
-                        (observedDriftPpm -
-                         _estimatedDriftPpm) *
-                        _smoothingFactor;
+                    _estimatedDriftPpm += (observedDriftPpm - _estimatedDriftPpm) * _smoothingFactor;
                 }
                 else
                 {
-                    _estimatedDriftPpm =
-                        observedDriftPpm;
+                    _estimatedDriftPpm = observedDriftPpm;
 
-                    _hasRateEstimate =
-                        true;
+                    _hasRateEstimate = true;
                 }
             }
 
-            _rateAnchorSourceFrame =
-                sourceFramePosition;
+            _rateAnchorSourceFrame = sourceFramePosition;
 
-            _rateAnchorPlayedFrame =
-                snapshot.PlayedFramePosition;
+            _rateAnchorPlayedFrame = snapshot.PlayedFramePosition;
 
-            _targetQueuedFrames +=
-                (snapshot.QueuedFrameCount -
-                 _targetQueuedFrames) *
-                TargetQueuedFramesTrackingFactor;
+            _targetQueuedFrames += (snapshot.QueuedFrameCount - _targetQueuedFrames) * TargetQueuedFramesTrackingFactor;
         }
 
-        double timingErrorFrames =
-            snapshot.QueuedFrameCount -
-            _targetQueuedFrames;
+        double timingErrorFrames = snapshot.QueuedFrameCount - _targetQueuedFrames;
 
-        return new ClockEstimate(
-            _estimatedDriftPpm,
-            snapshot.QueuedFrameCount,
-            timingErrorFrames,
-            _hasRateEstimate);
+        return new ClockEstimate(_estimatedDriftPpm, snapshot.QueuedFrameCount, timingErrorFrames, _hasRateEstimate);
     }
 
     public void Reset()
     {
-        _initialized =
-            false;
+        _initialized = false;
 
-        _hasRateEstimate =
-            false;
+        _hasRateEstimate = false;
 
-        _rateAnchorSourceFrame =
-            0;
+        _rateAnchorSourceFrame = 0;
 
-        _rateAnchorPlayedFrame =
-            0.0;
+        _rateAnchorPlayedFrame = 0.0;
 
-        _targetQueuedFrames =
-            0.0;
+        _targetQueuedFrames = 0.0;
 
-        _estimatedDriftPpm =
-            0.0;
+        _estimatedDriftPpm = 0.0;
     }
 }

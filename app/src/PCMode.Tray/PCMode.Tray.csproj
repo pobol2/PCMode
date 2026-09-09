@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -19,9 +18,6 @@
   <!-- App.xaml lives in App/, not the project root, so the SDK's default
        ApplicationDefinition glob (which only matches a root-level App.xaml)
        does not find it. -->
-  <PropertyGroup>
-    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
-  </PropertyGroup>
 
   <ItemGroup>
     <ApplicationDefinition Include="App\App.xaml" />
@@ -53,20 +49,16 @@
     other end of this arrangement.
   -->
   <ItemGroup>
-    <ProjectReference
-      Include="..\PCMode.Audio.Host\PCMode.Audio.Host.csproj"
-      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\PCMode.Audio.Host\PCMode.Audio.Host.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Target Name="CopyAudioHost" AfterTargets="Build">
-
     <MSBuild
       Projects="..\PCMode.Audio.Host\PCMode.Audio.Host.csproj"
       Targets="Build"
-      Properties="Configuration=$(Configuration)">
-
+      Properties="Configuration=$(Configuration)"
+    >
       <Output TaskParameter="TargetOutputs" ItemName="AudioHostOutput" />
-
     </MSBuild>
 
     <ItemGroup>
@@ -76,8 +68,7 @@
     <Copy
       SourceFiles="@(AudioHostFile)"
       DestinationFiles="@(AudioHostFile->'$(OutDir)AudioHost\%(RecursiveDir)%(Filename)%(Extension)')"
-      SkipUnchangedFiles="true" />
-
+      SkipUnchangedFiles="true"
+    />
   </Target>
-
 </Project>

@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 Push-Location $PSScriptRoot
-try {
+try
+{
     $files = @(
         "README.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md",
         "PCMode_Product_Roadmap.md", "LICENSE",
@@ -13,7 +14,7 @@ try {
 
     tar -a -c -f "PCMode_Documentation.zip" $files
     if ($LASTEXITCODE) { throw "Could not create the documentation archive." }
-}
-finally {
+} finally
+{
     Pop-Location
 }

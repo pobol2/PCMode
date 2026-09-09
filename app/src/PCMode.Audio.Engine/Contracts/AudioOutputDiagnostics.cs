@@ -50,4 +50,5 @@ public readonly record struct AudioOutputDiagnostics(
     long EndpointDryCount,
     double LongestSubmitGapMilliseconds,
     double LongestWriteMilliseconds,
-    double LongestBufferWaitMilliseconds);
+    double LongestBufferWaitMilliseconds
+);

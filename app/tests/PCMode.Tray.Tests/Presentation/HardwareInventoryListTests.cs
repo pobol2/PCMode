@@ -27,7 +27,8 @@ public sealed class HardwareInventoryListTests
     public async Task ScanAsync_populates_rows_and_toggles_busy_around_the_scan()
     {
         var list = new HardwareInventoryList<FakeRow>(() =>
-            Task.FromResult<(IReadOnlyList<FakeRow>, string?)>(([new FakeRow("a"), new FakeRow("b")], null)));
+            Task.FromResult<(IReadOnlyList<FakeRow>, string?)>(([new FakeRow("a"), new FakeRow("b")], null))
+        );
 
         Assert.True(list.CanScan);
 
@@ -45,7 +46,8 @@ public sealed class HardwareInventoryListTests
     public async Task ScanAsync_reports_a_problem_and_clears_the_status_message()
     {
         var list = new HardwareInventoryList<FakeRow>(() =>
-            Task.FromResult<(IReadOnlyList<FakeRow>, string?)>(([], "The scan failed.")));
+            Task.FromResult<(IReadOnlyList<FakeRow>, string?)>(([], "The scan failed."))
+        );
 
         await list.ScanAsync();
 

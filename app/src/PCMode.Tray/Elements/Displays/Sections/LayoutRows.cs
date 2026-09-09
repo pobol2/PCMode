@@ -15,23 +15,19 @@ public static class LayoutDirectionChoice
     public static IReadOnlyList<string> All { get; } = [LeftOf, RightOf, Above, Below];
 
     public static IReadOnlyList<LayoutDirectionOption> Options { get; } =
-    [
-        new(LeftOf, "Left of"),
-        new(RightOf, "Right of"),
-        new(Above, "Above"),
-        new(Below, "Below"),
-    ];
+    [new(LeftOf, "Left of"), new(RightOf, "Right of"), new(Above, "Above"), new(Below, "Below")];
 
     public static string LabelOf(string value) =>
         Options.FirstOrDefault(choice => string.Equals(choice.Value, value, StringComparison.Ordinal))?.Label ?? value;
 
-    public static string OppositeOf(string value) => value switch
-    {
-        LeftOf => RightOf,
-        RightOf => LeftOf,
-        Above => Below,
-        _ => Above,
-    };
+    public static string OppositeOf(string value) =>
+        value switch
+        {
+            LeftOf => RightOf,
+            RightOf => LeftOf,
+            Above => Below,
+            _ => Above,
+        };
 }
 
 /// <summary>A friendly label backed by the canonical word stored in configuration.</summary>
@@ -45,11 +41,7 @@ public static class LayoutAlignmentChoice
     public const string End = "End";
 
     public static IReadOnlyList<LayoutDirectionOption> Options { get; } =
-    [
-        new(Start, "Start (near edge)"),
-        new(Center, "Center"),
-        new(End, "End (far edge)"),
-    ];
+    [new(Start, "Start (near edge)"), new(Center, "Center"), new(End, "End (far edge)")];
 
     public static string LabelOf(string value) =>
         Options.FirstOrDefault(choice => string.Equals(choice.Value, value, StringComparison.Ordinal))?.Label ?? value;
@@ -272,25 +264,25 @@ public sealed class LayoutMonitorRow : ObservableObject, ISelectionRow
 
     public string MappingState => _mappingState;
 
-    public string CurrentPositionText => _currentWidth > 0 && _currentHeight > 0
-        ? $"X {_currentX:N0}, Y {_currentY:N0} px"
-        : "Unavailable while the monitor is inactive";
+    public string CurrentPositionText =>
+        _currentWidth > 0 && _currentHeight > 0
+            ? $"X {_currentX:N0}, Y {_currentY:N0} px"
+            : "Unavailable while the monitor is inactive";
 
-    public string CurrentResolutionText => _currentWidth > 0 && _currentHeight > 0
-        ? $"{_currentWidth:N0} × {_currentHeight:N0} px"
-        : "Unavailable while the monitor is inactive";
+    public string CurrentResolutionText =>
+        _currentWidth > 0 && _currentHeight > 0
+            ? $"{_currentWidth:N0} × {_currentHeight:N0} px"
+            : "Unavailable while the monitor is inactive";
 
-    public string CurrentRefreshText => _currentRefreshHz > 0
-        ? $"{FormatHz(_currentRefreshHz)} Hz"
-        : "Unavailable while the monitor is inactive";
+    public string CurrentRefreshText =>
+        _currentRefreshHz > 0 ? $"{FormatHz(_currentRefreshHz)} Hz" : "Unavailable while the monitor is inactive";
 
-    public string ConfiguredRefreshText => RefreshHz is double configured
-        ? $"{FormatHz(configured)} Hz"
-        : NoPreference;
+    public string ConfiguredRefreshText => RefreshHz is double configured ? $"{FormatHz(configured)} Hz" : NoPreference;
 
-    public string SavedPlacementText => Primary
-        ? "Primary monitor (Windows origin)"
-        : $"{LayoutDirectionChoice.LabelOf(Direction)} {Anchor}{AlignmentSuffix}";
+    public string SavedPlacementText =>
+        Primary
+            ? "Primary monitor (Windows origin)"
+            : $"{LayoutDirectionChoice.LabelOf(Direction)} {Anchor}{AlignmentSuffix}";
 
     /// <summary>", centered" / ", offset +40px" / "" -- appended to <see cref="SavedPlacementText"/> only when there is something beyond the default (Start, no offset) worth saying.</summary>
     private string AlignmentSuffix
@@ -365,7 +357,11 @@ public sealed class LayoutMonitorRow : ObservableObject, ISelectionRow
     }
 
     internal void SetPlacement(
-        string direction, string anchor, string alignment = LayoutAlignmentChoice.Start, int offset = 0)
+        string direction,
+        string anchor,
+        string alignment = LayoutAlignmentChoice.Start,
+        int offset = 0
+    )
     {
         Direction = direction;
         Anchor = anchor;
@@ -375,7 +371,11 @@ public sealed class LayoutMonitorRow : ObservableObject, ISelectionRow
 
     private static string FormatHz(double hz) => hz.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private void SetPreview(ref double field, double value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    private void SetPreview(
+        ref double field,
+        double value,
+        [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null
+    )
     {
         if (Math.Abs(field - value) < 0.01)
         {

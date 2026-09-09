@@ -40,12 +40,10 @@ internal static class Wasapi
     /// initializer does not accept loopback capture; that path must use the
     /// ordinary IAudioClient initializer instead.
     /// </summary>
-    public static bool CanUseLowLatencySharedStream(int requestedFlags) =>
-        (requestedFlags & StreamFlagsLoopback) == 0;
+    public static bool CanUseLowLatencySharedStream(int requestedFlags) => (requestedFlags & StreamFlagsLoopback) == 0;
 
     /// <summary>The subset IAudioClient3 accepts when opening a shared stream.</summary>
-    public static int LowLatencySharedStreamFlags(int requestedFlags) =>
-        requestedFlags & StreamFlagsEventCallback;
+    public static int LowLatencySharedStreamFlags(int requestedFlags) => requestedFlags & StreamFlagsEventCallback;
 
     public const int BufferFlagsDataDiscontinuity = 0x1;
     public const int BufferFlagsSilent = 0x2;
@@ -85,8 +83,7 @@ internal static class Wasapi
     /// <see cref="CoreAudioEndpoints"/> through <see cref="CoreAudioEndpointInterop"/>;
     /// only opening a stream on it is specific to this file.
     /// </summary>
-    public static IMMDeviceEnumerator CreateEnumerator() =>
-        CoreAudioEndpointInterop.CreateEnumerator();
+    public static IMMDeviceEnumerator CreateEnumerator() => CoreAudioEndpointInterop.CreateEnumerator();
 
     public static IMMDevice OpenDevice(IMMDeviceEnumerator enumerator, string endpointId, string what) =>
         CoreAudioEndpointInterop.OpenDevice(enumerator, endpointId, what);
@@ -106,21 +103,18 @@ internal static class Wasapi
     }
 
     /// <summary>Turns an audio HRESULT into something worth showing a user.</summary>
-    public static string Explain(int hr, string what) => hr switch
-    {
-        DeviceInvalidated =>
-            $"{what} is no longer available. It was unplugged, disabled, or its driver restarted.",
-        UnsupportedFormat =>
-            $"{what} will not accept the shared-mode format Windows mixes at.",
-        DeviceInUse or ExclusiveModeOnly =>
-            $"{what} is held in exclusive mode by another program, so Party mode cannot share it.",
-        ServiceNotRunning =>
-            "The Windows Audio service is not running.",
-        _ => $"{what} reported {Hresult(hr)}.",
-    };
+    public static string Explain(int hr, string what) =>
+        hr switch
+        {
+            DeviceInvalidated => $"{what} is no longer available. It was unplugged, disabled, or its driver restarted.",
+            UnsupportedFormat => $"{what} will not accept the shared-mode format Windows mixes at.",
+            DeviceInUse or ExclusiveModeOnly =>
+                $"{what} is held in exclusive mode by another program, so Party mode cannot share it.",
+            ServiceNotRunning => "The Windows Audio service is not running.",
+            _ => $"{what} reported {Hresult(hr)}.",
+        };
 
-    public static string Hresult(int hr) =>
-        "0x" + hr.ToString("X8", CultureInfo.InvariantCulture);
+    public static string Hresult(int hr) => "0x" + hr.ToString("X8", CultureInfo.InvariantCulture);
 
     public static void Check(int hr, string what)
     {
@@ -139,7 +133,14 @@ internal static class Wasapi
     public interface IAudioClient
     {
         [PreserveSig]
-        int Initialize(int shareMode, int streamFlags, long bufferDuration, long periodicity, nint format, nint sessionGuid);
+        int Initialize(
+            int shareMode,
+            int streamFlags,
+            long bufferDuration,
+            long periodicity,
+            nint format,
+            nint sessionGuid
+        );
 
         [PreserveSig]
         int GetBufferSize(out int bufferFrames);
@@ -181,7 +182,13 @@ internal static class Wasapi
     public interface IAudioCaptureClient
     {
         [PreserveSig]
-        int GetBuffer(out nint data, out int frames, out int flags, out long devicePosition, out long performancePosition);
+        int GetBuffer(
+            out nint data,
+            out int frames,
+            out int flags,
+            out long devicePosition,
+            out long performancePosition
+        );
 
         [PreserveSig]
         int ReleaseBuffer(int frames);
@@ -224,7 +231,14 @@ internal static class Wasapi
     {
         // IAudioClient
         [PreserveSig]
-        int Initialize(int shareMode, int streamFlags, long bufferDuration, long periodicity, nint format, nint sessionGuid);
+        int Initialize(
+            int shareMode,
+            int streamFlags,
+            long bufferDuration,
+            long periodicity,
+            nint format,
+            nint sessionGuid
+        );
 
         [PreserveSig]
         int GetBufferSize(out int bufferFrames);
@@ -267,7 +281,12 @@ internal static class Wasapi
         int SetClientProperties(nint properties);
 
         [PreserveSig]
-        int GetBufferSizeLimits(nint format, [MarshalAs(UnmanagedType.Bool)] bool eventDriven, out long minDuration, out long maxDuration);
+        int GetBufferSizeLimits(
+            nint format,
+            [MarshalAs(UnmanagedType.Bool)] bool eventDriven,
+            out long minDuration,
+            out long maxDuration
+        );
 
         // IAudioClient3
         [PreserveSig]
@@ -276,7 +295,8 @@ internal static class Wasapi
             out int defaultPeriodInFrames,
             out int fundamentalPeriodInFrames,
             out int minPeriodInFrames,
-            out int maxPeriodInFrames);
+            out int maxPeriodInFrames
+        );
 
         [PreserveSig]
         int GetCurrentSharedModeEnginePeriod(out nint format, out int currentPeriodInFrames);
@@ -363,7 +383,8 @@ internal sealed record WaveFormat(int SampleRate, int Channels, int Bits, bool I
             ? "not yet known"
             : string.Create(
                 CultureInfo.InvariantCulture,
-                $"{SampleRate} Hz, {Channels} ch, {Bits}-bit {(IsFloat ? "float" : "PCM")}");
+                $"{SampleRate} Hz, {Channels} ch, {Bits}-bit {(IsFloat ? "float" : "PCM")}"
+            );
 
     /// <summary>
     /// Reads a WAVEFORMATEX, following it into WAVEFORMATEXTENSIBLE when it says
@@ -408,8 +429,9 @@ internal sealed record WaveFormat(int SampleRate, int Channels, int Bits, bool I
             if (!isFloat && subtype != Wasapi.SubtypePcm)
             {
                 throw new InvalidOperationException(
-                    $"{what} mixes in a compressed or encoded format that Party mode cannot mirror. " +
-                    "Set that endpoint to a plain PCM format in Sound settings.");
+                    $"{what} mixes in a compressed or encoded format that Party mode cannot mirror. "
+                        + "Set that endpoint to a plain PCM format in Sound settings."
+                );
             }
         }
         else if (tag is WaveFormatPcm or WaveFormatFloat)
@@ -419,14 +441,16 @@ internal sealed record WaveFormat(int SampleRate, int Channels, int Bits, bool I
         else
         {
             throw new InvalidOperationException(
-                $"{what} mixes in an audio format ({tag}) that Party mode cannot mirror.");
+                $"{what} mixes in an audio format ({tag}) that Party mode cannot mirror."
+            );
         }
 
         if (channels <= 0 || sampleRate <= 0 || bits is not (16 or 24 or 32))
         {
             throw new InvalidOperationException(
-                $"Windows described {what} as {sampleRate} Hz, {channels} channel(s), {bits}-bit, " +
-                "which is not something Party mode can mirror.");
+                $"Windows described {what} as {sampleRate} Hz, {channels} channel(s), {bits}-bit, "
+                    + "which is not something Party mode can mirror."
+            );
         }
 
         return new WaveFormat(sampleRate, channels, bits, isFloat, blockAlign);

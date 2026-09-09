@@ -77,8 +77,7 @@ public sealed record ApplicationObservation
     }
 
     /// <summary>Explicitly represents a launch target with no reliable runtime observer.</summary>
-    public static ApplicationObservation None { get; } =
-        new(ApplicationObservationKind.None, processName: null);
+    public static ApplicationObservation None { get; } = new(ApplicationObservationKind.None, processName: null);
 }
 
 /// <summary>
@@ -224,9 +223,10 @@ public sealed record ApplicationDefinition
         {
             char character = value[index];
 
-            bool usable = index == 0
-                ? char.IsAsciiLetter(character)
-                : char.IsAsciiLetterOrDigit(character) || character is '+' or '-' or '.';
+            bool usable =
+                index == 0
+                    ? char.IsAsciiLetter(character)
+                    : char.IsAsciiLetterOrDigit(character) || character is '+' or '-' or '.';
 
             if (!usable)
             {

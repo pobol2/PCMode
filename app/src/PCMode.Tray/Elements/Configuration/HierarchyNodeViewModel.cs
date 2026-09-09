@@ -24,7 +24,8 @@ public sealed class HierarchyNodeViewModel : INotifyPropertyChanged, IHierarchic
         SourceKind? kind,
         bool targetEnabled,
         bool hasChildren = false,
-        bool isExpanded = true)
+        bool isExpanded = true
+    )
     {
         Address = address;
         Level = level;
@@ -79,25 +80,27 @@ public sealed class HierarchyNodeViewModel : INotifyPropertyChanged, IHierarchic
     /// <summary>Left margin, in pixels, for this row's depth.</summary>
     public double Indent => (int)Level * 18d;
 
-    public object? ParentKey => Level switch
-    {
-        NodeLevel.Activity => new NodeAddress(Address.SpaceId),
-        NodeLevel.Source => new NodeAddress(Address.SpaceId, Address.ActivityId),
-        _ => null,
-    };
+    public object? ParentKey =>
+        Level switch
+        {
+            NodeLevel.Activity => new NodeAddress(Address.SpaceId),
+            NodeLevel.Source => new NodeAddress(Address.SpaceId, Address.ActivityId),
+            _ => null,
+        };
 
     /// <summary>What the row says beside the name.</summary>
-    public string Description => Level switch
-    {
-        NodeLevel.Space => "Space",
-        NodeLevel.Activity => "Activity",
-        _ => Kind switch
+    public string Description =>
+        Level switch
         {
-            SourceKind.ExternalDevice => "Source â€” external device",
-            SourceKind.TvApplication => "Source â€” TV app",
-            _ => "Source â€” PC application",
-        },
-    };
+            NodeLevel.Space => "Space",
+            NodeLevel.Activity => "Activity",
+            _ => Kind switch
+            {
+                SourceKind.ExternalDevice => "Source â€” external device",
+                SourceKind.TvApplication => "Source â€” TV app",
+                _ => "Source â€” PC application",
+            },
+        };
 
     public string Summary => Description;
 
@@ -149,13 +152,19 @@ public sealed class HierarchyNodeViewModel : INotifyPropertyChanged, IHierarchic
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(ancestor);
 
-        if ((int)candidate.Level <= (int)ancestor.Level ||
-            !string.Equals(candidate.Address.SpaceId, ancestor.Address.SpaceId, StringComparison.OrdinalIgnoreCase))
+        if (
+            (int)candidate.Level <= (int)ancestor.Level
+            || !string.Equals(candidate.Address.SpaceId, ancestor.Address.SpaceId, StringComparison.OrdinalIgnoreCase)
+        )
         {
             return false;
         }
 
-        return ancestor.Level == NodeLevel.Space ||
-            string.Equals(candidate.Address.ActivityId, ancestor.Address.ActivityId, StringComparison.OrdinalIgnoreCase);
+        return ancestor.Level == NodeLevel.Space
+            || string.Equals(
+                candidate.Address.ActivityId,
+                ancestor.Address.ActivityId,
+                StringComparison.OrdinalIgnoreCase
+            );
     }
 }

@@ -31,7 +31,11 @@ namespace PCMode.Engine;
 /// repeatedly -- a resource that was genuinely already correct confirms on the
 /// first read rather than being commanded again for the same reason.
 /// </remarks>
-public sealed class TvProfileProvider : IConfigurableProvider, IDependentProvider, IConvergentProvider, IAvailableProvider
+public sealed class TvProfileProvider
+    : IConfigurableProvider,
+        IDependentProvider,
+        IConvergentProvider,
+        IAvailableProvider
 {
     /// <summary>The configuration key.</summary>
     public const string ResourceKey = "tvProfile";
@@ -70,9 +74,7 @@ public sealed class TvProfileProvider : IConfigurableProvider, IDependentProvide
     /// gets the whole chain.
     /// </remarks>
     public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
-        [new ResourceRequirement(
-            LgTvResourceKeys.Signal(_connection.ResourceName),
-            target)];
+        [new ResourceRequirement(LgTvResourceKeys.Signal(_connection.ResourceName), target)];
 
     /// <summary>
     /// After the display, when there is one.
@@ -99,14 +101,15 @@ public sealed class TvProfileProvider : IConfigurableProvider, IDependentProvide
     /// and "something was sent". An HDR mode selected against a signal that never
     /// became HDR fails here, which is exactly the mistake worth catching.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 1,
-        RetryInterval = TimeSpan.FromSeconds(8),
-        PollInterval = TimeSpan.FromSeconds(1),
-        DispatchAtLeastOnce = true,
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 1,
+            RetryInterval = TimeSpan.FromSeconds(8),
+            PollInterval = TimeSpan.FromSeconds(1),
+            DispatchAtLeastOnce = true,
+        };
 
     /// <summary>
     /// Whether there is a television whose picture can be set. See
@@ -117,8 +120,7 @@ public sealed class TvProfileProvider : IConfigurableProvider, IDependentProvide
     public bool IsValidValue(string value, out string? problem) =>
         TvSignalProvider.ValidateProfile(_connection.Settings, value, out problem);
 
-    public string? Read() =>
-        LgTvBridge.Wait(_connection.ReadProfileAsync);
+    public string? Read() => LgTvBridge.Wait(_connection.ReadProfileAsync);
 
     public void Apply(string value, CancellationToken cancellationToken) =>
         LgTvBridge.Wait(token => _connection.ApplyProfileAsync(value, token), cancellationToken);

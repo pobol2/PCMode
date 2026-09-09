@@ -33,8 +33,7 @@ namespace PCMode.Engine;
 internal static class LgTvManifest
 {
     /// <summary>The manifest, as it goes on the wire.</summary>
-    public const string Json =
-        """
+    public const string Json = """
         {
           "appVersion": "1.1",
           "manifestVersion": 1,

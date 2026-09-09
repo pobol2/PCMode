@@ -60,8 +60,7 @@ internal sealed class FakeTelevision : ILgTvNetwork
     /// is the only sequence that writes anything on a real television. A test
     /// asserting a value is here is asserting the whole round trip happened.
     /// </remarks>
-    public Dictionary<string, Dictionary<string, string>> Written { get; } =
-        new(StringComparer.Ordinal);
+    public Dictionary<string, Dictionary<string, string>> Written { get; } = new(StringComparer.Ordinal);
 
     /// <summary>Each completed settings write, as the keys it carried, in order.</summary>
     public List<string> Writes { get; } = [];
@@ -75,8 +74,8 @@ internal sealed class FakeTelevision : ILgTvNetwork
 
     /// <summary>One setting as it now stands, or null if nothing set it.</summary>
     public string? Setting(string category, string key) =>
-        Written.TryGetValue(category, out Dictionary<string, string>? values) &&
-        values.TryGetValue(key, out string? value)
+        Written.TryGetValue(category, out Dictionary<string, string>? values)
+        && values.TryGetValue(key, out string? value)
             ? value
             : null;
 
@@ -114,7 +113,8 @@ internal sealed class FakeTelevision : ILgTvNetwork
         string host,
         int port,
         string? pinnedFingerprint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -123,8 +123,10 @@ internal sealed class FakeTelevision : ILgTvNetwork
             throw new IOException($"No route to {host}.");
         }
 
-        if (pinnedFingerprint is not null &&
-            !string.Equals(pinnedFingerprint, Fingerprint, StringComparison.OrdinalIgnoreCase))
+        if (
+            pinnedFingerprint is not null
+            && !string.Equals(pinnedFingerprint, Fingerprint, StringComparison.OrdinalIgnoreCase)
+        )
         {
             // What a pinned certificate is for. Something else is answering on the
             // television's address, and it does not get handed a client key.
@@ -186,12 +188,14 @@ internal sealed class FakeTelevision : ILgTvNetwork
 
             if (television.RefusesPower && uri.EndsWith("getPowerState", StringComparison.Ordinal))
             {
-                _pending.Enqueue(new JsonObject
-                {
-                    ["id"] = id,
-                    ["type"] = "error",
-                    ["error"] = "power read refused",
-                }.ToJsonString());
+                _pending.Enqueue(
+                    new JsonObject
+                    {
+                        ["id"] = id,
+                        ["type"] = "error",
+                        ["error"] = "power read refused",
+                    }.ToJsonString()
+                );
 
                 return Task.CompletedTask;
             }
@@ -206,8 +210,7 @@ internal sealed class FakeTelevision : ILgTvNetwork
                 // Read from 'onclose', which is the action that will actually run.
                 JsonElement parameters = payload.GetProperty("onclose").GetProperty("params");
 
-                _alert = (parameters.GetProperty("category").GetString()!,
-                          parameters.GetProperty("settings").Clone());
+                _alert = (parameters.GetProperty("category").GetString()!, parameters.GetProperty("settings").Clone());
             }
 
             if (uri == "ssap://system.notifications/closeAlert" && _alert is (string category, JsonElement settings))
@@ -224,12 +227,14 @@ internal sealed class FakeTelevision : ILgTvNetwork
                 _alert = null;
             }
 
-            _pending.Enqueue(new JsonObject
-            {
-                ["id"] = id,
-                ["type"] = "response",
-                ["payload"] = PayloadFor(uri, payload),
-            }.ToJsonString());
+            _pending.Enqueue(
+                new JsonObject
+                {
+                    ["id"] = id,
+                    ["type"] = "response",
+                    ["payload"] = PayloadFor(uri, payload),
+                }.ToJsonString()
+            );
 
             return Task.CompletedTask;
         }
@@ -252,8 +257,9 @@ internal sealed class FakeTelevision : ILgTvNetwork
 
         private void Register(string id, JsonElement payload)
         {
-            bool hasKey = payload.TryGetProperty("client-key", out JsonElement key) &&
-                          !string.IsNullOrWhiteSpace(key.GetString());
+            bool hasKey =
+                payload.TryGetProperty("client-key", out JsonElement key)
+                && !string.IsNullOrWhiteSpace(key.GetString());
 
             if (!hasKey)
             {
@@ -263,12 +269,14 @@ internal sealed class FakeTelevision : ILgTvNetwork
                 television.Prompts++;
             }
 
-            _pending.Enqueue(new JsonObject
-            {
-                ["id"] = id,
-                ["type"] = "registered",
-                ["payload"] = new JsonObject { ["client-key"] = hasKey ? key.GetString() : television.IssuedKey },
-            }.ToJsonString());
+            _pending.Enqueue(
+                new JsonObject
+                {
+                    ["id"] = id,
+                    ["type"] = "registered",
+                    ["payload"] = new JsonObject { ["client-key"] = hasKey ? key.GetString() : television.IssuedKey },
+                }.ToJsonString()
+            );
         }
 
         private JsonObject PayloadFor(string uri, JsonElement request)

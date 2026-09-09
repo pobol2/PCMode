@@ -88,7 +88,8 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
     public DisplaysViewModel(
         IConfigurationWorkspace workspace,
         Func<string?, TvPowerProvider?>? livePowerProvider = null,
-        IConfigurationPrompts? prompts = null)
+        IConfigurationPrompts? prompts = null
+    )
         : base(workspace, prompts)
     {
         _liveRefresh = new LiveRefreshTimer(LiveStatusInterval, RefreshLiveStatusAsync);
@@ -96,10 +97,16 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         _session = new ConfigurationEditingSession<string, DisplayLayoutEntry>(
             keyOf: entry => entry.Name,
             titleOf: entry => entry.Name,
-            summaryOf: entry => entry.IsCurrent ? "Current" : null);
+            summaryOf: entry => entry.IsCurrent ? "Current" : null
+        );
 
         _livePowerProvider = livePowerProvider;
-        LayoutSection = new LayoutSectionViewModel(workspace, OnSectionChanged, OnCursorLinkChanged, OnSelectedMonitorChanged);
+        LayoutSection = new LayoutSectionViewModel(
+            workspace,
+            OnSectionChanged,
+            OnCursorLinkChanged,
+            OnSelectedMonitorChanged
+        );
 
         // The cursor section owns the prompts and confirmations for its four
         // actions but not the writes: a position's link lives on a
@@ -113,10 +120,16 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
                 LayoutSection.CreateCursorPosition,
                 RenameCursorPosition,
                 DuplicateCursorPosition,
-                DeleteCursorPosition));
+                DeleteCursorPosition
+            )
+        );
 
         DisplayRegistrationSection = new DisplayRegistrationSectionViewModel(
-            workspace, Refresh, Prompts, GuardUnsavedChanges);
+            workspace,
+            Refresh,
+            Prompts,
+            GuardUnsavedChanges
+        );
 
         SaveCommand = new RelayCommand(() => TrySaveChanges(), () => CanSave);
         DiscardCommand = new RelayCommand(DiscardChanges, () => CanDiscard);
@@ -125,30 +138,59 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         DuplicateLayoutCommand = new RelayCommand(PromptDuplicateLayout, () => HasSelectedLayout);
         DeleteLayoutCommand = new RelayCommand(ConfirmDeleteLayout, () => HasSelectedLayout);
         ActivateLayoutCommand = new AsyncRelayCommand(ActivateSelectedForShellAsync, () => CanActivateSelected);
-        AddMonitorCommand = new RelayCommand(LayoutSection.AddMonitor, () => HasSelectedLayout && LayoutSection.CanAddMonitor);
+        AddMonitorCommand = new RelayCommand(
+            LayoutSection.AddMonitor,
+            () => HasSelectedLayout && LayoutSection.CanAddMonitor
+        );
         RemoveMonitorCommand = new RelayCommand<MonitorConfigurationSectionRow>(
             section => LayoutSection.RemoveMonitor(section.Monitor),
-            _ => LayoutSection.CanRemoveMonitor);
+            _ => LayoutSection.CanRemoveMonitor
+        );
         SelectMonitorCommand = new RelayCommand<LayoutMonitorRow>(LayoutSection.SelectMonitor);
-        RescanMonitorControlsCommand = new AsyncRelayCommand(RescanMonitorControlsAsync, () => CanRescanMonitorControls);
+        RescanMonitorControlsCommand = new AsyncRelayCommand(
+            RescanMonitorControlsAsync,
+            () => CanRescanMonitorControls
+        );
 
         TreePresentation = new ConfigurationPagePresentation(
             "Displays",
-            new ConfigurationSelectorPresentation("Layouts", SelectorItems, CreateLayoutCommand, SelectCommand: SelectItemCommand),
+            new ConfigurationSelectorPresentation(
+                "Layouts",
+                SelectorItems,
+                CreateLayoutCommand,
+                SelectCommand: SelectItemCommand
+            ),
             ConfigurationEditorPresentation.Create(
                 essential:
                 [
-                    new("Layout", new TerminalElementContent("Monitor arrangement and layout membership", LayoutSection)),
+                    new(
+                        "Layout",
+                        new TerminalElementContent("Monitor arrangement and layout membership", LayoutSection)
+                    ),
                 ],
                 advanced:
                 [
-                    new("Cursor", new TerminalElementContent("Cursor positions and layout links", CursorSection), IsCollapsible: true),
-                    new("Monitor controls", new TerminalElementContent("Per-monitor DDC and television settings", MonitorSections), IsCollapsible: true),
+                    new(
+                        "Cursor",
+                        new TerminalElementContent("Cursor positions and layout links", CursorSection),
+                        IsCollapsible: true
+                    ),
+                    new(
+                        "Monitor controls",
+                        new TerminalElementContent("Per-monitor DDC and television settings", MonitorSections),
+                        IsCollapsible: true
+                    ),
                 ],
                 hardware:
                 [
-                    new("Current hardware", new TerminalElementContent("Display registration", DisplayRegistrationSection), IsCollapsible: true),
-                ]));
+                    new(
+                        "Current hardware",
+                        new TerminalElementContent("Display registration", DisplayRegistrationSection),
+                        IsCollapsible: true
+                    ),
+                ]
+            )
+        );
 
         PropertyChanged += OnSelfPropertyChanged;
     }
@@ -188,11 +230,7 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
             return;
         }
 
-        Prompts.PromptForName(
-            "Create layout",
-            "Name the new layout.",
-            string.Empty,
-            StartNewLayout);
+        Prompts.PromptForName("Create layout", "Name the new layout.", string.Empty, StartNewLayout);
     }
 
     private void PromptRenameLayout()
@@ -212,27 +250,32 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
             return;
         }
 
-        Prompts.PromptForName("Duplicate layout", $"Name the copy of '{current}'.", $"{current} copy", DuplicateSelected);
+        Prompts.PromptForName(
+            "Duplicate layout",
+            $"Name the copy of '{current}'.",
+            $"{current} copy",
+            DuplicateSelected
+        );
     }
 
     private void ConfirmDeleteLayout()
     {
-        if (EditingLayoutName is string current &&
-            Prompts.Confirm($"Delete '{current}'? This cannot be undone."))
+        if (EditingLayoutName is string current && Prompts.Confirm($"Delete '{current}'? This cannot be undone."))
         {
             DeleteSelected();
         }
     }
 
-    private void OnSelfPropertyChanged(
-        object? sender,
-        PropertyChangedEventArgs e)
+    private void OnSelfPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SelectedKey)
-            or nameof(CanSave)
-            or nameof(CanDiscard)
-            or nameof(CanActivateSelected)
-            or nameof(CanRescanMonitorControls))
+        if (
+            e.PropertyName
+            is nameof(SelectedKey)
+                or nameof(CanSave)
+                or nameof(CanDiscard)
+                or nameof(CanActivateSelected)
+                or nameof(CanRescanMonitorControls)
+        )
         {
             RefreshCommands();
         }
@@ -324,18 +367,14 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
     public bool CanActivateSelected => HasSelectedLayout && !HasUnsavedChanges && !IsBusy;
 
     public bool CanRescanMonitorControls =>
-        !_isMonitorControlRescanRunning &&
-        !IsBusy &&
-        MonitorSections.Any(
-            section =>
-                section.ShowDdc &&
-                section.Ddc.CanProbe);
+        !_isMonitorControlRescanRunning
+        && !IsBusy
+        && MonitorSections.Any(section => section.ShowDdc && section.Ddc.CanProbe);
 
-    public string? InstructionMessage => !string.IsNullOrEmpty(StatusMessage)
-        ? null
-        : LayoutSection.Rows.Count == 0
-            ? "Add at least one monitor."
-            : null;
+    public string? InstructionMessage =>
+        !string.IsNullOrEmpty(StatusMessage) ? null
+        : LayoutSection.Rows.Count == 0 ? "Add at least one monitor."
+        : null;
 
     /// <summary>
     /// The first thing any section says is wrong. The layout's own rules are
@@ -345,17 +384,17 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
     /// least one monitor" is not a reason to refuse a television edit.
     /// </summary>
     public override string? ValidationProblem =>
-        (HasSelectedLayout ? LayoutSection.ValidationProblem : null) ??
-        (HasSelectedLayout ? CursorSection.ValidationProblem : null) ??
-        MonitorSections
+        (HasSelectedLayout ? LayoutSection.ValidationProblem : null)
+        ?? (HasSelectedLayout ? CursorSection.ValidationProblem : null)
+        ?? MonitorSections
             .Select(section => section.Television.ValidationProblem)
             .FirstOrDefault(problem => problem is not null);
 
     public override bool CanSave =>
-        (HasSelectedLayout || MonitorSections.Any(section => section.Television.HasAssociation)) &&
-        HasUnsavedChanges &&
-        !IsBusy &&
-        ValidationProblem is null;
+        (HasSelectedLayout || MonitorSections.Any(section => section.Television.HasAssociation))
+        && HasUnsavedChanges
+        && !IsBusy
+        && ValidationProblem is null;
 
     /// <summary>
     /// Refreshes only Windows-observed display state for the already-loaded
@@ -381,10 +420,11 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         {
             DisplaySnapshot snapshot = await Task.Run(display.Discover).ConfigureAwait(true);
 
-            CurrentLayout = snapshot.CurrentLayout is { } current &&
-                _session.Items.Any(entry => string.Equals(entry.Name, current, StringComparison.OrdinalIgnoreCase))
-                ? current
-                : null;
+            CurrentLayout =
+                snapshot.CurrentLayout is { } current
+                && _session.Items.Any(entry => string.Equals(entry.Name, current, StringComparison.OrdinalIgnoreCase))
+                    ? current
+                    : null;
         }
         catch
         {
@@ -439,10 +479,7 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         {
             MonitorConfigurationSectionRow[] sections =
             [
-                .. MonitorSections.Where(
-                    section =>
-                        section.ShowDdc &&
-                        section.Ddc.CanProbe)
+                .. MonitorSections.Where(section => section.ShowDdc && section.Ddc.CanProbe),
             ];
 
             foreach (MonitorConfigurationSectionRow section in sections)
@@ -503,8 +540,10 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
 
         List<DisplayLayoutEntry> entries =
         [
-            .. display.LayoutNames.Select(name =>
-                new DisplayLayoutEntry(name, string.Equals(name, _currentLayout, StringComparison.OrdinalIgnoreCase)))
+            .. display.LayoutNames.Select(name => new DisplayLayoutEntry(
+                name,
+                string.Equals(name, _currentLayout, StringComparison.OrdinalIgnoreCase)
+            )),
         ];
 
         _session.Load(entries, keep: SelectedKey as string);
@@ -684,9 +723,11 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
                 // Space/Activity/Source 'display' resource naming it is
                 // rewritten, before the current in-memory arrangement below
                 // overwrites what that rename just copied under the new name.
-                if (!_session.IsDraft &&
-                    _session.Selected?.Name is string oldName &&
-                    !string.Equals(oldName, trimmed, StringComparison.OrdinalIgnoreCase))
+                if (
+                    !_session.IsDraft
+                    && _session.Selected?.Name is string oldName
+                    && !string.Equals(oldName, trimmed, StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     ModeSaveOutcome renameOutcome = LayoutConfigurationStore.Rename(Workspace.Root, oldName, trimmed);
 
@@ -796,8 +837,7 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         EditingLayoutName = trimmed;
         MarkDirty();
         NotifyEditingState();
-        StatusMessage =
-            $"Copy of '{source}' ready as '{trimmed}'. Change at least one monitor setting, then Save.";
+        StatusMessage = $"Copy of '{source}' ready as '{trimmed}'. Change at least one monitor setting, then Save.";
         return null;
     }
 
@@ -941,9 +981,12 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
             return "Give the cursor position a name.";
         }
 
-        if (LayoutSection.CursorPositionChoices.Any(existing =>
-            !string.Equals(existing, LayoutSectionViewModel.NoCursorPosition, StringComparison.Ordinal) &&
-            string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (
+            LayoutSection.CursorPositionChoices.Any(existing =>
+                !string.Equals(existing, LayoutSectionViewModel.NoCursorPosition, StringComparison.Ordinal)
+                && string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return $"'{trimmed}' is already a configured cursor position.";
         }
@@ -993,8 +1036,8 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         if (!outcome.Success)
         {
             StatusMessage =
-                $"'{name}' unlinked from this layout, but not deleted yet -- {outcome.Problem} " +
-                $"Save this layout, then delete '{name}' again.";
+                $"'{name}' unlinked from this layout, but not deleted yet -- {outcome.Problem} "
+                + $"Save this layout, then delete '{name}' again.";
             Workspace.Warn(Category, StatusMessage);
             return null;
         }
@@ -1014,7 +1057,8 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         string name = LayoutSection.CursorPositionName;
 
         CursorSection.LoadLinkedPosition(
-            string.Equals(name, LayoutSectionViewModel.NoCursorPosition, StringComparison.Ordinal) ? null : name);
+            string.Equals(name, LayoutSectionViewModel.NoCursorPosition, StringComparison.Ordinal) ? null : name
+        );
     }
 
     /// <summary>Rebuilds the all-display sections when a layout load replaces the monitor row objects.</summary>
@@ -1047,9 +1091,12 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
 
     private void EnsureMonitorSections()
     {
-        if (MonitorSections.Count == LayoutSection.Rows.Count &&
-            MonitorSections.Select(section => section.Monitor)
-                .SequenceEqual(LayoutSection.Rows, ReferenceEqualityComparer.Instance))
+        if (
+            MonitorSections.Count == LayoutSection.Rows.Count
+            && MonitorSections
+                .Select(section => section.Monitor)
+                .SequenceEqual(LayoutSection.Rows, ReferenceEqualityComparer.Instance)
+        )
         {
             return;
         }
@@ -1064,11 +1111,16 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
 
         foreach (LayoutMonitorRow monitor in LayoutSection.Rows)
         {
-            var ddc = new MonitorDdcSectionViewModel(
-                Workspace, Prompts, ReloadMonitorSections, GuardUnsavedChanges);
+            var ddc = new MonitorDdcSectionViewModel(Workspace, Prompts, ReloadMonitorSections, GuardUnsavedChanges);
 
             var television = new MonitorTelevisionSectionViewModel(
-                Workspace, OnSectionChanged, _livePowerProvider, Prompts, ReloadMonitorSections, GuardUnsavedChanges);
+                Workspace,
+                OnSectionChanged,
+                _livePowerProvider,
+                Prompts,
+                ReloadMonitorSections,
+                GuardUnsavedChanges
+            );
 
             ddc.Load(monitor);
             television.Load(monitor);
@@ -1096,9 +1148,7 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
     {
         LayoutMonitorRow? primary = LayoutSection.Rows.FirstOrDefault(row => row.Primary);
 
-        CursorSection.SetTargetBounds(
-            primary?.LayoutWidth ?? 1920,
-            primary?.LayoutHeight ?? 1080);
+        CursorSection.SetTargetBounds(primary?.LayoutWidth ?? 1920, primary?.LayoutHeight ?? 1080);
     }
 
     private void OnMonitorControlSectionChanged(object? sender, PropertyChangedEventArgs e)
@@ -1111,8 +1161,11 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
 
     private void OnMonitorDdcStateChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MonitorDdcSectionViewModel.CanProbe)
-            or nameof(MonitorDdcSectionViewModel.HasMonitor))
+        if (
+            e.PropertyName
+            is nameof(MonitorDdcSectionViewModel.CanProbe)
+                or nameof(MonitorDdcSectionViewModel.HasMonitor)
+        )
         {
             OnPropertyChanged(nameof(CanRescanMonitorControls));
         }
@@ -1129,9 +1182,12 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
             return "Give the layout a name.";
         }
 
-        if (_session.Items.Any(entry =>
-                !string.Equals(entry.Name, ignoredName, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(entry.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (
+            _session.Items.Any(entry =>
+                !string.Equals(entry.Name, ignoredName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.Name, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return $"'{trimmed}' is already a configured display layout.";
         }
@@ -1145,7 +1201,11 @@ public sealed class DisplaysViewModel : ConfigurationPageViewModelBase, IPageLif
         List<DisplayLayoutEntry> entries =
         [
             .. _session.Items.Select(entry =>
-                entry with { IsCurrent = string.Equals(entry.Name, _currentLayout, StringComparison.OrdinalIgnoreCase) })
+                entry with
+                {
+                    IsCurrent = string.Equals(entry.Name, _currentLayout, StringComparison.OrdinalIgnoreCase),
+                }
+            ),
         ];
 
         _session.Load(entries, keep: SelectedKey as string);

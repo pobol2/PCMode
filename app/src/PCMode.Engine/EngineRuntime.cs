@@ -73,10 +73,7 @@ public sealed class EngineRuntime : IDisposable
     /// has to outlive them: a reload replaces the audio provider, and a Host
     /// launched by the replaced one would be a process nothing left could steer.
     /// </param>
-    public EngineRuntime(
-        ModeEngine engine,
-        string? root = null,
-        IAudioRuntime? audio = null)
+    public EngineRuntime(ModeEngine engine, string? root = null, IAudioRuntime? audio = null)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
@@ -99,7 +96,8 @@ public sealed class EngineRuntime : IDisposable
         if (previous.IsBusy)
         {
             return RuntimeActivationOutcome.Deferred(
-                "A transition is running. The previous configuration is still active; try again once it finishes.");
+                "A transition is running. The previous configuration is still active; try again once it finishes."
+            );
         }
 
         ModeEngine candidate;
@@ -111,8 +109,9 @@ public sealed class EngineRuntime : IDisposable
         catch (ModeConfigurationException exception)
         {
             return RuntimeActivationOutcome.Failed(
-                "The saved configuration could not be activated, so the previous configuration is still " +
-                $"running. {exception.Message}");
+                "The saved configuration could not be activated, so the previous configuration is still "
+                    + $"running. {exception.Message}"
+            );
         }
 
         // Checked again immediately before the swap. This narrows the window
@@ -124,8 +123,9 @@ public sealed class EngineRuntime : IDisposable
         if (previous.IsBusy)
         {
             return RuntimeActivationOutcome.Deferred(
-                "A transition started while the configuration was being validated. The previous " +
-                "configuration is still active.");
+                "A transition started while the configuration was being validated. The previous "
+                    + "configuration is still active."
+            );
         }
 
         Interlocked.Exchange(ref _engine, candidate);

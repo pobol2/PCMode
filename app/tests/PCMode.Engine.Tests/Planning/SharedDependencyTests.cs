@@ -25,7 +25,8 @@ public sealed class SharedDependencyTests
             Mode("Film", ("audio", "TV", true), ("display", "TVOnly", false)),
             new Needy("audio") { Needs = [new ResourceRequirement("tv", "On")] },
             new Needy("display") { Needs = [new ResourceRequirement("tv", "On")] },
-            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings.")));
+            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings."))
+        );
 
         Assert.Contains("display", problem, StringComparison.Ordinal);
         Assert.DoesNotContain("audio", problem, StringComparison.Ordinal);
@@ -41,7 +42,8 @@ public sealed class SharedDependencyTests
             Mode("Film", ("audio", "TV", false)),
             new Needy("audio") { Needs = [new ResourceRequirement("display", "TVOnly")] },
             new Needy("display") { Needs = [new ResourceRequirement("tv", "On")] },
-            new Needy("tv", ResourceAvailability.Unavailable("there is no television on this machine.")));
+            new Needy("tv", ResourceAvailability.Unavailable("there is no television on this machine."))
+        );
 
         Assert.Contains("needed by display", problem, StringComparison.Ordinal);
         Assert.Contains("which is needed by audio", problem, StringComparison.Ordinal);
@@ -56,7 +58,8 @@ public sealed class SharedDependencyTests
         string problem = Rejected(
             Mode("Film", ("tv", "On", false), ("audio", "TV", false)),
             new Needy("audio") { Needs = [new ResourceRequirement("tv", "On")] },
-            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings.")));
+            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings."))
+        );
 
         Assert.Contains("'Film' sets it.", problem, StringComparison.Ordinal);
     }
@@ -71,7 +74,8 @@ public sealed class SharedDependencyTests
             Mode("Film", ("theme", "Dark", false), ("audio", "TV", true)),
             new Needy("theme"),
             new Needy("audio") { Needs = [new ResourceRequirement("tv", "On")] },
-            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings.")));
+            new Needy("tv", ResourceAvailability.Disabled("it is switched off in the settings."))
+        );
 
         Assert.Equal(["theme"], plan.Steps.Select(step => step.Key));
         Assert.Equal(["audio", "tv"], plan.Omissions.Select(omitted => omitted.Key).Order());
@@ -89,7 +93,8 @@ public sealed class SharedDependencyTests
                 Needs = [new ResourceRequirement("tv", "On")],
             },
             new Needy("display") { Needs = [new ResourceRequirement("tv", "On")] },
-            new Needy("tv"));
+            new Needy("tv")
+        );
 
         Assert.Equal(["tv", "display"], plan.Steps.Select(step => step.Key));
         Assert.Equal("audio", Assert.Single(plan.Omissions).Key);
@@ -103,7 +108,8 @@ public sealed class SharedDependencyTests
 
     /// <summary>A resource that needs others and may not be available.</summary>
     private sealed class Needy(string key, ResourceAvailability? availability = null)
-        : IAvailableProvider, IDependentProvider
+        : IAvailableProvider,
+            IDependentProvider
     {
         public string Key { get; } = key;
 
@@ -113,8 +119,7 @@ public sealed class SharedDependencyTests
 
         public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) => Needs;
 
-        public ResourceAvailability AvailabilityOf(string target) =>
-            availability ?? ResourceAvailability.Available;
+        public ResourceAvailability AvailabilityOf(string target) => availability ?? ResourceAvailability.Available;
 
         public bool IsValidValue(string value, out string? problem)
         {
@@ -124,9 +129,7 @@ public sealed class SharedDependencyTests
 
         public string? Read() => null;
 
-        public void Apply(string value, CancellationToken cancellationToken)
-        {
-        }
+        public void Apply(string value, CancellationToken cancellationToken) { }
     }
 
     private static ConfiguredMode Mode(string name, params (string Key, string Value, bool Optional)[] resources) =>
@@ -139,7 +142,8 @@ public sealed class SharedDependencyTests
                 DisplayName = name,
                 DisplayPath = name,
                 Identity = new TargetIdentity("space", name.ToLowerInvariant(), null),
-            });
+            }
+        );
 
     private static TransitionPlan Plan(ConfiguredMode mode, params IModeResourceProvider[] providers)
     {

@@ -1,8 +1,7 @@
-﻿using System.Runtime.ExceptionServices;
+using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
-
 // WinForms is enabled for the tray's notify icon, so these arrive ambiguous.
 using Application = System.Windows.Application;
 using Size = System.Windows.Size;
@@ -58,7 +57,8 @@ internal static class Wpf
 
         Assert.True(
             status == DispatcherOperationStatus.Completed,
-            $"The test body was still running on the WPF thread after {limit.TotalSeconds:0} seconds.");
+            $"The test body was still running on the WPF thread after {limit.TotalSeconds:0} seconds."
+        );
 
         failure?.Throw();
     }
@@ -109,10 +109,9 @@ internal static class Wpf
 
             foreach (string source in Dictionaries)
             {
-                application.Resources.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri(source, UriKind.Relative),
-                });
+                application.Resources.MergedDictionaries.Add(
+                    new ResourceDictionary { Source = new Uri(source, UriKind.Relative) }
+                );
             }
 
             ready.Set();
@@ -141,6 +140,7 @@ internal static class Wpf
         "/PCMode.Tray;component/UI/Framework/Framework.xaml",
         "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/PageLayoutResources.xaml",
         "/PCMode.Tray;component/UI/Components/Components.xaml",
+        "/PCMode.Tray;component/UI/Components/Content/EditorContentPrimitives.xaml",
         "/PCMode.Tray;component/UI/Components/Migration/MigrationComponents.xaml",
         "/PCMode.Tray;component/UI/Tree/Application/ApplicationLayout.xaml",
         "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/AppShellLayout.xaml",
@@ -156,7 +156,6 @@ internal static class Wpf
         "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/ConfigurationPageBindings.xaml",
         "/PCMode.Tray;component/UI/Components/Theme/Light.xaml",
         "/PCMode.Tray;component/UI/Components/Theme/Dark.xaml",
-
         "/PCMode.Tray.Tests;component/UI/Construction/Fixtures/BlockTemplates.xaml",
     ];
 

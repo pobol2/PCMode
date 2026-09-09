@@ -19,11 +19,7 @@ public sealed class ConvergenceTests
         // THE rule this whole step exists for. Apply returned without complaint
         // and the machine is still where it was, which is precisely the failure
         // an engine that trusted the call could never report.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(window: 4, poll: 1),
-            Reads = ["Desktop"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(window: 4, poll: 1), Reads = ["Desktop"] };
 
         using var world = new World(screen);
 
@@ -55,7 +51,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(screen);
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Succeeded, outcome.Status);
@@ -82,13 +77,8 @@ public sealed class ConvergenceTests
         // readback is a single fact -- the theme is a pair of registry values --
         // is either right or it is not, and there is no period over which that
         // could become more true.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(window: 8, poll: 1),
-            Reads = ["TVOnly"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(window: 8, poll: 1), Reads = ["TVOnly"] };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -105,13 +95,8 @@ public sealed class ConvergenceTests
         // wobble. One agreeing sample is exactly the evidence it exists to
         // reject, and a sample taken before anything was dispatched is no better
         // than one taken after.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(window: 8, poll: 1, settle: 2),
-            Reads = ["TVOnly"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(window: 8, poll: 1, settle: 2), Reads = ["TVOnly"] };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -141,7 +126,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(screen);
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Succeeded, outcome.Status);
@@ -168,7 +152,6 @@ public sealed class ConvergenceTests
             Reads = ["Desktop", "TVOnly", "Desktop", "TVOnly", "TVOnly", "TVOnly"],
         };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -197,8 +180,7 @@ public sealed class ConvergenceTests
 
         var pointer = new Machine("pointer", clock) { After = ["screen"] };
 
-        using var world = new World(clock, screen, pointer, Document(
-            """{"screen":"TVOnly","pointer":"Corner"}"""));
+        using var world = new World(clock, screen, pointer, Document("""{"screen":"TVOnly","pointer":"Corner"}"""));
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -220,7 +202,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(screen);
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Succeeded, outcome.Status);
@@ -234,13 +215,8 @@ public sealed class ConvergenceTests
         // Bounded, because a resource that has not taken twice is not going to
         // take on the ninetieth try, and a transition that never gives up is a
         // shell that never comes back.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(attempts: 3, window: 2, poll: 1),
-            Reads = ["Desktop"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(attempts: 3, window: 2, poll: 1), Reads = ["Desktop"] };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -287,7 +263,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(sound, Document("""{"sound":"TV"}"""));
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Failed, outcome.Status);
@@ -331,7 +306,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(pointer, Document("""{"pointer":"Corner"}"""));
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Failed, outcome.Status);
@@ -348,7 +322,6 @@ public sealed class ConvergenceTests
         // command would put a confirmation in the report that nobody made.
         var pointer = new Machine("pointer");
         using var world = new World(pointer, Document("""{"pointer":"Corner"}"""));
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -378,8 +351,7 @@ public sealed class ConvergenceTests
 
         var pointer = new Machine("pointer", clock) { After = ["screen"] };
 
-        using var world = new World(clock, announcer, pointer, Document(
-            """{"screen":"TVOnly","pointer":"Corner"}"""));
+        using var world = new World(clock, announcer, pointer, Document("""{"screen":"TVOnly","pointer":"Corner"}"""));
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -396,9 +368,10 @@ public sealed class ConvergenceTests
         // The pointer is the user's again the moment it has been moved. A delay
         // after moving it would be the transition sitting still for a reason
         // nobody could name.
-        ConvergencePolicy policy =
-            new CursorProvider(new FakeCursor(), new FakeDisplay(new DisplayRect(0, 0, 1920, 1080)))
-                .PolicyFor("Corner");
+        ConvergencePolicy policy = new CursorProvider(
+            new FakeCursor(),
+            new FakeDisplay(new DisplayRect(0, 0, 1920, 1080))
+        ).PolicyFor("Corner");
 
         Assert.False(policy.Verify);
         Assert.Equal(1, policy.MaxAttempts);
@@ -433,11 +406,7 @@ public sealed class ConvergenceTests
         // The resource's own policy would spend twenty-four seconds on this.
         // The transition's deadline is what stops one stubborn resource from
         // spending the whole shell's afternoon on it.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(attempts: 3, window: 8, poll: 1),
-            Reads = ["Desktop"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(attempts: 3, window: 8, poll: 1), Reads = ["Desktop"] };
 
         using var world = new World(screen, timeout: TimeSpan.FromSeconds(5));
 
@@ -471,7 +440,8 @@ public sealed class ConvergenceTests
             clock,
             [screen, pointer],
             Document("""{"screen":"TVOnly","pointer":"Corner"}"""),
-            TimeSpan.FromSeconds(5));
+            TimeSpan.FromSeconds(5)
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -480,7 +450,8 @@ public sealed class ConvergenceTests
 
         Assert.Equal(
             TransitionStepStatus.NotReached,
-            Assert.Single(outcome.Steps, step => step.Resource == "pointer").Status);
+            Assert.Single(outcome.Steps, step => step.Resource == "pointer").Status
+        );
     }
 
     [Fact]
@@ -518,13 +489,8 @@ public sealed class ConvergenceTests
         // when the transition finishes going wrong -- and a transition that is
         // killed along with the machine never gets to a moment afterwards at
         // all. So it is cleared first, and written again only on success.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(attempts: 1, window: 2, poll: 1),
-            Reads = ["Desktop"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(attempts: 1, window: 2, poll: 1), Reads = ["Desktop"] };
         using var world = new World(screen);
-
 
         world.Record("Desktop");
 
@@ -545,13 +511,8 @@ public sealed class ConvergenceTests
         // The other half, and the reason the clearing is placed where it is
         // rather than at the top of the transition. Nothing moved, so the old
         // answer is exactly as good as it was.
-        var screen = new Machine("screen")
-        {
-            Policy = Verifying(window: 2, poll: 1),
-            Reads = ["TVOnly"],
-        };
+        var screen = new Machine("screen") { Policy = Verifying(window: 2, poll: 1), Reads = ["TVOnly"] };
         using var world = new World(screen);
-
 
         world.Record("Desktop");
 
@@ -574,7 +535,6 @@ public sealed class ConvergenceTests
             FailedAttempts = int.MaxValue,
         };
         using var world = new World(screen);
-
 
         world.Record("Desktop");
 
@@ -616,12 +576,9 @@ public sealed class ConvergenceTests
 
         var pointer = new Machine("pointer", clock) { After = ["screen"] };
 
-        using var world = new World(clock, screen, pointer, Document(
-            """{"screen":"TVOnly","pointer":"Corner"}"""));
+        using var world = new World(clock, screen, pointer, Document("""{"screen":"TVOnly","pointer":"Corner"}"""));
 
-        TransitionOutcome outcome = await world.Engine.ApplyAsync(
-            "Film",
-            cancellationToken: cancellation.Token);
+        TransitionOutcome outcome = await world.Engine.ApplyAsync("Film", cancellationToken: cancellation.Token);
 
         Assert.Equal(TransitionStatus.Uncertain, outcome.Status);
         Assert.Single(screen.Commands);
@@ -645,7 +602,6 @@ public sealed class ConvergenceTests
             Reads = ["Desktop"],
         };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film", dryRun: true);
 
@@ -675,7 +631,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(screen);
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Refused, outcome.Status);
@@ -693,7 +648,6 @@ public sealed class ConvergenceTests
         var screen = new Machine("screen") { PolicyThrows = new InvalidOperationException("no idea") };
         using var world = new World(screen);
 
-
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
         Assert.Equal(TransitionStatus.Refused, outcome.Status);
@@ -706,7 +660,6 @@ public sealed class ConvergenceTests
     {
         var screen = new Machine("screen") { RequirementsThrow = new InvalidOperationException("cannot say") };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -725,19 +678,14 @@ public sealed class ConvergenceTests
     }
 
     [Theory]
-    [InlineData(0, false, 0, 0, 0)]                 // no attempt at all
-    [InlineData(3, false, 0, 0, 0)]                 // retries with no pause between them
-    [InlineData(1, false, 0, 0, 2)]                 // settles without ever reading
-    [InlineData(1, true, 4, 0, 0)]                  // verifies but never reads
-    [InlineData(1, true, 0, 1, 0)]                  // verifies with no time to do it in
-    [InlineData(1, true, 1, 4, 0)]                  // gives up before it would read once
-    [InlineData(1, true, 4, 1, -1)]                 // waits for a negative length of time
-    public void Refuses_a_policy_that_could_not_converge(
-        int attempts,
-        bool verify,
-        int window,
-        int poll,
-        int settle)
+    [InlineData(0, false, 0, 0, 0)] // no attempt at all
+    [InlineData(3, false, 0, 0, 0)] // retries with no pause between them
+    [InlineData(1, false, 0, 0, 2)] // settles without ever reading
+    [InlineData(1, true, 4, 0, 0)] // verifies but never reads
+    [InlineData(1, true, 0, 1, 0)] // verifies with no time to do it in
+    [InlineData(1, true, 1, 4, 0)] // gives up before it would read once
+    [InlineData(1, true, 4, 1, -1)] // waits for a negative length of time
+    public void Refuses_a_policy_that_could_not_converge(int attempts, bool verify, int window, int poll, int settle)
     {
         var policy = new ConvergencePolicy
         {
@@ -783,8 +731,7 @@ public sealed class ConvergenceTests
     [Fact]
     public void Refuses_a_pause_of_a_negative_length()
     {
-        Assert.False(
-            new ConvergencePolicy { PostDispatchDelay = TimeSpan.FromSeconds(-1) }.IsUsable(out _));
+        Assert.False(new ConvergencePolicy { PostDispatchDelay = TimeSpan.FromSeconds(-1) }.IsUsable(out _));
     }
 
     // ---- dispatching even when it already looks right -----------------------
@@ -802,7 +749,6 @@ public sealed class ConvergenceTests
             Current = "TVOnly",
         };
         using var world = new World(screen);
-
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -828,7 +774,6 @@ public sealed class ConvergenceTests
         };
         using var world = new World(screen);
 
-
         Assert.Equal(TransitionStatus.Succeeded, (await world.Engine.ApplyAsync("Film")).Status);
         Assert.Single(screen.Commands);
     }
@@ -851,7 +796,6 @@ public sealed class ConvergenceTests
             Fails = new InvalidOperationException("the socket went away."),
         };
         using var world = new World(screen);
-
 
         world.Record("Desktop");
 
@@ -909,7 +853,6 @@ public sealed class ConvergenceTests
         var screen = new Machine("screen") { Current = "Desktop" };
         using var world = new World(screen);
 
-
         world.Record("Desktop");
 
         // Held open with no sharing, which is what stops the delete.
@@ -944,7 +887,8 @@ public sealed class ConvergenceTests
             clock,
             [settled, moving],
             Document("""{"first":"TVOnly","second":"TVOnly"}"""),
-            timeout: null);
+            timeout: null
+        );
 
         world.Record("Desktop");
 
@@ -1042,8 +986,7 @@ public sealed class ConvergenceTests
         public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
             RequirementsThrow is not null ? throw RequirementsThrow : [];
 
-        public ConvergencePolicy PolicyFor(string target) =>
-            PolicyThrows is not null ? throw PolicyThrows : Policy;
+        public ConvergencePolicy PolicyFor(string target) => PolicyThrows is not null ? throw PolicyThrows : Policy;
 
         public bool IsValidValue(string value, out string? problem)
         {
@@ -1053,9 +996,7 @@ public sealed class ConvergenceTests
 
         public string? Read()
         {
-            string? answer = Reads is null
-                ? Current
-                : Reads[Math.Min(_reads, Reads.Count - 1)];
+            string? answer = Reads is null ? Current : Reads[Math.Min(_reads, Reads.Count - 1)];
 
             _reads++;
             OnRead?.Invoke();
@@ -1106,20 +1047,12 @@ public sealed class ConvergenceTests
     private sealed class World : IDisposable
     {
         public World(Machine machine, string? document = null, TimeSpan? timeout = null)
-            : this(new FakeTime(), [machine], document, timeout)
-        {
-        }
+            : this(new FakeTime(), [machine], document, timeout) { }
 
         public World(FakeTime clock, Machine first, Machine second, string? document = null)
-            : this(clock, [first, second], document, timeout: null)
-        {
-        }
+            : this(clock, [first, second], document, timeout: null) { }
 
-        public World(
-            FakeTime clock,
-            IReadOnlyList<Machine> machines,
-            string? document,
-            TimeSpan? timeout)
+        public World(FakeTime clock, IReadOnlyList<Machine> machines, string? document, TimeSpan? timeout)
         {
             Clock = clock;
             Root = new TemporaryRoot();
@@ -1132,7 +1065,8 @@ public sealed class ConvergenceTests
                 new ModeStateStore(Root.StateFile),
                 providers,
                 clock,
-                timeout);
+                timeout
+            );
         }
 
         public FakeTime Clock { get; }

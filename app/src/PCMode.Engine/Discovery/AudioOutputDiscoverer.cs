@@ -63,8 +63,8 @@ public sealed class AudioOutputDiscoverer(AudioProvider provider) : IHardwareDis
         // matches by name alone, so a name two endpoints share right now cannot
         // be aliased safely: the entry would be written, and would immediately
         // read back as ambiguous, matching either one.
-        Dictionary<string, int> nameCounts = snapshot.Endpoints
-            .Where(endpoint => !string.IsNullOrWhiteSpace(endpoint.Name))
+        Dictionary<string, int> nameCounts = snapshot
+            .Endpoints.Where(endpoint => !string.IsNullOrWhiteSpace(endpoint.Name))
             .GroupBy(endpoint => endpoint.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
@@ -76,13 +76,13 @@ public sealed class AudioOutputDiscoverer(AudioProvider provider) : IHardwareDis
 
             // An endpoint with no name, or one sharing its name with another
             // active endpoint right now, cannot be aliased.
-            string? identifier = string.IsNullOrWhiteSpace(endpoint.Name) || nameCounts.GetValueOrDefault(endpoint.Name) > 1
-                ? null
-                : endpoint.Name;
+            string? identifier =
+                string.IsNullOrWhiteSpace(endpoint.Name) || nameCounts.GetValueOrDefault(endpoint.Name) > 1
+                    ? null
+                    : endpoint.Name;
 
-            string? alias = identifier is not null && aliasByEndpoint.TryGetValue(identifier, out string? found)
-                ? found
-                : null;
+            string? alias =
+                identifier is not null && aliasByEndpoint.TryGetValue(identifier, out string? found) ? found : null;
 
             List<HardwareDetail> details = [new("Default", endpoint.IsDefault ? "Yes" : "No")];
 
@@ -91,22 +91,26 @@ public sealed class AudioOutputDiscoverer(AudioProvider provider) : IHardwareDis
                 details.Add(new("PCMode virtual endpoint", "Yes"));
             }
 
-            items.Add(new HardwareItem(
-                name,
-                HardwareItemStatus.Ok,
-                endpoint.IsVirtualEndpoint
-                    ? "PCMode's own audio endpoint. Audio targets play into this one."
-                    : endpoint.IsDefault ? "Default Windows output." : "Available.",
-                details,
-
-                // The virtual endpoint is offered no identifier, so nothing
-                // proposes aliasing it. It is not a device a mode should be able
-                // to select: it is where audio targets send sound in, and a mode
-                // naming it directly would put Windows in front of an engine
-                // holding no target at all.
-                endpoint.IsVirtualEndpoint ? null : identifier,
-                endpoint.IsVirtualEndpoint ? null : alias,
-                CategoryName));
+            items.Add(
+                new HardwareItem(
+                    name,
+                    HardwareItemStatus.Ok,
+                    endpoint.IsVirtualEndpoint ? "PCMode's own audio endpoint. Audio targets play into this one."
+                        : endpoint.IsDefault ? "Default Windows output."
+                        : "Available.",
+                    details,
+                    // The virtual endpoint is offered no identifier, so nothing
+                    // proposes aliasing it. It is not a device a mode should be able
+                    // to select: it is where audio targets send sound in, and a mode
+                    // naming it directly would put Windows in front of an engine
+                    // holding no target at all.
+                    endpoint.IsVirtualEndpoint
+                        ? null
+                        : identifier,
+                    endpoint.IsVirtualEndpoint ? null : alias,
+                    CategoryName
+                )
+            );
         }
 
         return HardwareNaming.Disambiguate(items);

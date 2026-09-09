@@ -11,11 +11,9 @@ namespace PCMode.Audio.Windows.Interop;
 /// </summary>
 internal static class CoreAudioInterop
 {
-    public static IMMDeviceEnumerator CreateEnumerator() =>
-        CoreAudioEndpointInterop.CreateEnumerator();
+    public static IMMDeviceEnumerator CreateEnumerator() => CoreAudioEndpointInterop.CreateEnumerator();
 
-    public static string GetDeviceId(IMMDevice device) =>
-        CoreAudioEndpointInterop.GetDeviceId(device);
+    public static string GetDeviceId(IMMDevice device) => CoreAudioEndpointInterop.GetDeviceId(device);
 
     public static string GetFriendlyName(IMMDevice device)
     {
@@ -24,6 +22,5 @@ internal static class CoreAudioInterop
         return string.IsNullOrEmpty(name) ? "(Unnamed audio endpoint)" : name;
     }
 
-    public static void Release(object? value) =>
-        CoreAudioEndpointInterop.Release(value);
+    public static void Release(object? value) => CoreAudioEndpointInterop.Release(value);
 }

@@ -83,7 +83,8 @@ public sealed class ConfigurationEntityListTests
         var list = new ConfigurationEntityList<string, Sample>(
             keyOf: sample => sample.Key,
             titleOf: sample => sample.Title,
-            summaryOf: sample => $"summary:{sample.Title}");
+            summaryOf: sample => $"summary:{sample.Title}"
+        );
 
         list.Load([new Sample("a", "Alpha")], keep: null);
 

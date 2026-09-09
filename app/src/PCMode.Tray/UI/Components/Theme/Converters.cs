@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-
 // The tray enables WinForms for the notify icon, whose implicit usings bring
 // System.Drawing's Color and Brushes into scope alongside WPF's own.
 using Brushes = System.Windows.Media.Brushes;
@@ -45,7 +44,18 @@ public sealed class InverseBooleanConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => value is not true;
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is not true;
+}
+
+/// <summary>True when two bound semantic values represent the same selection.</summary>
+public sealed class EqualityMultiConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture) =>
+        values.Length >= 2 && Equals(values[0], values[1]);
+
+    public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }
 
 /// <summary>
@@ -82,10 +92,13 @@ public sealed class HexToBrushConverter : IValueConverter
             return Brushes.Transparent;
         }
 
-        return new SolidColorBrush(Color.FromRgb(
-            byte.Parse(color.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(color.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(color.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+        return new SolidColorBrush(
+            Color.FromRgb(
+                byte.Parse(color.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                byte.Parse(color.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                byte.Parse(color.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)
+            )
+        );
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

@@ -17,7 +17,8 @@ public static class ConfigurationWorkspaceProviderReading
     /// message when the configuration itself could not be read.
     /// </summary>
     public static (IReadOnlyList<TProvider> Providers, string? Problem) ReadProviders<TProvider>(
-        this IConfigurationWorkspace workspace)
+        this IConfigurationWorkspace workspace
+    )
         where TProvider : IModeResourceProvider
     {
         ArgumentNullException.ThrowIfNull(workspace);

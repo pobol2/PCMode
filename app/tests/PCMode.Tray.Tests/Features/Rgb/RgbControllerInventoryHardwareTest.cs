@@ -11,8 +11,8 @@ public sealed class RgbControllerInventoryHardwareFactAttribute : FactAttribute
         if (!RgbControllerInventoryHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_TRAY_RGB_HARDWARE_TEST=1 to run it with the OpenRGB SDK server " +
-                "listening on localhost:6742 and at least one controller available.";
+                "Hardware check. Set PCMODE_TRAY_RGB_HARDWARE_TEST=1 to run it with the OpenRGB SDK server "
+                + "listening on localhost:6742 and at least one controller available.";
         }
     }
 }
@@ -36,14 +36,17 @@ public sealed class RgbControllerInventoryHardwareTest
     [RgbControllerInventoryHardwareFact]
     public async Task Rescan_reports_the_first_real_OpenRGB_controller_through_shared_inventory_rows()
     {
-        using var root = new TemporaryConfigurationRoot("""
+        using var root = new TemporaryConfigurationRoot(
+            """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}]}
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = CaseRgbConfigurationStore.Save(
             root.Path,
-            new CaseRgbEdit(true, string.Empty, [new CaseRgbDeviceEdit(0, "Direct")], 4000));
+            new CaseRgbEdit(true, string.Empty, [new CaseRgbDeviceEdit(0, "Direct")], 4000)
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         var viewModel = new RgbViewModel(Workspaces.At(root.Path));

@@ -6,20 +6,17 @@ using PCMode.Audio.Core.Models;
 using PCMode.Audio.Core.Processing;
 using PCMode.Engine;
 using PCMode.Tray.Elements.Configuration;
-using PCMode.Tray.UI.Components.Visualizations;
 
 namespace PCMode.Tray.Elements.Audio;
 
-public sealed class AudioEqBandRow(Action onChanged)
-    : ObservableEditableRow(onChanged)
+public sealed class AudioEqBandRow(Action onChanged) : ObservableEditableRow(onChanged)
 {
     private EqFilterType _type;
     private double _frequencyHz;
     private double _gainDb;
     private double _q;
 
-    public IReadOnlyList<EqFilterType> AvailableTypes { get; } =
-        Enum.GetValues<EqFilterType>();
+    public IReadOnlyList<EqFilterType> AvailableTypes { get; } = Enum.GetValues<EqFilterType>();
 
     public EqFilterType Type
     {
@@ -45,12 +42,7 @@ public sealed class AudioEqBandRow(Action onChanged)
         set => Set(ref _q, value);
     }
 
-    public EqBand ToBand() =>
-        new(
-            Type,
-            (float)FrequencyHz,
-            (float)GainDb,
-            (float)Q);
+    public EqBand ToBand() => new(Type, (float)FrequencyHz, (float)GainDb, (float)Q);
 
     /// <summary>
     /// <see cref="ToBand"/>, without throwing for a combination that is
@@ -78,8 +70,8 @@ public sealed class AudioRouteRow(
     ObservableCollection<string> availableSelections,
     Action onChanged,
     Action onCalibrationChanged,
-    Action onProfileChanged)
-    : ObservableEditableRow(onChanged), ISelectionRow
+    Action onProfileChanged
+) : ObservableEditableRow(onChanged), ISelectionRow
 {
     public const double DefaultVolume = 0.5;
     public const string NoProfile = "(None)";
@@ -146,12 +138,7 @@ public sealed class AudioRouteRow(
         get => _delayMs;
         set
         {
-            if (Set(
-                ref _delayMs,
-                Math.Clamp(
-                    value,
-                    0,
-                    AudioTargetSettings.MaxDelayMs)))
+            if (Set(ref _delayMs, Math.Clamp(value, 0, AudioTargetSettings.MaxDelayMs)))
             {
                 onCalibrationChanged();
             }
@@ -163,13 +150,7 @@ public sealed class AudioRouteRow(
         get => _gain;
         set
         {
-            double next =
-                double.IsNaN(value)
-                    ? _gain
-                    : Math.Clamp(
-                        value,
-                        0,
-                        AudioTargetSettings.MaxGain);
+            double next = double.IsNaN(value) ? _gain : Math.Clamp(value, 0, AudioTargetSettings.MaxGain);
 
             if (Set(ref _gain, next))
             {
@@ -204,9 +185,7 @@ public sealed class AudioRouteRow(
         get => _volume;
         set
         {
-            if (Set(
-                ref _volume,
-                Math.Clamp(value, 0, 1)))
+            if (Set(ref _volume, Math.Clamp(value, 0, 1)))
             {
                 OnPropertyChanged(nameof(VolumePercent));
 
@@ -244,17 +223,13 @@ public sealed class AudioRouteRow(
         get => _profileName;
         set
         {
-            string next =
-                string.IsNullOrWhiteSpace(value)
-                    ? NoProfile
-                    : value;
+            string next = string.IsNullOrWhiteSpace(value) ? NoProfile : value;
 
             if (Set(ref _profileName, next))
             {
                 IsProfileEditorExpanded = false;
 
-                OnPropertyChanged(
-                    nameof(HasProcessingProfile));
+                OnPropertyChanged(nameof(HasProcessingProfile));
 
                 onCalibrationChanged();
             }
@@ -262,22 +237,14 @@ public sealed class AudioRouteRow(
     }
 
     public string? SavedProfileName =>
-        string.Equals(
-            _profileName,
-            NoProfile,
-            StringComparison.Ordinal)
-            ? null
-            : _profileName;
+        string.Equals(_profileName, NoProfile, StringComparison.Ordinal) ? null : _profileName;
 
-    public bool HasProcessingProfile =>
-        SavedProfileName is not null;
+    public bool HasProcessingProfile => SavedProfileName is not null;
 
     public bool IsProfileEditorExpanded
     {
         get => _isProfileEditorExpanded;
-        set => SetProperty(
-            ref _isProfileEditorExpanded,
-            value);
+        set => SetProperty(ref _isProfileEditorExpanded, value);
     }
 
     public double ProfilePreampGainDb
@@ -290,12 +257,12 @@ public sealed class AudioRouteRow(
                 return;
             }
 
-            if (SetProperty(
-                ref _profilePreampGainDb,
-                Math.Clamp(
-                    value,
-                    ParametricEqProfile.MinPreampGainDb,
-                    ParametricEqProfile.MaxPreampGainDb)))
+            if (
+                SetProperty(
+                    ref _profilePreampGainDb,
+                    Math.Clamp(value, ParametricEqProfile.MinPreampGainDb, ParametricEqProfile.MaxPreampGainDb)
+                )
+            )
             {
                 OnPropertyChanged(nameof(PreampGainDbText));
 
@@ -306,8 +273,7 @@ public sealed class AudioRouteRow(
 
     public string PreampGainDbText => FormatSignedDb(_profilePreampGainDb);
 
-    public ObservableCollection<AudioEqBandRow>
-        ProfileBands { get; } = [];
+    public ObservableCollection<AudioEqBandRow> ProfileBands { get; } = [];
 
     /// <summary>
     /// Whether this row's processing-profile fields (<see cref="ProfilePreampGainDb"/>,
@@ -410,8 +376,7 @@ public sealed class AudioRouteRow(
 
     public string HeadroomStatusText => IsHeadroomWarning ? "Warning" : "OK";
 
-    public StatusLevel HeadroomStatusState =>
-        IsHeadroomWarning ? StatusLevel.Warning : StatusLevel.Ok;
+    public StatusLevel HeadroomStatusState => IsHeadroomWarning ? StatusLevel.Warning : StatusLevel.Ok;
 
     /// <summary>
     /// Rebuilds <see cref="ResponseCurve"/>, <see cref="BandCurves"/>
@@ -499,31 +464,19 @@ public sealed class AudioRouteRow(
         get => _runtimeText;
         set
         {
-            if (SetProperty(
-                ref _runtimeText,
-                value))
+            if (SetProperty(ref _runtimeText, value))
             {
-                OnPropertyChanged(
-                    nameof(HasRuntimeText));
+                OnPropertyChanged(nameof(HasRuntimeText));
             }
         }
     }
 
-    public bool HasRuntimeText =>
-        _runtimeText.Length > 0;
+    public bool HasRuntimeText => _runtimeText.Length > 0;
 
-    public AudioRouteEdit ToEdit() =>
-        new(
-            Output ?? string.Empty,
-            DelayMs,
-            Gain,
-            Volume,
-            Required,
-            SavedProfileName);
+    public AudioRouteEdit ToEdit() => new(Output ?? string.Empty, DelayMs, Gain, Volume, Required, SavedProfileName);
 }
 
-public sealed class AudioViewModel
-    : ConfigurationPageViewModelBase, IPageLifecycle
+public sealed class AudioViewModel : ConfigurationPageViewModelBase, IPageLifecycle
 {
     public const int MaxRoutes = 2;
 
@@ -532,16 +485,13 @@ public sealed class AudioViewModel
     private readonly ConfigurationEditingSession<string, AudioTargetStatus> _session;
     private readonly SelectionList<AudioRouteRow> _routes;
     private readonly AudioTargetEditorViewModel _editor;
-    private readonly AudioNoTargetViewModel _noTarget =
-        new("No audio targets yet. Use Create above to add one.");
+    private readonly AudioNoTargetViewModel _noTarget = new("No audio targets yet. Use Create above to add one.");
 
     private string _targetName = string.Empty;
 
-    private AudioTargetState _targetState =
-        AudioTargetState.Stopped;
+    private AudioTargetState _targetState = AudioTargetState.Stopped;
 
-    private string _targetStateText =
-        string.Empty;
+    private string _targetStateText = string.Empty;
 
     private string? _targetHealthText;
     private string? _engineText;
@@ -551,7 +501,17 @@ public sealed class AudioViewModel
 
     private static readonly TimeSpan LiveStatusInterval = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// Roughly 30 redraws a second for the top-of-page waveform -- far
+    /// faster than <see cref="LiveStatusInterval"/>, and deliberately its own
+    /// timer rather than a shorter <see cref="LiveStatusInterval"/>: nothing
+    /// about a waveform's redraw rate should make the much larger Health
+    /// payload behind the rest of this page refetch that often.
+    /// </summary>
+    private static readonly TimeSpan WaveformRefreshInterval = TimeSpan.FromMilliseconds(33);
+
     private readonly LiveRefreshTimer _liveRefresh;
+    private readonly LiveRefreshTimer _waveformRefresh;
     private bool _loaded;
 
     /// <param name="prompts">
@@ -560,26 +520,25 @@ public sealed class AudioViewModel
     /// <see cref="NoConfigurationPrompts"/> refuses every prompt rather than
     /// silently discarding an edit nobody could be asked about.
     /// </param>
-    public AudioViewModel(
-        IConfigurationWorkspace workspace,
-        IConfigurationPrompts? prompts = null)
+    public AudioViewModel(IConfigurationWorkspace workspace, IConfigurationPrompts? prompts = null)
         : base(workspace, prompts)
     {
         _liveRefresh = new LiveRefreshTimer(LiveStatusInterval, RefreshLiveStatusAsync);
+        _waveformRefresh = new LiveRefreshTimer(WaveformRefreshInterval, RefreshWaveformAsync);
 
         _session = new ConfigurationEditingSession<string, AudioTargetStatus>(
             keyOf: status => TargetKey(status.Name),
             titleOf: status => status.Name,
             summaryOf: status =>
-                status.State is AudioTargetState.Running or AudioTargetState.Degraded
-                    ? "Current"
-                    : null);
+                status.State is AudioTargetState.Running or AudioTargetState.Degraded ? "Current" : null
+        );
 
         _routes = new SelectionList<AudioRouteRow>(
             NewRoute,
             OnRouteMembershipChanged,
             maximumRows: MaxRoutes,
-            minimumRows: 1);
+            minimumRows: 1
+        );
 
         DeviceDiscovery = new AudioDeviceDiscoveryViewModel(workspace, Refresh);
 
@@ -600,17 +559,19 @@ public sealed class AudioViewModel
 
         TreePresentation = new ConfigurationPagePresentation(
             "Audio",
-            new ConfigurationSelectorPresentation("Audio targets", SelectorItems, CreateTargetCommand, SelectCommand: SelectItemCommand),
+            new ConfigurationSelectorPresentation(
+                "Audio targets",
+                SelectorItems,
+                CreateTargetCommand,
+                SelectCommand: SelectItemCommand
+            ),
             ConfigurationEditorPresentation.Create(
-                                                essential:
-                                                [
-                                                    new(
-                                                        "",
-                                                        new TerminalElementContent(
-                                                            "Audio editor migration boundary",
-                                                            _editor),
-                                                        ShowChrome: false),
-                                                ]));
+                essential:
+                [
+                    new("", new TerminalElementContent("Audio editor migration boundary", _editor), ShowChrome: false),
+                ]
+            )
+        );
 
         // One place keeps the selector projection current, rather than every
         // action that touches the session remembering to rebuild it.
@@ -665,20 +626,15 @@ public sealed class AudioViewModel
     /// <summary>Makes one route the alignment reference the others are measured against.</summary>
     public ICommand SetReferenceRouteCommand { get; }
 
-    public ObservableCollection<ConfigurationEntityListItem<string>>
-        SelectorItems => _session.SelectorItems;
+    public ObservableCollection<ConfigurationEntityListItem<string>> SelectorItems => _session.SelectorItems;
 
-    public ObservableCollection<string>
-        OutputChoices => _routes.Choices;
+    public ObservableCollection<string> OutputChoices => _routes.Choices;
 
-    public ObservableCollection<string>
-        ProfileChoices { get; } = [];
+    public ObservableCollection<string> ProfileChoices { get; } = [];
 
-    public ObservableCollection<AudioRouteRow>
-        Routes => _routes.Rows;
+    public ObservableCollection<AudioRouteRow> Routes => _routes.Rows;
 
-    public ObservableCollection<AudioAlignmentCard>
-        AlignmentCards { get; } = [];
+    public ObservableCollection<AudioAlignmentCard> AlignmentCards { get; } = [];
 
     /// <summary>Whether an audio target is currently selected in the selector.</summary>
     public bool IsTargetSelected => _session.HasSelection;
@@ -686,88 +642,60 @@ public sealed class AudioViewModel
     /// <summary>Whether the current selection is a not-yet-saved Create/Duplicate draft.</summary>
     public bool IsNewTarget => _session.IsDraft;
 
-    public bool CanAddRoute =>
-        IsTargetSelected &&
-        _routes.CanAdd;
+    public bool CanAddRoute => IsTargetSelected && _routes.CanAdd;
 
-    public bool CanRemoveRoute =>
-        IsTargetSelected &&
-        _routes.CanRemove;
+    public bool CanRemoveRoute => IsTargetSelected && _routes.CanRemove;
 
     /// <summary>
     /// Whether the Multi-output alignment section has anything to show. A
     /// single-route target has nothing to align, so Level offset and Delay
     /// are not shown for it at all -- see <see cref="AudioRouteRow.IsReference"/>.
     /// </summary>
-    public bool ShowAlignment =>
-        Routes.Count >= 2;
+    public bool ShowAlignment => Routes.Count >= 2;
 
     /// <summary>The alignment section's reference output: the first route.</summary>
-    public string? ReferenceOutputName =>
-        Routes.FirstOrDefault()?.Output;
+    public string? ReferenceOutputName => Routes.FirstOrDefault()?.Output;
 
-    public bool CanActivateSelected =>
-        !IsBusy &&
-        IsTargetSelected &&
-        !HasUnsavedChanges;
+    public bool CanActivateSelected => !IsBusy && IsTargetSelected && !HasUnsavedChanges;
 
     public string TargetName
     {
         get => _targetName;
-
         set
         {
-            if (SetDirtyProperty(
-                ref _targetName,
-                value))
+            if (SetDirtyProperty(ref _targetName, value))
             {
                 RaiseValidation();
             }
         }
     }
 
-    public bool IsTargetRunning =>
-        _targetState
-            is AudioTargetState.Running
-            or AudioTargetState.Degraded;
+    public bool IsTargetRunning => _targetState is AudioTargetState.Running or AudioTargetState.Degraded;
 
     public string TargetStateText
     {
         get => _targetStateText;
-
-        private set =>
-            SetProperty(
-                ref _targetStateText,
-                value);
+        private set => SetProperty(ref _targetStateText, value);
     }
 
     public string? TargetHealthText
     {
         get => _targetHealthText;
-
         private set
         {
-            if (SetProperty(
-                ref _targetHealthText,
-                value))
+            if (SetProperty(ref _targetHealthText, value))
             {
-                OnPropertyChanged(
-                    nameof(HasTargetHealth));
+                OnPropertyChanged(nameof(HasTargetHealth));
             }
         }
     }
 
-    public bool HasTargetHealth =>
-        _targetHealthText is not null;
+    public bool HasTargetHealth => _targetHealthText is not null;
 
     public string? EngineText
     {
         get => _engineText;
-
-        private set =>
-            SetProperty(
-                ref _engineText,
-                value);
+        private set => SetProperty(ref _engineText, value);
     }
 
     public override string? ValidationProblem
@@ -779,69 +707,46 @@ public sealed class AudioViewModel
                 return null;
             }
 
-            string name =
-                _targetName?.Trim()
-                ?? string.Empty;
+            string name = _targetName?.Trim() ?? string.Empty;
 
             if (name.Length == 0)
             {
-                return
-                    "Give the audio target a name. " +
-                    "A mode asks for it by that name.";
+                return "Give the audio target a name. " + "A mode asks for it by that name.";
             }
 
-            if (OutputChoices.Any(
-                choice =>
-                    string.Equals(
-                        choice,
-                        name,
-                        StringComparison.OrdinalIgnoreCase)))
+            if (OutputChoices.Any(choice => string.Equals(choice, name, StringComparison.OrdinalIgnoreCase)))
             {
-                return
-                    $"'{name}' is already one of your outputs. " +
-                    "Give the target a name of its own.";
+                return $"'{name}' is already one of your outputs. " + "Give the target a name of its own.";
             }
 
             if (Routes.Count == 0)
             {
-                return
-                    "An audio target needs at least one output.";
+                return "An audio target needs at least one output.";
             }
 
             if (OutputChoices.Count == 0)
             {
-                return
-                    "No audio outputs are configured. " +
-                    "Add and name one under Audio outputs first.";
+                return "No audio outputs are configured. " + "Add and name one under Audio outputs first.";
             }
 
             foreach (AudioRouteRow route in Routes)
             {
-                if (string.IsNullOrWhiteSpace(
-                    route.Output))
+                if (string.IsNullOrWhiteSpace(route.Output))
                 {
-                    return
-                        "Choose every one of the audio target's outputs.";
+                    return "Choose every one of the audio target's outputs.";
                 }
             }
 
-            if (!Routes.Any(
-                route => route.Required))
+            if (!Routes.Any(route => route.Required))
             {
-                return
-                    "At least one output has to be required, " +
-                    "or nothing could fail the target.";
+                return "At least one output has to be required, " + "or nothing could fail the target.";
             }
 
             return null;
         }
     }
 
-    public override bool CanSave =>
-        IsTargetSelected &&
-        HasUnsavedChanges &&
-        !IsBusy &&
-        ValidationProblem is null;
+    public override bool CanSave => IsTargetSelected && HasUnsavedChanges && !IsBusy && ValidationProblem is null;
 
     /// <summary>
     /// The route wiring's own dirty state (which outputs, which profile each
@@ -851,9 +756,7 @@ public sealed class AudioViewModel
     /// treats an open, edited processing profile the same as any other unsaved
     /// edit, without the two kinds of dirty state being the same flag.
     /// </summary>
-    public override bool HasUnsavedChanges =>
-        base.HasUnsavedChanges ||
-        Routes.Any(route => route.IsProfileDirty);
+    public override bool HasUnsavedChanges => base.HasUnsavedChanges || Routes.Any(route => route.IsProfileDirty);
 
     // EntityActions and EssentialCollectionActions are deliberately not
     // overridden. Those exist so ConfigurationPageBlock can build a page's
@@ -862,8 +765,7 @@ public sealed class AudioViewModel
     // carry their own enablement through CanExecute, so the whole surface --
     // and the shell-side syncing behind it -- has nothing left to do here.
 
-    public override void SelectKey(
-        object key)
+    public override void SelectKey(object key)
     {
         _session.Select((string)key);
         SelectedKey = _session.SelectedKey;
@@ -897,11 +799,7 @@ public sealed class AudioViewModel
             return;
         }
 
-        Prompts.PromptForName(
-            "Create audio target",
-            "Name the new audio target.",
-            string.Empty,
-            CreateTarget);
+        Prompts.PromptForName("Create audio target", "Name the new audio target.", string.Empty, CreateTarget);
     }
 
     private void PromptRenameTarget()
@@ -911,11 +809,7 @@ public sealed class AudioViewModel
             return;
         }
 
-        Prompts.PromptForName(
-            "Rename audio target",
-            $"Rename '{current}'.",
-            current,
-            RenameSelected);
+        Prompts.PromptForName("Rename audio target", $"Rename '{current}'.", current, RenameSelected);
     }
 
     private void PromptDuplicateTarget()
@@ -929,7 +823,8 @@ public sealed class AudioViewModel
             "Duplicate audio target",
             $"Name the copy of '{current}'.",
             $"{current} copy",
-            DuplicateSelected);
+            DuplicateSelected
+        );
     }
 
     private void PromptDeleteTarget()
@@ -980,7 +875,8 @@ public sealed class AudioViewModel
             "Create processing profile",
             "Name the new processing profile. It starts with no EQ bands.",
             string.Empty,
-            name => CreateProfile(row, name));
+            name => CreateProfile(row, name)
+        );
 
     public void PromptRenameProfile(AudioRouteRow row)
     {
@@ -993,7 +889,8 @@ public sealed class AudioViewModel
             "Rename processing profile",
             $"Rename '{current}'. Every audio target using it is updated to match.",
             current,
-            name => RenameProfile(row, name));
+            name => RenameProfile(row, name)
+        );
     }
 
     public void PromptDeleteProfile(AudioRouteRow row)
@@ -1003,9 +900,12 @@ public sealed class AudioViewModel
             return;
         }
 
-        if (Prompts.Confirm(
-            $"Delete processing profile '{profileName}'? Audio targets using it will keep their outputs, " +
-            "but that processing profile will be removed from them."))
+        if (
+            Prompts.Confirm(
+                $"Delete processing profile '{profileName}'? Audio targets using it will keep their outputs, "
+                    + "but that processing profile will be removed from them."
+            )
+        )
         {
             DeleteProfile(row);
         }
@@ -1047,7 +947,8 @@ public sealed class AudioViewModel
             row.IsConfigured ? "Rename audio output" : "Add audio output to PCMode",
             $"Give '{row.Name}' a PCMode name. Audio targets and spaces use this name.",
             row.Alias ?? row.Name,
-            alias => DeviceDiscovery.SetAliasAsync(row, alias));
+            alias => DeviceDiscovery.SetAliasAsync(row, alias)
+        );
     }
 
     /// <summary>
@@ -1068,14 +969,61 @@ public sealed class AudioViewModel
         }
 
         _liveRefresh.Start();
+        _waveformRefresh.Start();
     }
 
-    public void OnDeactivated() => _liveRefresh.Stop();
+    public void OnDeactivated()
+    {
+        _liveRefresh.Stop();
+        _waveformRefresh.Stop();
+    }
+
+    /// <summary>
+    /// Pushes the reference route's current waveform envelope into
+    /// <see cref="AudioTargetEditorViewModel.Waveform"/>, or marks it
+    /// unavailable when there is nothing to show -- no provider, no Host, or
+    /// no route reported at all. Never touches <see cref="Refresh"/> or the
+    /// route wiring: this is purely a redraw of already-flowing telemetry.
+    /// </summary>
+    private async Task RefreshWaveformAsync()
+    {
+        (AudioProvider? provider, _) = ReadProvider<AudioProvider>();
+
+        if (provider is null)
+        {
+            SetWaveformUnavailable();
+            return;
+        }
+
+        IReadOnlyList<AudioRouteWaveform> waveforms = await provider
+            .WaveformAsync(CancellationToken.None)
+            .ConfigureAwait(true);
+
+        // The first route is the same "reference" route the alignment
+        // section already measures everything else against -- see
+        // AudioRouteRow.IsReference -- so the waveform tracks whichever
+        // output a user would call this target's primary one.
+        AudioRouteWaveform? reference = waveforms.Count > 0 ? waveforms[0] : null;
+
+        if (reference is not { Available: true })
+        {
+            SetWaveformUnavailable();
+            return;
+        }
+
+        _editor.Waveform.IsAvailable = true;
+        _editor.Waveform.Buckets = reference.Buckets;
+    }
+
+    private void SetWaveformUnavailable()
+    {
+        _editor.Waveform.IsAvailable = false;
+        _editor.Waveform.Buckets = AudioWaveformViewModel.Idle();
+    }
 
     public override void Refresh()
     {
-        if (!TryReadSnapshot(
-            out AudioSnapshot snapshot))
+        if (!TryReadSnapshot(out AudioSnapshot snapshot))
         {
             return;
         }
@@ -1124,8 +1072,7 @@ public sealed class AudioViewModel
     /// </summary>
     private void RefreshLiveStatusOnly()
     {
-        if (!TryReadSnapshot(
-            out AudioSnapshot snapshot))
+        if (!TryReadSnapshot(out AudioSnapshot snapshot))
         {
             return;
         }
@@ -1139,20 +1086,13 @@ public sealed class AudioViewModel
         ApplyGlobalStatus(snapshot);
     }
 
-    private bool TryReadSnapshot(
-        out AudioSnapshot snapshot)
+    private bool TryReadSnapshot(out AudioSnapshot snapshot)
     {
-        (
-            AudioProvider? provider,
-            string? problem
-        ) =
-            ReadProvider<AudioProvider>();
+        (AudioProvider? provider, string? problem) = ReadProvider<AudioProvider>();
 
         if (provider is null)
         {
-            ResetToProblemState(
-                problem ??
-                "The configuration could not be read.");
+            ResetToProblemState(problem ?? "The configuration could not be read.");
 
             snapshot = default!;
 
@@ -1161,15 +1101,13 @@ public sealed class AudioViewModel
 
         try
         {
-            snapshot =
-                provider.Discover();
+            snapshot = provider.Discover();
 
             return true;
         }
         catch (Exception exception)
         {
-            ResetToProblemState(
-                $"Audio could not be read. {exception.Message}");
+            ResetToProblemState($"Audio could not be read. {exception.Message}");
 
             snapshot = default!;
 
@@ -1177,8 +1115,7 @@ public sealed class AudioViewModel
         }
     }
 
-    private void ResetToProblemState(
-        string message)
+    private void ResetToProblemState(string message)
     {
         _session.Clear();
         _routes.Clear();
@@ -1191,20 +1128,16 @@ public sealed class AudioViewModel
         DeviceDiscovery.ReportProblem(StatusMessage);
     }
 
-    private void ApplyGlobalStatus(
-        AudioSnapshot snapshot)
+    private void ApplyGlobalStatus(AudioSnapshot snapshot)
     {
-        EngineText =
-            snapshot.EngineAvailable
-                ? "The PCMode audio engine is running."
-                : "The PCMode audio engine is not available, " +
-                  $"so audio targets cannot play. {snapshot.Runtime.Problem}";
+        EngineText = snapshot.EngineAvailable
+            ? "The PCMode audio engine is running."
+            : "The PCMode audio engine is not available, "
+                + $"so audio targets cannot play. {snapshot.Runtime.Problem}";
 
-        StatusMessage =
-            snapshot.Available
-                ? $"{snapshot.Devices.Count} configured output(s), " +
-                  $"{snapshot.Targets.Count} audio target(s)."
-                : $"Windows audio could not be read. {snapshot.Problem}";
+        StatusMessage = snapshot.Available
+            ? $"{snapshot.Devices.Count} configured output(s), " + $"{snapshot.Targets.Count} audio target(s)."
+            : $"Windows audio could not be read. {snapshot.Problem}";
     }
 
     /// <summary>
@@ -1213,39 +1146,27 @@ public sealed class AudioViewModel
     /// Deliberately does not touch route wiring or any row's processing-profile
     /// fields -- see <see cref="RefreshLiveStatusOnly"/>.
     /// </summary>
-    private void UpdateLiveRouteStatus(
-        AudioSnapshot snapshot)
+    private void UpdateLiveRouteStatus(AudioSnapshot snapshot)
     {
         if (SelectedKey is not string selectedKey)
         {
             return;
         }
 
-        AudioTargetStatus? status =
-            snapshot.Targets.FirstOrDefault(
-                target => string.Equals(TargetKey(target.Name), selectedKey, StringComparison.Ordinal));
+        AudioTargetStatus? status = snapshot.Targets.FirstOrDefault(target =>
+            string.Equals(TargetKey(target.Name), selectedKey, StringComparison.Ordinal)
+        );
 
         foreach (AudioRouteRow route in Routes)
         {
-            AudioTargetRouteStatus? routeStatus =
-                status?.Routes.FirstOrDefault(
-                    candidate =>
-                        string.Equals(
-                            candidate.Output,
-                            route.Output,
-                            StringComparison.OrdinalIgnoreCase));
+            AudioTargetRouteStatus? routeStatus = status?.Routes.FirstOrDefault(candidate =>
+                string.Equals(candidate.Output, route.Output, StringComparison.OrdinalIgnoreCase)
+            );
 
-            route.RuntimeText =
-                routeStatus is null
-                    ? string.Empty
-                    : FormatRuntimeText(routeStatus);
+            route.RuntimeText = routeStatus is null ? string.Empty : FormatRuntimeText(routeStatus);
         }
 
-        TargetState(
-            status?.State ??
-                AudioTargetState.Stopped,
-            status?.Problem,
-            status?.Detail);
+        TargetState(status?.State ?? AudioTargetState.Stopped, status?.Problem, status?.Detail);
     }
 
     /// <summary>What the shell's Rescan button calls -- DeviceDiscovery's own ScanAsync, exposed as a delegate for CurrentHardwareRescan to bind to.</summary>
@@ -1253,11 +1174,7 @@ public sealed class AudioViewModel
 
     private void RefreshProfileChoices()
     {
-        (
-            AudioProvider? provider,
-            _
-        ) =
-            ReadProvider<AudioProvider>();
+        (AudioProvider? provider, _) = ReadProvider<AudioProvider>();
 
         if (provider is null)
         {
@@ -1268,12 +1185,11 @@ public sealed class AudioViewModel
             ProfileChoices,
             [
                 AudioRouteRow.NoProfile,
-                .. provider.Profiles
-                    .Select(profile => profile.Name)
-                    .OrderBy(
-                        name => name,
-                        StringComparer.OrdinalIgnoreCase),
-            ]);
+                .. provider
+                    .Profiles.Select(profile => profile.Name)
+                    .OrderBy(name => name, StringComparer.OrdinalIgnoreCase),
+            ]
+        );
     }
 
     /// <summary>
@@ -1296,63 +1212,38 @@ public sealed class AudioViewModel
     /// reordering via <see cref="ObservableCollection{T}.Move"/> -- means the
     /// selected value's presence in the list is never interrupted.
     /// </remarks>
-    private static void ReconcileChoices(
-        ObservableCollection<string> target,
-        IReadOnlyList<string> desired)
+    private static void ReconcileChoices(ObservableCollection<string> target, IReadOnlyList<string> desired)
     {
-        for (
-            int index = target.Count - 1;
-            index >= 0;
-            index--)
+        for (int index = target.Count - 1; index >= 0; index--)
         {
-            if (!desired.Contains(
-                target[index],
-                StringComparer.OrdinalIgnoreCase))
+            if (!desired.Contains(target[index], StringComparer.OrdinalIgnoreCase))
             {
                 target.RemoveAt(index);
             }
         }
 
-        for (
-            int index = 0;
-            index < desired.Count;
-            index++)
+        for (int index = 0; index < desired.Count; index++)
         {
             string wanted = desired[index];
 
-            int currentIndex =
-                IndexOf(
-                    target,
-                    wanted);
+            int currentIndex = IndexOf(target, wanted);
 
             if (currentIndex < 0)
             {
-                target.Insert(
-                    Math.Min(index, target.Count),
-                    wanted);
+                target.Insert(Math.Min(index, target.Count), wanted);
             }
             else if (currentIndex != index)
             {
-                target.Move(
-                    currentIndex,
-                    index);
+                target.Move(currentIndex, index);
             }
         }
     }
 
-    private static int IndexOf(
-        ObservableCollection<string> target,
-        string value)
+    private static int IndexOf(ObservableCollection<string> target, string value)
     {
-        for (
-            int index = 0;
-            index < target.Count;
-            index++)
+        for (int index = 0; index < target.Count; index++)
         {
-            if (string.Equals(
-                target[index],
-                value,
-                StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(target[index], value, StringComparison.OrdinalIgnoreCase))
             {
                 return index;
             }
@@ -1361,35 +1252,27 @@ public sealed class AudioViewModel
         return -1;
     }
 
-    private async Task ActivateSelectedForShellAsync() =>
-        await ActivateSelectedAsync().ConfigureAwait(true);
+    private async Task ActivateSelectedForShellAsync() => await ActivateSelectedAsync().ConfigureAwait(true);
 
-    public async Task<string?>
-        ActivateSelectedAsync(
-            CancellationToken cancellationToken = default)
+    public async Task<string?> ActivateSelectedAsync(CancellationToken cancellationToken = default)
     {
         ClearError();
 
         if (!IsTargetSelected)
         {
-            return SetError(
-                "Choose an audio target first.");
+            return SetError("Choose an audio target first.");
         }
 
         if (HasUnsavedChanges)
         {
-            return SetError(
-                "Save the audio target before activating it.");
+            return SetError("Save the audio target before activating it.");
         }
 
         // Not dirty and something is selected: it must be a clean, persisted
         // target -- an unsaved draft is always dirty from the moment it exists.
         string name = _session.Selected!.Name;
 
-        return await ApplyAsync(
-                name,
-                cancellationToken)
-            .ConfigureAwait(true);
+        return await ApplyAsync(name, cancellationToken).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -1398,17 +1281,11 @@ public sealed class AudioViewModel
     /// the direct-output counterpart to <see cref="ActivateSelectedAsync"/>,
     /// which is reserved for Audio Targets.
     /// </summary>
-    public async Task<string?>
-        SwitchOutputAsync(
-            string alias,
-            CancellationToken cancellationToken = default)
+    public async Task<string?> SwitchOutputAsync(string alias, CancellationToken cancellationToken = default)
     {
         ClearError();
 
-        return await ApplyAsync(
-                alias,
-                cancellationToken)
-            .ConfigureAwait(true);
+        return await ApplyAsync(alias, cancellationToken).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -1418,84 +1295,52 @@ public sealed class AudioViewModel
     /// which differ only in where the value comes from and what they validate
     /// first.
     /// </summary>
-    private async Task<string?> ApplyAsync(
-        string value,
-        CancellationToken cancellationToken)
+    private async Task<string?> ApplyAsync(string value, CancellationToken cancellationToken)
     {
-        (
-            AudioProvider? provider,
-            string? problem
-        ) =
-            ReadProvider<AudioProvider>();
+        (AudioProvider? provider, string? problem) = ReadProvider<AudioProvider>();
 
         if (provider is null)
         {
-            StatusMessage =
-                problem ??
-                "The configuration could not be read.";
+            StatusMessage = problem ?? "The configuration could not be read.";
 
-            return SetError(
-                StatusMessage);
+            return SetError(StatusMessage);
         }
 
         IsBusy = true;
 
-        StatusMessage =
-            $"Activating '{value}'...";
+        StatusMessage = $"Activating '{value}'...";
 
         try
         {
-            await Task.Run(
-                    () =>
-                        provider.Apply(
-                            value,
-                            cancellationToken),
-                    cancellationToken)
-                .ConfigureAwait(true);
+            await Task.Run(() => provider.Apply(value, cancellationToken), cancellationToken).ConfigureAwait(true);
 
-            string? observed =
-                SafeRead(provider);
+            string? observed = SafeRead(provider);
 
-            bool reachedTarget =
-                string.Equals(
-                    observed,
-                    value,
-                    StringComparison.OrdinalIgnoreCase);
+            bool reachedTarget = string.Equals(observed, value, StringComparison.OrdinalIgnoreCase);
 
             Refresh();
 
-            StatusMessage =
-                reachedTarget
-                    ? $"'{value}' activated."
-                    : $"'{value}' requested. Windows is still settling.";
+            StatusMessage = reachedTarget
+                ? $"'{value}' activated."
+                : $"'{value}' requested. Windows is still settling.";
 
-            Workspace.Note(
-                Category,
-                StatusMessage);
+            Workspace.Note(Category, StatusMessage);
 
             return null;
         }
         catch (OperationCanceledException)
         {
-            StatusMessage =
-                "Audio activation was cancelled.";
+            StatusMessage = "Audio activation was cancelled.";
 
-            return SetError(
-                StatusMessage);
+            return SetError(StatusMessage);
         }
         catch (Exception exception)
         {
-            StatusMessage =
-                $"Could not activate '{value}'. " +
-                exception.Message;
+            StatusMessage = $"Could not activate '{value}'. " + exception.Message;
 
-            Workspace.Fault(
-                Category,
-                $"Could not activate '{value}'.",
-                exception);
+            Workspace.Fault(Category, $"Could not activate '{value}'.", exception);
 
-            return SetError(
-                StatusMessage);
+            return SetError(StatusMessage);
         }
         finally
         {
@@ -1512,14 +1357,11 @@ public sealed class AudioViewModel
     /// target is refused consistently no matter which of the three actions is
     /// asking.
     /// </summary>
-    public string? CreateTarget(
-        string name)
+    public string? CreateTarget(string name)
     {
         ClearError();
 
-        if (
-            TargetNameProblem(name)
-            is string problem)
+        if (TargetNameProblem(name) is string problem)
         {
             return SetError(problem);
         }
@@ -1529,13 +1371,12 @@ public sealed class AudioViewModel
         _session.BeginCreate(TargetKey(trimmed), trimmed);
         SelectedKey = _session.SelectedKey;
 
-        RunWithoutDirtyTracking(
-            () =>
-            {
-                TargetName = trimmed;
+        RunWithoutDirtyTracking(() =>
+        {
+            TargetName = trimmed;
 
-                _routes.Load([OutputChoices.FirstOrDefault()]);
-            });
+            _routes.Load([OutputChoices.FirstOrDefault()]);
+        });
 
         // Unsaved from the moment it exists -- matching Displays' and Rgb's
         // own "create" actions -- so switching away goes through the same
@@ -1546,13 +1387,9 @@ public sealed class AudioViewModel
         RaiseRouteCounts();
         RaiseValidation();
 
-        TargetState(
-            AudioTargetState.Stopped,
-            null,
-            null);
+        TargetState(AudioTargetState.Stopped, null, null);
 
-        StatusMessage =
-            "Choose the outputs this target plays through, then save it.";
+        StatusMessage = "Choose the outputs this target plays through, then save it.";
 
         return null;
     }
@@ -1562,35 +1399,23 @@ public sealed class AudioViewModel
     /// saved target -- without writing anything; the page's own Save is what
     /// persists it, under whichever name is current at that point.
     /// </summary>
-    public string? RenameSelected(
-        string newName)
+    public string? RenameSelected(string newName)
     {
         ClearError();
 
         if (!IsTargetSelected)
         {
-            return SetError(
-                "Choose an audio target first.");
+            return SetError("Choose an audio target first.");
         }
 
-        string trimmed =
-            newName?.Trim()
-            ?? string.Empty;
+        string trimmed = newName?.Trim() ?? string.Empty;
 
-        if (
-            string.Equals(
-                TargetName,
-                trimmed,
-                StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(TargetName, trimmed, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        if (
-            TargetNameProblem(
-                trimmed,
-                _session.Selected?.Name)
-            is string problem)
+        if (TargetNameProblem(trimmed, _session.Selected?.Name) is string problem)
         {
             return SetError(problem);
         }
@@ -1600,16 +1425,14 @@ public sealed class AudioViewModel
         _session.RenameCurrent(TargetKey(trimmed), trimmed);
         SelectedKey = _session.SelectedKey;
 
-        RunWithoutDirtyTracking(
-            () => TargetName = trimmed);
+        RunWithoutDirtyTracking(() => TargetName = trimmed);
 
         MarkDirty();
         RaiseValidation();
 
-        StatusMessage =
-            wasDraft
-                ? $"New audio target will be saved as '{trimmed}'."
-                : $"'{trimmed}' will be saved as the new name.";
+        StatusMessage = wasDraft
+            ? $"New audio target will be saved as '{trimmed}'."
+            : $"'{trimmed}' will be saved as the new name.";
 
         return null;
     }
@@ -1619,24 +1442,18 @@ public sealed class AudioViewModel
     /// a new, unsaved draft named <paramref name="newName"/>. Nothing is
     /// written until Save.
     /// </summary>
-    public string? DuplicateSelected(
-        string newName)
+    public string? DuplicateSelected(string newName)
     {
         ClearError();
 
         if (!IsTargetSelected)
         {
-            return SetError(
-                "Choose an audio target first.");
+            return SetError("Choose an audio target first.");
         }
 
-        string trimmed =
-            newName?.Trim()
-            ?? string.Empty;
+        string trimmed = newName?.Trim() ?? string.Empty;
 
-        if (
-            TargetNameProblem(trimmed)
-            is string problem)
+        if (TargetNameProblem(trimmed) is string problem)
         {
             return SetError(problem);
         }
@@ -1646,45 +1463,45 @@ public sealed class AudioViewModel
         _session.BeginDuplicate(TargetKey(trimmed), trimmed);
         SelectedKey = _session.SelectedKey;
 
-        RunWithoutDirtyTracking(
-            () =>
+        RunWithoutDirtyTracking(() =>
+        {
+            List<(
+                string? Output,
+                int DelayMs,
+                double Gain,
+                double Volume,
+                bool Required,
+                string ProfileName
+            )> clonedRoutes =
+            [
+                .. Routes.Select(route =>
+                    (route.Output, route.DelayMs, route.Gain, route.Volume, route.Required, route.ProfileName)
+                ),
+            ];
+
+            TargetName = trimmed;
+
+            _routes.Load(clonedRoutes.Select(route => route.Output));
+
+            for (int index = 0; index < clonedRoutes.Count; index++)
             {
-                List<(string? Output, int DelayMs, double Gain, double Volume, bool Required, string ProfileName)> clonedRoutes =
-                [
-                    .. Routes.Select(route =>
-                        (
-                            route.Output,
-                            route.DelayMs,
-                            route.Gain,
-                            route.Volume,
-                            route.Required,
-                            route.ProfileName))
-                ];
+                var source = clonedRoutes[index];
+                AudioRouteRow row = Routes[index];
 
-                TargetName = trimmed;
-
-                _routes.Load(clonedRoutes.Select(route => route.Output));
-
-                for (int index = 0; index < clonedRoutes.Count; index++)
-                {
-                    var source = clonedRoutes[index];
-                    AudioRouteRow row = Routes[index];
-
-                    row.DelayMs = source.DelayMs;
-                    row.Gain = source.Gain;
-                    row.Volume = source.Volume;
-                    row.Required = source.Required;
-                    row.ProfileName = source.ProfileName;
-                }
-            });
+                row.DelayMs = source.DelayMs;
+                row.Gain = source.Gain;
+                row.Volume = source.Volume;
+                row.Required = source.Required;
+                row.ProfileName = source.ProfileName;
+            }
+        });
 
         MarkDirty();
 
         RaiseRouteCounts();
         RaiseValidation();
 
-        StatusMessage =
-            $"'{trimmed}' will be saved as a copy of '{source}'.";
+        StatusMessage = $"'{trimmed}' will be saved as a copy of '{source}'.";
 
         return null;
     }
@@ -1695,8 +1512,7 @@ public sealed class AudioViewModel
 
         if (!IsTargetSelected)
         {
-            return SetError(
-                "Choose an audio target first.");
+            return SetError("Choose an audio target first.");
         }
 
         if (_session.HasOverlay)
@@ -1710,45 +1526,31 @@ public sealed class AudioViewModel
             return null;
         }
 
-        string removed =
-            _session.Selected!.Name;
+        string removed = _session.Selected!.Name;
 
-        ModeSaveOutcome outcome =
-            AudioConfigurationStore.RemoveTarget(
-                Workspace.Root,
-                removed);
+        ModeSaveOutcome outcome = AudioConfigurationStore.RemoveTarget(Workspace.Root, removed);
 
         if (!outcome.Success)
         {
-            StatusMessage =
-                outcome.Problem ??
-                "That could not be removed.";
+            StatusMessage = outcome.Problem ?? "That could not be removed.";
 
-            Workspace.Warn(
-                Category,
-                StatusMessage);
+            Workspace.Warn(Category, StatusMessage);
 
-            return SetError(
-                StatusMessage);
+            return SetError(StatusMessage);
         }
 
         Refresh();
 
-        StatusMessage =
-            Workspace.Apply(
-                $"'{removed}' was removed.");
+        StatusMessage = Workspace.Apply($"'{removed}' was removed.");
 
         return null;
     }
 
-    public void LoadProfileEditor(
-        AudioRouteRow row)
+    public void LoadProfileEditor(AudioRouteRow row)
     {
         ClearError();
 
-        if (
-            row?.SavedProfileName
-            is not string profileName)
+        if (row?.SavedProfileName is not string profileName)
         {
             return;
         }
@@ -1763,280 +1565,188 @@ public sealed class AudioViewModel
             return;
         }
 
-        (
-            AudioProvider? provider,
-            string? problem
-        ) =
-            ReadProvider<AudioProvider>();
+        (AudioProvider? provider, string? problem) = ReadProvider<AudioProvider>();
 
         if (provider is null)
         {
-            SetError(
-                problem ??
-                "The audio configuration could not be read.");
+            SetError(problem ?? "The audio configuration could not be read.");
 
             return;
         }
 
-        AudioProcessingProfileSettings? profile =
-            provider.Profile(
-                profileName);
+        AudioProcessingProfileSettings? profile = provider.Profile(profileName);
 
         if (profile is null)
         {
-            SetError(
-                $"Processing profile '{profileName}' could not be found.");
+            SetError($"Processing profile '{profileName}' could not be found.");
 
             return;
         }
 
-        RunWithoutDirtyTracking(
-            () =>
+        RunWithoutDirtyTracking(() =>
+        {
+            row.ProfileBands.Clear();
+
+            row.ProfilePreampGainDb = profile.PreampGainDb;
+
+            foreach (EqBand band in profile.Bands)
             {
-                row.ProfileBands.Clear();
+                row.ProfileBands.Add(
+                    new AudioEqBandRow(() => OnProfileFieldChanged(row))
+                    {
+                        Type = band.Type,
 
-                row.ProfilePreampGainDb =
-                    profile.PreampGainDb;
+                        FrequencyHz = band.FrequencyHz,
 
-                foreach (EqBand band in profile.Bands)
-                {
-                    row.ProfileBands.Add(
-                        new AudioEqBandRow(
-                            () => OnProfileFieldChanged(row))
-                        {
-                            Type =
-                                band.Type,
+                        GainDb = band.GainDb,
 
-                            FrequencyHz =
-                                band.FrequencyHz,
-
-                            GainDb =
-                                band.GainDb,
-
-                            Q =
-                                band.Q,
-                        });
-                }
-            });
+                        Q = band.Q,
+                    }
+                );
+            }
+        });
 
         row.RecomputeResponse();
 
-        row.IsProfileEditorExpanded =
-            true;
+        row.IsProfileEditorExpanded = true;
     }
 
-    public string? CreateProfile(
-        AudioRouteRow row,
-        string name)
+    public string? CreateProfile(AudioRouteRow row, string name)
     {
         ClearError();
 
-        string trimmed =
-            name?.Trim()
-            ?? string.Empty;
+        string trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length == 0)
         {
-            return SetError(
-                "Give the processing profile a name.");
+            return SetError("Give the processing profile a name.");
         }
 
         if (
-            ProfileChoices.Any(
-                existing =>
-                    !string.Equals(
-                        existing,
-                        AudioRouteRow.NoProfile,
-                        StringComparison.Ordinal) &&
-                    string.Equals(
-                        existing,
-                        trimmed,
-                        StringComparison.OrdinalIgnoreCase)))
+            ProfileChoices.Any(existing =>
+                !string.Equals(existing, AudioRouteRow.NoProfile, StringComparison.Ordinal)
+                && string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
-            return SetError(
-                $"A processing profile named '{trimmed}' already exists.");
+            return SetError($"A processing profile named '{trimmed}' already exists.");
         }
 
-        var edit =
-            new AudioProcessingProfileEdit(
-                trimmed,
-                0,
-                []);
+        var edit = new AudioProcessingProfileEdit(trimmed, 0, []);
 
-        ModeSaveOutcome outcome =
-            AudioConfigurationStore.SaveProfile(
-                Workspace.Root,
-                edit);
+        ModeSaveOutcome outcome = AudioConfigurationStore.SaveProfile(Workspace.Root, edit);
 
         if (!outcome.Success)
         {
-            return SetError(
-                outcome.Problem ??
-                "The processing profile could not be created.");
+            return SetError(outcome.Problem ?? "The processing profile could not be created.");
         }
 
         RefreshProfileChoices();
 
-        row.ProfileName =
-            trimmed;
+        row.ProfileName = trimmed;
 
         LoadProfileEditor(row);
 
-        StatusMessage =
-            Workspace.Apply(
-                $"Processing profile '{trimmed}' created.");
+        StatusMessage = Workspace.Apply($"Processing profile '{trimmed}' created.");
 
         return null;
     }
 
-    public string? RenameProfile(
-        AudioRouteRow row,
-        string newName)
+    public string? RenameProfile(AudioRouteRow row, string newName)
     {
         ClearError();
 
-        if (
-            row.SavedProfileName
-            is not string oldName)
+        if (row.SavedProfileName is not string oldName)
         {
-            return SetError(
-                "Choose a processing profile first.");
+            return SetError("Choose a processing profile first.");
         }
 
-        string trimmed =
-            newName?.Trim()
-            ?? string.Empty;
+        string trimmed = newName?.Trim() ?? string.Empty;
 
         if (trimmed.Length == 0)
         {
-            return SetError(
-                "Give the processing profile a name.");
+            return SetError("Give the processing profile a name.");
         }
 
-        if (
-            string.Equals(
-                oldName,
-                trimmed,
-                StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(oldName, trimmed, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
         if (
-            ProfileChoices.Any(
-                existing =>
-                    !string.Equals(
-                        existing,
-                        AudioRouteRow.NoProfile,
-                        StringComparison.Ordinal) &&
-                    !string.Equals(
-                        existing,
-                        oldName,
-                        StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(
-                        existing,
-                        trimmed,
-                        StringComparison.OrdinalIgnoreCase)))
+            ProfileChoices.Any(existing =>
+                !string.Equals(existing, AudioRouteRow.NoProfile, StringComparison.Ordinal)
+                && !string.Equals(existing, oldName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
-            return SetError(
-                $"A processing profile named '{trimmed}' already exists.");
+            return SetError($"A processing profile named '{trimmed}' already exists.");
         }
 
-        ModeSaveOutcome outcome =
-            AudioConfigurationStore.RenameProfile(
-                Workspace.Root,
-                oldName,
-                trimmed);
+        ModeSaveOutcome outcome = AudioConfigurationStore.RenameProfile(Workspace.Root, oldName, trimmed);
 
         if (!outcome.Success)
         {
-            return SetError(
-                outcome.Problem ??
-                "The processing profile could not be renamed.");
+            return SetError(outcome.Problem ?? "The processing profile could not be renamed.");
         }
 
         RefreshProfileChoices();
 
         foreach (AudioRouteRow route in Routes)
         {
-            if (
-                string.Equals(
-                    route.SavedProfileName,
-                    oldName,
-                    StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(route.SavedProfileName, oldName, StringComparison.OrdinalIgnoreCase))
             {
-                route.ProfileName =
-                    trimmed;
+                route.ProfileName = trimmed;
             }
         }
 
-        row.ProfileName =
-            trimmed;
+        row.ProfileName = trimmed;
 
         LoadProfileEditor(row);
 
-        StatusMessage =
-            Workspace.Apply(
-                $"Processing profile '{oldName}' renamed to '{trimmed}'.");
+        StatusMessage = Workspace.Apply($"Processing profile '{oldName}' renamed to '{trimmed}'.");
 
         return null;
     }
 
-    public string? DeleteProfile(
-        AudioRouteRow row)
+    public string? DeleteProfile(AudioRouteRow row)
     {
         ClearError();
 
-        if (
-            row.SavedProfileName
-            is not string profileName)
+        if (row.SavedProfileName is not string profileName)
         {
-            return SetError(
-                "Choose a processing profile first.");
+            return SetError("Choose a processing profile first.");
         }
 
-        ModeSaveOutcome outcome =
-            AudioConfigurationStore.RemoveProfile(
-                Workspace.Root,
-                profileName);
+        ModeSaveOutcome outcome = AudioConfigurationStore.RemoveProfile(Workspace.Root, profileName);
 
         if (!outcome.Success)
         {
-            return SetError(
-                outcome.Problem ??
-                "The processing profile could not be deleted.");
+            return SetError(outcome.Problem ?? "The processing profile could not be deleted.");
         }
 
         foreach (AudioRouteRow route in Routes)
         {
-            if (
-                string.Equals(
-                    route.SavedProfileName,
-                    profileName,
-                    StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(route.SavedProfileName, profileName, StringComparison.OrdinalIgnoreCase))
             {
-                route.ProfileName =
-                    AudioRouteRow.NoProfile;
+                route.ProfileName = AudioRouteRow.NoProfile;
 
                 ClearRowProfileDirty(route);
             }
         }
 
         row.ProfileBands.Clear();
-        row.IsProfileEditorExpanded =
-            false;
+        row.IsProfileEditorExpanded = false;
 
         RefreshProfileChoices();
 
-        StatusMessage =
-            Workspace.Apply(
-                $"Processing profile '{profileName}' deleted.");
+        StatusMessage = Workspace.Apply($"Processing profile '{profileName}' deleted.");
 
         return null;
     }
 
-    public void AddProfileBand(
-        AudioRouteRow row)
+    public void AddProfileBand(AudioRouteRow row)
     {
         if (row is null)
         {
@@ -2044,54 +1754,41 @@ public sealed class AudioViewModel
         }
 
         row.ProfileBands.Add(
-            new AudioEqBandRow(
-                () => OnProfileFieldChanged(row))
+            new AudioEqBandRow(() => OnProfileFieldChanged(row))
             {
-                Type =
-                    EqFilterType.Peak,
+                Type = EqFilterType.Peak,
 
-                FrequencyHz =
-                    1000,
+                FrequencyHz = 1000,
 
-                GainDb =
-                    0,
+                GainDb = 0,
 
-                Q =
-                    0.70710677,
-            });
+                Q = 0.70710677,
+            }
+        );
 
         OnProfileFieldChanged(row);
     }
 
-    public void RemoveProfileBand(
-        AudioRouteRow row,
-        AudioEqBandRow band)
+    public void RemoveProfileBand(AudioRouteRow row, AudioEqBandRow band)
     {
-        if (
-            row is null ||
-            band is null)
+        if (row is null || band is null)
         {
             return;
         }
 
-        if (row.ProfileBands.Remove(
-            band))
+        if (row.ProfileBands.Remove(band))
         {
             OnProfileFieldChanged(row);
         }
     }
 
-    public string? SaveProfile(
-        AudioRouteRow row)
+    public string? SaveProfile(AudioRouteRow row)
     {
         ClearError();
 
-        if (
-            row?.SavedProfileName
-            is not string profileName)
+        if (row?.SavedProfileName is not string profileName)
         {
-            return SetError(
-                "Choose a processing profile first.");
+            return SetError("Choose a processing profile first.");
         }
 
         if (SaveProfileCore(row, profileName) is string problem)
@@ -2099,9 +1796,7 @@ public sealed class AudioViewModel
             return SetError(problem);
         }
 
-        StatusMessage =
-            Workspace.Apply(
-                $"Processing profile '{profileName}' saved.");
+        StatusMessage = Workspace.Apply($"Processing profile '{profileName}' saved.");
 
         OnCalibrationChanged(row);
 
@@ -2115,51 +1810,30 @@ public sealed class AudioViewModel
     /// (the page's Save button, which must not silently drop a dirty profile
     /// on its way to saving the target's route wiring).
     /// </summary>
-    private string? SaveProfileCore(
-        AudioRouteRow row,
-        string profileName)
+    private string? SaveProfileCore(AudioRouteRow row, string profileName)
     {
         EqBand[] bands;
 
         try
         {
-            bands =
-            [
-                .. row.ProfileBands.Select(
-                    band =>
-                        band.ToBand())
-            ];
+            bands = [.. row.ProfileBands.Select(band => band.ToBand())];
 
-            _ =
-                new ParametricEqProfile(
-                    (float)row.ProfilePreampGainDb,
-                    bands);
+            _ = new ParametricEqProfile((float)row.ProfilePreampGainDb, bands);
         }
         catch (ArgumentException exception)
         {
             return exception.Message;
         }
 
-        var edit =
-            new AudioProcessingProfileEdit(
-                profileName,
-                (float)row.ProfilePreampGainDb,
-                bands);
+        var edit = new AudioProcessingProfileEdit(profileName, (float)row.ProfilePreampGainDb, bands);
 
-        ModeSaveOutcome outcome =
-            AudioConfigurationStore.SaveProfile(
-                Workspace.Root,
-                edit);
+        ModeSaveOutcome outcome = AudioConfigurationStore.SaveProfile(Workspace.Root, edit);
 
         if (!outcome.Success)
         {
-            StatusMessage =
-                outcome.Problem ??
-                "The processing profile could not be saved.";
+            StatusMessage = outcome.Problem ?? "The processing profile could not be saved.";
 
-            Workspace.Warn(
-                Category,
-                StatusMessage);
+            Workspace.Warn(Category, StatusMessage);
 
             return StatusMessage;
         }
@@ -2179,8 +1853,7 @@ public sealed class AudioViewModel
         _routes.Add();
     }
 
-    public void RemoveRoute(
-        AudioRouteRow row)
+    public void RemoveRoute(AudioRouteRow row)
     {
         if (!IsTargetSelected)
         {
@@ -2190,70 +1863,53 @@ public sealed class AudioViewModel
         _routes.Remove(row);
     }
 
-    public void SelectReferenceRoute(
-        AudioRouteRow row)
+    public void SelectReferenceRoute(AudioRouteRow row)
     {
-        if (
-            row is null ||
-            Routes.Count != MaxRoutes)
+        if (row is null || Routes.Count != MaxRoutes)
         {
             return;
         }
 
-        int selectedIndex =
-            Routes.IndexOf(row);
+        int selectedIndex = Routes.IndexOf(row);
 
         if (selectedIndex <= 0)
         {
             return;
         }
 
-        AudioRouteRow previousReference =
-            Routes[0];
+        AudioRouteRow previousReference = Routes[0];
 
-        int selectedDelay =
-            row.DelayMs;
+        int selectedDelay = row.DelayMs;
 
-        double selectedGain =
-            row.Gain;
+        double selectedGain = row.Gain;
 
-        row.DelayMs =
-            previousReference.DelayMs;
+        row.DelayMs = previousReference.DelayMs;
 
-        row.Gain =
-            previousReference.Gain;
+        row.Gain = previousReference.Gain;
 
-        previousReference.DelayMs =
-            selectedDelay;
+        previousReference.DelayMs = selectedDelay;
 
-        previousReference.Gain =
-            selectedGain;
+        previousReference.Gain = selectedGain;
 
-        Routes.Move(
-            selectedIndex,
-            0);
+        Routes.Move(selectedIndex, 0);
 
         MarkDirty();
         RaiseRouteCounts();
         RaiseValidation();
     }
 
-    protected override string?
-        SaveChangesCore()
+    protected override string? SaveChangesCore()
     {
         if (!IsTargetSelected)
         {
-            return
-                "Choose an audio target first.";
+            return "Choose an audio target first.";
         }
 
         bool savedAnyProfile = false;
 
         foreach (AudioRouteRow route in Routes)
         {
-            if (
-                route.IsProfileDirty &&
-                route.SavedProfileName is string profileName)
+            if (route.IsProfileDirty && route.SavedProfileName is string profileName)
             {
                 if (SaveProfileCore(route, profileName) is string profileProblem)
                 {
@@ -2273,21 +1929,16 @@ public sealed class AudioViewModel
         // no-op file write.
         if (!base.HasUnsavedChanges)
         {
-            StatusMessage =
-                Workspace.Apply(
-                    savedAnyProfile
-                        ? "Processing profile changes saved."
-                        : $"'{TargetName}' saved.");
+            StatusMessage = Workspace.Apply(
+                savedAnyProfile ? "Processing profile changes saved." : $"'{TargetName}' saved."
+            );
 
             return null;
         }
 
-        if (
-            ValidationProblem
-            is string problem)
+        if (ValidationProblem is string problem)
         {
-            StatusMessage =
-                problem;
+            StatusMessage = problem;
 
             return problem;
         }
@@ -2299,35 +1950,17 @@ public sealed class AudioViewModel
             // A fresh draft has no persisted entity to overwrite; a rename or
             // an ordinary edit writes over whatever this selection's origin
             // was actually loaded from.
-            string? oldName =
-                _session.IsDraft
-                    ? null
-                    : _session.Selected?.Name;
+            string? oldName = _session.IsDraft ? null : _session.Selected?.Name;
 
-            var edit =
-                new AudioTargetEdit(
-                    TargetName.Trim(),
-                    [
-                        .. Routes.Select(
-                            route =>
-                                route.ToEdit())
-                    ]);
+            var edit = new AudioTargetEdit(TargetName.Trim(), [.. Routes.Select(route => route.ToEdit())]);
 
-            ModeSaveOutcome outcome =
-                AudioConfigurationStore.SaveTarget(
-                    Workspace.Root,
-                    edit,
-                    oldName);
+            ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(Workspace.Root, edit, oldName);
 
             if (!outcome.Success)
             {
-                StatusMessage =
-                    outcome.Problem ??
-                    "That could not be saved.";
+                StatusMessage = outcome.Problem ?? "That could not be saved.";
 
-                Workspace.Warn(
-                    Category,
-                    StatusMessage);
+                Workspace.Warn(Category, StatusMessage);
 
                 return outcome.Problem;
             }
@@ -2336,9 +1969,7 @@ public sealed class AudioViewModel
 
             Refresh();
 
-            StatusMessage =
-                Workspace.Apply(
-                    $"'{edit.Name}' saved.");
+            StatusMessage = Workspace.Apply($"'{edit.Name}' saved.");
 
             return null;
         }
@@ -2348,8 +1979,7 @@ public sealed class AudioViewModel
         }
     }
 
-    protected override void
-        DiscardChangesCore()
+    protected override void DiscardChangesCore()
     {
         if (_session.HasOverlay)
         {
@@ -2359,28 +1989,16 @@ public sealed class AudioViewModel
         Refresh();
     }
 
-    private static string TargetKey(
-        string name) =>
-        "target:" + name;
+    private static string TargetKey(string name) => "target:" + name;
 
-    private AudioRouteRow NewRoute(
-        string? output)
+    private AudioRouteRow NewRoute(string? output)
     {
         AudioRouteRow row = null!;
 
-        row =
-            new AudioRouteRow(
-                [],
-                OnRouteChanged,
-                () =>
-                    OnCalibrationChanged(
-                        row),
-                () =>
-                    OnProfileFieldChanged(
-                        row))
-            {
-                Output = output,
-            };
+        row = new AudioRouteRow([], OnRouteChanged, () => OnCalibrationChanged(row), () => OnProfileFieldChanged(row))
+        {
+            Output = output,
+        };
 
         return row;
     }
@@ -2411,8 +2029,7 @@ public sealed class AudioViewModel
     /// route's dirty state or push a live recalibration, both of which belong
     /// to the moment the profile is actually saved (<see cref="SaveProfile"/>).
     /// </summary>
-    private void OnProfileFieldChanged(
-        AudioRouteRow row)
+    private void OnProfileFieldChanged(AudioRouteRow row)
     {
         // Always recomputed, even once the row is already marked dirty below
         // (and so would otherwise short-circuit) -- the Visual response graph
@@ -2420,8 +2037,7 @@ public sealed class AudioViewModel
         // the edit that first dirtied the profile.
         row.RecomputeResponse();
 
-        if (IsSuppressingDirtyTracking ||
-            row.IsProfileDirty)
+        if (IsSuppressingDirtyTracking || row.IsProfileDirty)
         {
             return;
         }
@@ -2431,8 +2047,7 @@ public sealed class AudioViewModel
         RaiseProfileDirtyChanged();
     }
 
-    private void ClearRowProfileDirty(
-        AudioRouteRow row)
+    private void ClearRowProfileDirty(AudioRouteRow row)
     {
         if (!row.IsProfileDirty)
         {
@@ -2446,17 +2061,14 @@ public sealed class AudioViewModel
 
     private void RaiseProfileDirtyChanged()
     {
-        OnPropertyChanged(
-            nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(HasUnsavedChanges));
 
-        OnPropertyChanged(
-            nameof(CanDiscard));
+        OnPropertyChanged(nameof(CanDiscard));
 
         OnDirtyStateChanged();
     }
 
-    private void OnCalibrationChanged(
-        AudioRouteRow row)
+    private void OnCalibrationChanged(AudioRouteRow row)
     {
         if (IsSuppressingDirtyTracking)
         {
@@ -2464,162 +2076,108 @@ public sealed class AudioViewModel
         }
 
         if (
-            _session.IsDraft ||
-            _session.Selected?.Name
-                is not string targetName ||
-            !IsTargetRunning ||
-            string.IsNullOrWhiteSpace(
-                row.Output))
+            _session.IsDraft
+            || _session.Selected?.Name is not string targetName
+            || !IsTargetRunning
+            || string.IsNullOrWhiteSpace(row.Output)
+        )
         {
             return;
         }
 
         if (_recalibrationInFlight)
         {
-            _recalibrationPending =
-                row;
+            _recalibrationPending = row;
 
             return;
         }
 
-        _ =
-            LiveRecalibrateAsync(
-                targetName,
-                row);
+        _ = LiveRecalibrateAsync(targetName, row);
     }
 
-    private async Task
-        LiveRecalibrateAsync(
-            string targetName,
-            AudioRouteRow row)
+    private async Task LiveRecalibrateAsync(string targetName, AudioRouteRow row)
     {
-        _recalibrationInFlight =
-            true;
+        _recalibrationInFlight = true;
 
         try
         {
-            (
-                AudioProvider? provider,
-                _
-            ) =
-                ReadProvider<AudioProvider>();
+            (AudioProvider? provider, _) = ReadProvider<AudioProvider>();
 
-            if (
-                provider is null ||
-                row.Output
-                    is not string output)
+            if (provider is null || row.Output is not string output)
             {
                 return;
             }
 
             try
             {
-                await Task.Run(
-                        () =>
-                            provider.Recalibrate(
-                                targetName,
-                                output,
-                                TimeSpan.FromMilliseconds(
-                                    row.DelayMs),
-                                row.Gain,
-                                row.Volume,
-                                row.SavedProfileName,
-                                CancellationToken.None))
+                await Task.Run(() =>
+                        provider.Recalibrate(
+                            targetName,
+                            output,
+                            TimeSpan.FromMilliseconds(row.DelayMs),
+                            row.Gain,
+                            row.Volume,
+                            row.SavedProfileName,
+                            CancellationToken.None
+                        )
+                    )
                     .ConfigureAwait(true);
             }
             catch (Exception exception)
             {
-                StatusMessage =
-                    "Live calibration could not reach " +
-                    $"the audio engine. {exception.Message}";
+                StatusMessage = "Live calibration could not reach " + $"the audio engine. {exception.Message}";
             }
         }
         finally
         {
-            _recalibrationInFlight =
-                false;
+            _recalibrationInFlight = false;
 
-            if (
-                _recalibrationPending
-                is AudioRouteRow pending)
+            if (_recalibrationPending is AudioRouteRow pending)
             {
-                _recalibrationPending =
-                    null;
+                _recalibrationPending = null;
 
-                OnCalibrationChanged(
-                    pending);
+                OnCalibrationChanged(pending);
             }
         }
     }
 
-    private string? TargetNameProblem(
-        string name,
-        string? ignoredName = null)
+    private string? TargetNameProblem(string name, string? ignoredName = null)
     {
-        string trimmed =
-            name?.Trim()
-            ?? string.Empty;
+        string trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length == 0)
         {
-            return
-                "Give the audio target a name.";
+            return "Give the audio target a name.";
+        }
+
+        if (OutputChoices.Any(output => string.Equals(output, trimmed, StringComparison.OrdinalIgnoreCase)))
+        {
+            return $"'{trimmed}' is already one of your outputs. " + "Give the target a name of its own.";
         }
 
         if (
-            OutputChoices.Any(
-                output =>
-                    string.Equals(
-                        output,
-                        trimmed,
-                        StringComparison.OrdinalIgnoreCase)))
+            _session.Items.Any(target =>
+                !string.Equals(target.Name, ignoredName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(target.Name, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
-            return
-                $"'{trimmed}' is already one of your outputs. " +
-                "Give the target a name of its own.";
-        }
-
-        if (
-            _session.Items.Any(
-                target =>
-                    !string.Equals(
-                        target.Name,
-                        ignoredName,
-                        StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(
-                        target.Name,
-                        trimmed,
-                        StringComparison.OrdinalIgnoreCase)))
-        {
-            return
-                $"An audio target named '{trimmed}' already exists.";
+            return $"An audio target named '{trimmed}' already exists.";
         }
 
         return null;
     }
 
-    private void LoadResources(
-        AudioSnapshot snapshot)
+    private void LoadResources(AudioSnapshot snapshot)
     {
         List<AudioDeviceMapping> devices =
         [
-            .. snapshot.Devices
-                .OrderBy(
-                    device =>
-                        device.LogicalName,
-                    StringComparer.OrdinalIgnoreCase)
+            .. snapshot.Devices.OrderBy(device => device.LogicalName, StringComparer.OrdinalIgnoreCase),
         ];
 
-        _routes.SetChoices(
-            [
-                .. devices.Select(
-                    device =>
-                        device.LogicalName)
-            ]);
+        _routes.SetChoices([.. devices.Select(device => device.LogicalName)]);
 
-        _session.Load(
-            snapshot.Targets,
-            keep: SelectedKey as string);
+        _session.Load(snapshot.Targets, keep: SelectedKey as string);
 
         SelectedKey = _session.SelectedKey;
     }
@@ -2635,87 +2193,63 @@ public sealed class AudioViewModel
             RaiseRouteCounts();
             RaiseValidation();
 
-            TargetState(
-                AudioTargetState.Stopped,
-                null,
-                null);
+            TargetState(AudioTargetState.Stopped, null, null);
 
             return;
         }
 
-        RunWithoutDirtyTracking(
-            () =>
+        RunWithoutDirtyTracking(() =>
+        {
+            TargetName = status.Name;
+
+            _routes.Load(status.Routes.Select(route => route.Output));
+
+            for (int index = 0; index < status.Routes.Count; index++)
             {
-                TargetName =
-                    status.Name;
+                AudioTargetRouteStatus route = status.Routes[index];
+                AudioRouteRow row = Routes[index];
 
-                _routes.Load(
-                    status.Routes.Select(
-                        route => route.Output));
-
-                for (int index = 0; index < status.Routes.Count; index++)
-                {
-                    AudioTargetRouteStatus route = status.Routes[index];
-                    AudioRouteRow row = Routes[index];
-
-                    row.DelayMs = route.DelayMs;
-                    row.Gain = route.Gain;
-                    row.Volume = route.Volume ?? AudioRouteRow.DefaultVolume;
-                    row.Required = route.Required;
-                    row.ProfileName = route.ProfileName ?? AudioRouteRow.NoProfile;
-                    row.RuntimeText = FormatRuntimeText(route);
-                }
-            });
+                row.DelayMs = route.DelayMs;
+                row.Gain = route.Gain;
+                row.Volume = route.Volume ?? AudioRouteRow.DefaultVolume;
+                row.Required = route.Required;
+                row.ProfileName = route.ProfileName ?? AudioRouteRow.NoProfile;
+                row.RuntimeText = FormatRuntimeText(route);
+            }
+        });
 
         ClearDirtyState();
 
         RaiseRouteCounts();
         RaiseValidation();
 
-        TargetState(
-            status.State,
-            status.Problem,
-            status.Detail);
+        TargetState(status.State, status.Problem, status.Detail);
     }
 
-    private void TargetState(
-        AudioTargetState state,
-        string? problem,
-        string? detail)
+    private void TargetState(AudioTargetState state, string? problem, string? detail)
     {
-        _targetState =
-            state;
+        _targetState = state;
 
-        TargetStateText =
-            state switch
-            {
-                AudioTargetState.Running =>
-                    $"'{TargetName}' is playing " +
-                    "through every one of its outputs.",
+        TargetStateText = state switch
+        {
+            AudioTargetState.Running => $"'{TargetName}' is playing " + "through every one of its outputs.",
 
-                AudioTargetState.Degraded =>
-                    $"'{TargetName}' is playing, " +
-                    $"and one of its outputs is not healthy. {problem}",
+            AudioTargetState.Degraded => $"'{TargetName}' is playing, "
+                + $"and one of its outputs is not healthy. {problem}",
 
-                AudioTargetState.Failed =>
-                    $"'{TargetName}' stopped " +
-                    $"on its own. {problem}",
+            AudioTargetState.Failed => $"'{TargetName}' stopped " + $"on its own. {problem}",
 
-                AudioTargetState.Unavailable =>
-                    "The PCMode audio engine is not available, so " +
-                    $"'{TargetName}' cannot play. {problem}",
+            AudioTargetState.Unavailable => "The PCMode audio engine is not available, so "
+                + $"'{TargetName}' cannot play. {problem}",
 
-                _ =>
-                    $"'{TargetName}' is configured " +
-                    "and not running. Activate it, or a target whose " +
-                    "audio output is this one, to start it.",
-            };
+            _ => $"'{TargetName}' is configured "
+                + "and not running. Activate it, or a target whose "
+                + "audio output is this one, to start it.",
+        };
 
-        TargetHealthText =
-            detail;
+        TargetHealthText = detail;
 
-        OnPropertyChanged(
-            nameof(IsTargetRunning));
+        OnPropertyChanged(nameof(IsTargetRunning));
     }
 
     private void RaiseRouteCounts()
@@ -2724,20 +2258,15 @@ public sealed class AudioViewModel
         RebuildRouteCards();
         RefreshCommands();
 
-        OnPropertyChanged(
-            nameof(CanAddRoute));
+        OnPropertyChanged(nameof(CanAddRoute));
 
-        OnPropertyChanged(
-            nameof(CanRemoveRoute));
+        OnPropertyChanged(nameof(CanRemoveRoute));
 
-        OnPropertyChanged(
-            nameof(IsNewTarget));
+        OnPropertyChanged(nameof(IsNewTarget));
 
-        OnPropertyChanged(
-            nameof(ShowAlignment));
+        OnPropertyChanged(nameof(ShowAlignment));
 
-        OnPropertyChanged(
-            nameof(ReferenceOutputName));
+        OnPropertyChanged(nameof(ReferenceOutputName));
     }
 
     /// <summary>
@@ -2760,7 +2289,8 @@ public sealed class AudioViewModel
     private void Reconcile<TCard>(
         ObservableCollection<TCard> cards,
         Func<TCard, AudioRouteRow> routeOf,
-        Func<AudioRouteRow, TCard> create)
+        Func<AudioRouteRow, TCard> create
+    )
         where TCard : IDisposable
     {
         for (int index = cards.Count - 1; index >= 0; index--)
@@ -2807,8 +2337,7 @@ public sealed class AudioViewModel
 
         foreach (ConfigurationEntityListItem<string> item in _session.SelectorItems)
         {
-            Selector.Items.Add(
-                new AudioSelectorItem(item.Key, item.Title, item.Summary, RequestSelect));
+            Selector.Items.Add(new AudioSelectorItem(item.Key, item.Title, item.Summary, RequestSelect));
         }
 
         SyncSelectorSelection();
@@ -2870,45 +2399,32 @@ public sealed class AudioViewModel
         }
     }
 
-    private static string FormatRuntimeText(
-        AudioTargetRouteStatus route) =>
+    private static string FormatRuntimeText(AudioTargetRouteStatus route) =>
         route.Runtime is null
             ? string.Empty
-            : $"{route.Runtime}" +
-              (
-                  route.Problem is null
-                      ? string.Empty
-                      : $" -- {route.Problem}"
-              );
+            : $"{route.Runtime}" + (route.Problem is null ? string.Empty : $" -- {route.Problem}");
 
     private void RaiseValidation()
     {
-        NotifyValidationChanged(
-            nameof(ValidationProblem),
-            nameof(CanSave),
-            nameof(CanActivateSelected));
+        NotifyValidationChanged(nameof(ValidationProblem), nameof(CanSave), nameof(CanActivateSelected));
 
         RefreshCommands();
     }
 
-    protected override void
-        OnDirtyStateChanged()
+    protected override void OnDirtyStateChanged()
     {
         base.OnDirtyStateChanged();
 
-        OnPropertyChanged(
-            nameof(CanActivateSelected));
+        OnPropertyChanged(nameof(CanActivateSelected));
 
         RefreshCommands();
     }
 
-    protected override void
-        OnBusyStateChanged()
+    protected override void OnBusyStateChanged()
     {
         base.OnBusyStateChanged();
 
-        OnPropertyChanged(
-            nameof(CanActivateSelected));
+        OnPropertyChanged(nameof(CanActivateSelected));
 
         RefreshCommands();
     }

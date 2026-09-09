@@ -22,7 +22,8 @@ public sealed class ModeConfigurationTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"movie","name":"Movie","resources":{"theme":"Dark"}},
               {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}}]}]}
-            """);
+            """
+        );
 
         Assert.Equal(["space/movie", "space/desktop"], configuration.Modes.Select(mode => mode.Name));
     }
@@ -33,7 +34,8 @@ public sealed class ModeConfigurationTests
         // The seeded document, so it is read by the providers that wrote it.
         ModeConfiguration configuration = ModeConfiguration.Parse(
             ModeConfiguration.DefaultDocument(),
-            EngineBootstrap.ProductionProviders());
+            EngineBootstrap.ProductionProviders()
+        );
 
         Assert.NotNull(configuration.Find("desktop"));
         Assert.NotNull(configuration.Find("  Desktop "));
@@ -45,8 +47,7 @@ public sealed class ModeConfigurationTests
     {
         // The alternative is reading a newer document leniently, which gives
         // somebody a configuration they believe they have and do not.
-        var refusal = Assert.Throws<ModeConfigurationException>(
-            () => Parse("""{"schemaVersion":99,"spaces":[]}"""));
+        var refusal = Assert.Throws<ModeConfigurationException>(() => Parse("""{"schemaVersion":99,"spaces":[]}"""));
 
         Assert.Contains("version 1", refusal.Message, StringComparison.Ordinal);
     }
@@ -56,9 +57,11 @@ public sealed class ModeConfigurationTests
     {
         // And says what it does know, because the answer is a short closed list
         // and making somebody find it in source is unkind.
-        var refusal = Assert.Throws<ModeConfigurationException>(
-            () => Parse(
-                """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{"volume":"40"}}]}]}"""));
+        var refusal = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{"volume":"40"}}]}]}"""
+            )
+        );
 
         Assert.Contains("volume", refusal.Message, StringComparison.Ordinal);
         Assert.Contains("theme", refusal.Message, StringComparison.Ordinal);
@@ -67,9 +70,11 @@ public sealed class ModeConfigurationTests
     [Fact]
     public void Refuses_a_value_the_provider_will_not_take()
     {
-        var refusal = Assert.Throws<ModeConfigurationException>(
-            () => Parse(
-                """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{"theme":"Purple"}}]}]}"""));
+        var refusal = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"desktop","name":"Desktop","resources":{"theme":"Purple"}}]}]}"""
+            )
+        );
 
         Assert.Contains("Purple", refusal.Message, StringComparison.Ordinal);
     }
@@ -78,12 +83,15 @@ public sealed class ModeConfigurationTests
     public void Refuses_two_modes_of_the_same_name()
     {
         // One of them could never be selected, and nothing would say which.
-        Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}},
-              {"id":"desktop-2","name":"desktop","resources":{"theme":"Dark"}}]}]}
-            """));
+        Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}},
+                  {"id":"desktop-2","name":"desktop","resources":{"theme":"Dark"}}]}]}
+                """
+            )
+        );
     }
 
     [Theory]
@@ -91,7 +99,8 @@ public sealed class ModeConfigurationTests
     [InlineData("{ not json")]
     [InlineData("""{"schemaVersion":1,"modes":[]}""")]
     [InlineData(
-        """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"blank","name":"  ","resources":{}}]}]}""")]
+        """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"blank","name":"  ","resources":{}}]}]}"""
+    )]
     public void Refuses_a_document_it_cannot_use(string json) =>
         Assert.Throws<ModeConfigurationException>(() => Parse(json));
 
@@ -108,7 +117,8 @@ public sealed class ModeConfigurationTests
               "spaces": [ { "id": "space", "name": "Space", "activities": [
                 { "id": "desktop", "name": "Desktop", "resources": { "theme": "Light" } }, ] } ]
             }
-            """);
+            """
+        );
 
         Assert.Single(configuration.Modes);
     }
@@ -125,16 +135,19 @@ public sealed class ModeConfigurationTests
         // setting on the machine running the test is touched.
         ModeConfiguration configuration = ModeConfiguration.LoadOrCreate(
             root.Path,
-            EngineBootstrap.ProductionProviders());
+            EngineBootstrap.ProductionProviders()
+        );
 
         Assert.True(File.Exists(root.ConfigurationFile));
         Assert.Equal(
             ["desk/desktop", "desk/youtube", "desk/gaming", "desk/movie"],
-            configuration.Modes.Select(mode => mode.Name));
+            configuration.Modes.Select(mode => mode.Name)
+        );
 
         Assert.Equal(
             ["Desk — Desktop", "Desk — YouTube", "Desk — Gaming", "Desk — Movie"],
-            configuration.Targets.Targets.Select(target => target.DisplayPath));
+            configuration.Targets.Targets.Select(target => target.DisplayPath)
+        );
     }
 
     [Fact]
@@ -142,7 +155,8 @@ public sealed class ModeConfigurationTests
     {
         using var root = new TemporaryRoot();
         root.Write(
-            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"work","name":"Work","resources":{"theme":"Light"}}]}]}""");
+            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"work","name":"Work","resources":{"theme":"Light"}}]}]}"""
+        );
 
         ModeConfiguration configuration = ModeConfiguration.LoadOrCreate(root.Path, Providers);
 
@@ -158,7 +172,8 @@ public sealed class ModeConfigurationTests
         // it -- the one case nobody tests by hand.
         ModeConfiguration configuration = ModeConfiguration.Parse(
             ModeConfiguration.DefaultDocument(),
-            EngineBootstrap.ProductionProviders());
+            EngineBootstrap.ProductionProviders()
+        );
 
         Assert.Equal(4, configuration.Modes.Count);
         Assert.All(configuration.Modes, mode => Assert.NotEmpty(mode.Resources));
@@ -176,7 +191,8 @@ public sealed class ModeConfigurationTests
         // leave a mode doing half of what it says it does.
         ModeConfiguration configuration = ModeConfiguration.Parse(
             ModeConfiguration.DefaultDocument(),
-            EngineBootstrap.ProductionProviders());
+            EngineBootstrap.ProductionProviders()
+        );
 
         ConfiguredMode configured = Assert.IsType<ConfiguredMode>(configuration.Find(mode));
 
@@ -190,13 +206,16 @@ public sealed class ModeConfigurationTests
         // The same rule as an unknown resource key, for the same reason: a
         // mistyped section is not one anybody notices is missing. It is simply
         // ignored, and the positions the user carefully wrote never exist.
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,
-             "providers":{"cursour":{"positions":{}}},
-             "spaces":[{"id":"space","name":"Space","activities":[
-               {"id":"work","name":"Work","resources":{"theme":"Dark"}}]}]}
-            """));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,
+                 "providers":{"cursour":{"positions":{}}},
+                 "spaces":[{"id":"space","name":"Space","activities":[
+                   {"id":"work","name":"Work","resources":{"theme":"Dark"}}]}]}
+                """
+            )
+        );
 
         Assert.Contains("cursour", failure.Message, StringComparison.Ordinal);
     }
@@ -214,7 +233,9 @@ public sealed class ModeConfigurationTests
                  "spaces":[{"id":"space","name":"Space","activities":[
                    {"id":"work","name":"Work","resources":{"theme":"Dark"}}]}]}
                 """,
-                EngineBootstrap.ProductionProviders()));
+                EngineBootstrap.ProductionProviders()
+            )
+        );
 
         Assert.Contains("takes none", failure.Message, StringComparison.Ordinal);
     }
@@ -233,9 +254,13 @@ public sealed class ModeConfigurationTests
              "spaces":[{"id":"space","name":"Space","activities":[
                {"id":"movie","name":"Movie","resources":{"cursor":"Corner"}}]}]}
             """,
-            EngineBootstrap.ProductionProviders());
+            EngineBootstrap.ProductionProviders()
+        );
 
-        Assert.Equal("Corner", Assert.Single(Assert.IsType<ConfiguredMode>(configuration.Find("Movie")).Resources).Value);
+        Assert.Equal(
+            "Corner",
+            Assert.Single(Assert.IsType<ConfiguredMode>(configuration.Find("Movie")).Resources).Value
+        );
     }
 
     // ---- optional resources, without a new document version -----------------
@@ -246,8 +271,11 @@ public sealed class ModeConfigurationTests
         // The whole reason this is still schema version 1. Adding a version for
         // optionality would have made every configuration on every machine need
         // rewriting to express something almost none of them want to say.
-        ConfiguredResource resource = Only(Parse(
-            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}"""));
+        ConfiguredResource resource = Only(
+            Parse(
+                """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}"""
+            )
+        );
 
         Assert.Equal("Dark", resource.Value);
         Assert.False(resource.Optional);
@@ -256,11 +284,14 @@ public sealed class ModeConfigurationTests
     [Fact]
     public void Reads_a_resource_the_mode_says_it_can_manage_without()
     {
-        ConfiguredResource resource = Only(Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"movie","name":"Movie","resources":{"theme":{"value":"Dark","optional":true}}}]}]}
-            """));
+        ConfiguredResource resource = Only(
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"movie","name":"Movie","resources":{"theme":{"value":"Dark","optional":true}}}]}]}
+                """
+            )
+        );
 
         Assert.Equal("Dark", resource.Value);
         Assert.True(resource.Optional);
@@ -269,8 +300,13 @@ public sealed class ModeConfigurationTests
     [Fact]
     public void Reads_the_long_form_without_optional_as_required()
     {
-        Assert.False(Only(Parse(
-            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":{"value":"Dark"}}}]}]}""")).Optional);
+        Assert.False(
+            Only(
+                Parse(
+                    """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":{"value":"Dark"}}}]}]}"""
+                )
+            ).Optional
+        );
     }
 
     [Theory]
@@ -282,8 +318,11 @@ public sealed class ModeConfigurationTests
     [InlineData("42", "neither a value nor")]
     public void Refuses_an_optional_resource_it_cannot_read(string written, string expected)
     {
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            $$$"""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":{{{written}}}}}]}]}"""));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                $$$"""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":{{{written}}}}}]}]}"""
+            )
+        );
 
         Assert.Contains(expected, failure.Message, StringComparison.Ordinal);
     }
@@ -294,11 +333,14 @@ public sealed class ModeConfigurationTests
         // Optional is about what this machine can do, never about what the
         // document means. A misspelt theme is a mistake in the file on every
         // machine there is.
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"movie","name":"Movie","resources":{"theme":{"value":"Purple","optional":true}}}]}]}
-            """));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"movie","name":"Movie","resources":{"theme":{"value":"Purple","optional":true}}}]}]}
+                """
+            )
+        );
 
         Assert.Contains("Purple", failure.Message, StringComparison.Ordinal);
     }
@@ -306,11 +348,14 @@ public sealed class ModeConfigurationTests
     [Fact]
     public void Refuses_a_resource_nothing_can_apply_even_when_it_is_optional()
     {
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"movie","name":"Movie","resources":{"volume":{"value":"40","optional":true}}}]}]}
-            """));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"movie","name":"Movie","resources":{"volume":{"value":"40","optional":true}}}]}]}
+                """
+            )
+        );
 
         Assert.Contains("volume", failure.Message, StringComparison.Ordinal);
     }
@@ -322,11 +367,14 @@ public sealed class ModeConfigurationTests
         // silently does nothing is worse than one refused by name. Matched the
         // way a resource is matched to its provider, so a difference of case is
         // still the same resource.
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"movie","name":"Movie","resources":{"theme":"Dark","Theme":"Light"}}]}]}
-            """));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"movie","name":"Movie","resources":{"theme":"Dark","Theme":"Light"}}]}]}
+                """
+            )
+        );
 
         Assert.Contains("more than once", failure.Message, StringComparison.Ordinal);
     }

@@ -33,7 +33,8 @@ public sealed class PickerCanvas : FrameworkElement
         new FontFamily("Segoe UI"),
         FontStyles.Normal,
         FontWeights.Bold,
-        FontStretches.Normal);
+        FontStretches.Normal
+    );
 
     private readonly PickerCoordinator _picker;
 
@@ -58,9 +59,9 @@ public sealed class PickerCanvas : FrameworkElement
     /// is selected now, and what the machine is currently in.
     /// </remarks>
     public string AccessibleName =>
-        $"PCMode mode picker. {_picker.Favorites[_picker.Selected].Label} selected. " +
-        $"Currently {_picker.Current.Label}. " +
-        "Use the arrow keys to choose, Enter to apply, Escape to close.";
+        $"PCMode mode picker. {_picker.Favorites[_picker.Selected].Label} selected. "
+        + $"Currently {_picker.Current.Label}. "
+        + "Use the arrow keys to choose, Enter to apply, Escape to close.";
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PickerCanvasAutomationPeer(this);
 
@@ -109,8 +110,15 @@ public sealed class PickerCanvas : FrameworkElement
             // Colour identifies the mode and never changes; only opacity says
             // which wedge is chosen.
             var brush = new RadialGradientBrush(
-                Argb(favorite.Color, PickerEasing.Lerp(tuning.InactiveWedgeOpacity, tuning.SelectedWedgeInnerOpacity, amount)),
-                Argb(favorite.Color, PickerEasing.Lerp(tuning.InactiveWedgeOpacity, tuning.SelectedWedgeOuterOpacity, amount)))
+                Argb(
+                    favorite.Color,
+                    PickerEasing.Lerp(tuning.InactiveWedgeOpacity, tuning.SelectedWedgeInnerOpacity, amount)
+                ),
+                Argb(
+                    favorite.Color,
+                    PickerEasing.Lerp(tuning.InactiveWedgeOpacity, tuning.SelectedWedgeOuterOpacity, amount)
+                )
+            )
             {
                 MappingMode = BrushMappingMode.Absolute,
                 Center = center,
@@ -131,9 +139,15 @@ public sealed class PickerCanvas : FrameworkElement
             null,
             center,
             geometry.HubRadius,
-            geometry.HubRadius);
+            geometry.HubRadius
+        );
 
-    private static void DrawSeparators(DrawingContext context, PickerGeometry geometry, PickerTuning tuning, Point center)
+    private static void DrawSeparators(
+        DrawingContext context,
+        PickerGeometry geometry,
+        PickerTuning tuning,
+        Point center
+    )
     {
         if (tuning.SeparatorOpacity <= 0.0001)
         {
@@ -157,7 +171,8 @@ public sealed class PickerCanvas : FrameworkElement
             context.DrawLine(
                 pen,
                 new Point(center.X + (sx * inner), center.Y + (sy * inner)),
-                new Point(center.X + (sx * outer), center.Y + (sy * outer)));
+                new Point(center.X + (sx * outer), center.Y + (sy * outer))
+            );
         }
 
         context.DrawEllipse(null, pen, center, geometry.HubRadius, geometry.HubRadius);
@@ -180,7 +195,8 @@ public sealed class PickerCanvas : FrameworkElement
                 new Point(iconCenter.X, iconCenter.Y),
                 Math.Max(8, geometry.IconSize * PickerEasing.Lerp(1.0, tuning.SelectedIconScale, amount)),
                 Math.Max(1, geometry.IconStrokeWidth * PickerEasing.Lerp(1.0, tuning.SelectedIconStrokeScale, amount)),
-                ink);
+                ink
+            );
 
             PickerRect box = geometry.LabelBox(favorite.Direction);
 
@@ -190,7 +206,8 @@ public sealed class PickerCanvas : FrameworkElement
                 new Rect(box.X, box.Y, box.Width, box.Height),
                 Math.Max(1, geometry.LabelFontSize * PickerEasing.Lerp(1.0, tuning.SelectedLabelScale, amount)),
                 ink,
-                isSelected);
+                isSelected
+            );
         }
     }
 
@@ -210,10 +227,12 @@ public sealed class PickerCanvas : FrameworkElement
             _picker.Current.Icon,
             new Point(
                 center.X + (geometry.WheelDiameter * tuning.HubIconOffset.X),
-                iconCenterY + (geometry.WheelDiameter * tuning.HubIconOffset.Y)),
+                iconCenterY + (geometry.WheelDiameter * tuning.HubIconOffset.Y)
+            ),
             geometry.HubIconSize,
             geometry.HubIconStrokeWidth,
-            white);
+            white
+        );
 
         double textY = iconCenterY + (geometry.HubIconSize / 2) + gap;
 
@@ -224,10 +243,12 @@ public sealed class PickerCanvas : FrameworkElement
                 center.X - geometry.HubRadius + (geometry.WheelDiameter * tuning.HubLabelOffset.X),
                 textY + (geometry.WheelDiameter * tuning.HubLabelOffset.Y),
                 geometry.HubRadius * 2,
-                geometry.HubFontSize * 1.65),
+                geometry.HubFontSize * 1.65
+            ),
             geometry.HubFontSize,
             white,
-            bold: true);
+            bold: true
+        );
     }
 
     private void DrawCenteredText(
@@ -236,7 +257,8 @@ public sealed class PickerCanvas : FrameworkElement
         Rect box,
         double fontSize,
         Brush brush,
-        bool bold)
+        bool bold
+    )
     {
         if (string.IsNullOrEmpty(text) || fontSize <= 0)
         {
@@ -252,7 +274,8 @@ public sealed class PickerCanvas : FrameworkElement
             bold ? BoldFace : Face,
             fontSize,
             brush,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip)
+            VisualTreeHelper.GetDpi(this).PixelsPerDip
+        )
         {
             // Centred horizontally and unclipped vertically, matching the
             // original's string format. A long label overflows its box rather
@@ -285,7 +308,8 @@ public sealed class PickerCanvas : FrameworkElement
                 isLargeArc: false,
                 SweepDirection.Clockwise,
                 isStroked: false,
-                isSmoothJoin: false);
+                isSmoothJoin: false
+            );
         }
 
         geometry.Freeze();
@@ -297,17 +321,11 @@ public sealed class PickerCanvas : FrameworkElement
     {
         double radians = degrees * Math.PI / 180.0;
 
-        return new Point(
-            center.X + (radius * Math.Cos(radians)),
-            center.Y + (radius * Math.Sin(radians)));
+        return new Point(center.X + (radius * Math.Cos(radians)), center.Y + (radius * Math.Sin(radians)));
     }
 
     private static Color Argb(PickerColor color, double opacity) =>
-        Color.FromArgb(
-            (byte)Math.Round(Math.Clamp(opacity, 0.0, 1.0) * 255),
-            color.Red,
-            color.Green,
-            color.Blue);
+        Color.FromArgb((byte)Math.Round(Math.Clamp(opacity, 0.0, 1.0) * 255), color.Red, color.Green, color.Blue);
 
     private static Brush Solid(PickerColor color, double opacity)
     {

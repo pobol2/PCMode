@@ -53,7 +53,8 @@ public sealed class ConfigurationWorkspace : IConfigurationWorkspace
         string? root,
         LocalLog? log,
         IAudioRuntime? audio,
-        Func<RuntimeActivationOutcome>? activate)
+        Func<RuntimeActivationOutcome>? activate
+    )
     {
         Root = root;
         _log = log;
@@ -80,7 +81,8 @@ public sealed class ConfigurationWorkspace : IConfigurationWorkspace
         string? root = null,
         LocalLog? log = null,
         IAudioRuntime? audio = null,
-        Func<RuntimeActivationOutcome>? activate = null) => new(root, log, audio, activate);
+        Func<RuntimeActivationOutcome>? activate = null
+    ) => new(root, log, audio, activate);
 
     public IReadOnlyList<IModeResourceProvider> ReadProviders() => Read().Providers;
 
@@ -96,9 +98,7 @@ public sealed class ConfigurationWorkspace : IConfigurationWorkspace
     {
         RuntimeActivationOutcome? outcome = _activate?.Invoke();
 
-        string message = outcome is null or { Activated: true }
-            ? saved
-            : $"{saved} {outcome.Message}";
+        string message = outcome is null or { Activated: true } ? saved : $"{saved} {outcome.Message}";
 
         _log?.Information("Configuration", message);
 

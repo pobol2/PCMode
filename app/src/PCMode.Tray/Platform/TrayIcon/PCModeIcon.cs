@@ -10,8 +10,8 @@ public static class PCModeIcon
 
     public static Icon LoadTrayIcon()
     {
-        System.Windows.Resources.StreamResourceInfo resource = System.Windows.Application.GetResourceStream(
-            new Uri(ResourceUri, UriKind.Relative))
+        System.Windows.Resources.StreamResourceInfo resource =
+            System.Windows.Application.GetResourceStream(new Uri(ResourceUri, UriKind.Relative))
             ?? throw new InvalidOperationException("The embedded PCMode icon resource could not be found.");
 
         using Stream stream = resource.Stream;

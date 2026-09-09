@@ -3,8 +3,7 @@ using PCMode.Audio.Core.Models;
 
 namespace PCMode.Audio.Engine.Contracts;
 
-public interface IAudioOutputStream :
-    IDisposable
+public interface IAudioOutputStream : IDisposable
 {
     AudioFormat Format { get; }
 
@@ -18,8 +17,7 @@ public interface IAudioOutputStream :
     /// </summary>
     AudioOutputDiagnostics GetDiagnostics();
 
-    void Write(
-        AudioBlock block);
+    void Write(AudioBlock block);
 
     void Stop();
 }

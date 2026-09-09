@@ -63,10 +63,9 @@ public sealed class HomeViewModelTests
         var viewModel = new HomeViewModel(runtime);
         viewModel.Refresh();
 
-        HomeTargetCard movie = viewModel.TargetGroups
-            .Single()
-            .Targets
-            .Single(target => string.Equals(target.Name, "Movie", StringComparison.OrdinalIgnoreCase));
+        HomeTargetCard movie = viewModel
+            .TargetGroups.Single()
+            .Targets.Single(target => string.Equals(target.Name, "Movie", StringComparison.OrdinalIgnoreCase));
 
         await viewModel.ApplyAsync(movie.Key);
 

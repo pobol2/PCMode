@@ -156,7 +156,8 @@ public sealed class ProtectedLgTvCredentials : ILgTvCredentials
             problem = null;
             return true;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or CryptographicException)
+        catch (Exception exception)
+            when (exception is IOException or UnauthorizedAccessException or CryptographicException)
         {
             problem = $"Could not save the television's pairing key in {_folder}. {exception.Message}";
             return false;
@@ -191,8 +192,7 @@ public sealed class ProtectedLgTvCredentials : ILgTvCredentials
     /// enumerated the addresses of devices on somebody's network would be telling
     /// anything that could read the folder more than it needs to know.
     /// </remarks>
-    private string FileFor(string host) =>
-        Path.Combine(_folder, $"{Convert.ToHexString(Entropy(host))[..16]}.cred");
+    private string FileFor(string host) => Path.Combine(_folder, $"{Convert.ToHexString(Entropy(host))[..16]}.cred");
 
     /// <summary>
     /// Binds a stored credential to the television it was issued for.

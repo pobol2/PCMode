@@ -6,7 +6,7 @@ public enum AudioHealthState
     Pending,
     Healthy,
     Degraded,
-    Failed
+    Failed,
 }
 
 public enum AudioEngineRuntimeState
@@ -15,15 +15,14 @@ public enum AudioEngineRuntimeState
     Starting,
     Running,
     Stopping,
-    Failed
+    Failed,
 }
 
 public sealed class AudioEngineHealth
 {
     private readonly AudioRouteHealth[] _routes;
 
-    private readonly IReadOnlyList<AudioRouteHealth>
-        _readOnlyRoutes;
+    private readonly IReadOnlyList<AudioRouteHealth> _readOnlyRoutes;
 
     public AudioHealthState State { get; }
 
@@ -35,8 +34,7 @@ public sealed class AudioEngineHealth
 
     public AudioInputHealth? Input { get; }
 
-    public IReadOnlyList<AudioRouteHealth> Routes =>
-        _readOnlyRoutes;
+    public IReadOnlyList<AudioRouteHealth> Routes => _readOnlyRoutes;
 
     public AudioFailure? LastFailure { get; }
 
@@ -46,59 +44,40 @@ public sealed class AudioEngineHealth
         string? activeTargetName,
         IEnumerable<AudioRouteHealth> routes,
         AudioFailure? lastFailure,
-        AudioInputHealth? input = null)
+        AudioInputHealth? input = null
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            routes);
+        ArgumentNullException.ThrowIfNull(routes);
 
-        EngineState =
-            engineState;
+        EngineState = engineState;
 
-        ActiveTargetId =
-            activeTargetId;
+        ActiveTargetId = activeTargetId;
 
-        ActiveTargetName =
-            activeTargetName;
+        ActiveTargetName = activeTargetName;
 
-        Input =
-            input;
+        Input = input;
 
-        _routes =
-            routes.ToArray();
+        _routes = routes.ToArray();
 
-        _readOnlyRoutes =
-            Array.AsReadOnly(
-                _routes);
+        _readOnlyRoutes = Array.AsReadOnly(_routes);
 
-        LastFailure =
-            lastFailure;
+        LastFailure = lastFailure;
 
-        State =
-            Aggregate(
-                engineState,
-                input,
-                _routes);
+        State = Aggregate(engineState, input, _routes);
     }
 
-    public AudioEngineHealth WithInput(
-        AudioInputHealth input)
+    public AudioEngineHealth WithInput(AudioInputHealth input)
     {
-        ArgumentNullException.ThrowIfNull(
-            input);
+        ArgumentNullException.ThrowIfNull(input);
 
-        return new AudioEngineHealth(
-            EngineState,
-            ActiveTargetId,
-            ActiveTargetName,
-            _routes,
-            LastFailure,
-            input);
+        return new AudioEngineHealth(EngineState, ActiveTargetId, ActiveTargetName, _routes, LastFailure, input);
     }
 
     private static AudioHealthState Aggregate(
         AudioEngineRuntimeState engineState,
         AudioInputHealth? input,
-        IReadOnlyList<AudioRouteHealth> routes)
+        IReadOnlyList<AudioRouteHealth> routes
+    )
     {
         switch (engineState)
         {
@@ -128,42 +107,33 @@ public sealed class AudioEngineHealth
             }
         }
 
-        bool degraded =
-            false;
+        bool degraded = false;
 
-        for (int i = 0;
-             i < routes.Count;
-             i++)
+        for (int i = 0; i < routes.Count; i++)
         {
-            AudioRouteHealth route =
-                routes[i];
+            AudioRouteHealth route = routes[i];
 
             switch (route.State)
             {
                 case AudioRouteHealthState.Failed:
                 case AudioRouteHealthState.Unavailable:
-                    if (route.Requirement ==
-                        AudioRouteRequirement.Required)
+                    if (route.Requirement == AudioRouteRequirement.Required)
                     {
                         return AudioHealthState.Failed;
                     }
 
-                    degraded =
-                        true;
+                    degraded = true;
 
                     break;
 
                 case AudioRouteHealthState.Degraded:
                 case AudioRouteHealthState.Pending:
-                    degraded =
-                        true;
+                    degraded = true;
 
                     break;
             }
         }
 
-        return degraded
-            ? AudioHealthState.Degraded
-            : AudioHealthState.Healthy;
+        return degraded ? AudioHealthState.Degraded : AudioHealthState.Healthy;
     }
 }

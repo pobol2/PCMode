@@ -22,18 +22,10 @@ public interface IConfigurationPrompts
     /// Asks for a name, then hands it to <paramref name="apply"/>, keeping the
     /// dialog open and showing the returned problem until it returns null.
     /// </summary>
-    void PromptForName(
-        string title,
-        string message,
-        string initialValue,
-        Func<string, string?> apply);
+    void PromptForName(string title, string message, string initialValue, Func<string, string?> apply);
 
     /// <summary>Asks the same question asynchronously, for an <paramref name="apply"/> that has real work to do.</summary>
-    void PromptForNameAsync(
-        string title,
-        string message,
-        string initialValue,
-        Func<string, Task<string?>> apply);
+    void PromptForNameAsync(string title, string message, string initialValue, Func<string, Task<string?>> apply);
 
     /// <summary>A yes/no confirmation before something destructive. False means the caller must do nothing.</summary>
     bool Confirm(string message);
@@ -76,16 +68,16 @@ public sealed class NoConfigurationPrompts : IConfigurationPrompts
 {
     public static NoConfigurationPrompts Instance { get; } = new();
 
-    public void PromptForName(string title, string message, string initialValue, Func<string, string?> apply)
-    {
-    }
+    public void PromptForName(string title, string message, string initialValue, Func<string, string?> apply) { }
 
-    public void PromptForNameAsync(string title, string message, string initialValue, Func<string, Task<string?>> apply)
-    {
-    }
+    public void PromptForNameAsync(
+        string title,
+        string message,
+        string initialValue,
+        Func<string, Task<string?>> apply
+    ) { }
 
     public bool Confirm(string message) => false;
 
-    public bool ConfirmDiscardIfDirty(IUnsavedChanges source) =>
-        source is null || !source.HasUnsavedChanges;
+    public bool ConfirmDiscardIfDirty(IUnsavedChanges source) => source is null || !source.HasUnsavedChanges;
 }

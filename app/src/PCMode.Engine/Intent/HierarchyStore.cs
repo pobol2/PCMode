@@ -29,9 +29,10 @@ public enum NodeLevel
 /// </remarks>
 public sealed record NodeAddress(string SpaceId, string? ActivityId = null, string? SourceId = null)
 {
-    public NodeLevel Level => SourceId is not null
-        ? NodeLevel.Source
-        : ActivityId is not null ? NodeLevel.Activity : NodeLevel.Space;
+    public NodeLevel Level =>
+        SourceId is not null ? NodeLevel.Source
+        : ActivityId is not null ? NodeLevel.Activity
+        : NodeLevel.Space;
 
     /// <summary>The target key this addresses, or null for a Space.</summary>
     public string? TargetKey => ActivityId is null ? null : new TargetIdentity(SpaceId, ActivityId, SourceId).Key;
@@ -60,8 +61,7 @@ public sealed record ResourceEdit(ResourceIntent Intent, string? Value = null, b
 
     public static readonly ResourceEdit Cleared = new(ResourceIntent.Clear);
 
-    public static ResourceEdit Of(string value, bool optional = false) =>
-        new(ResourceIntent.Set, value, optional);
+    public static ResourceEdit Of(string value, bool optional = false) => new(ResourceIntent.Set, value, optional);
 }
 
 /// <summary>
@@ -107,23 +107,28 @@ public static class HierarchyStore
 
         string trimmed = name.Trim();
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (FindByName(spaces, trimmed) is not null)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed($"'{trimmed}' is already a space.");
+                if (FindByName(spaces, trimmed) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmed}' is already a space.");
+                }
+
+                spaces.Add(
+                    new JsonObject
+                    {
+                        ["id"] = LogicalId.From(trimmed, IdsOf(spaces)),
+                        ["name"] = trimmed,
+                        ["resources"] = new JsonObject(),
+                        ["activities"] = new JsonArray(),
+                    }
+                );
+
+                return null;
             }
-
-            spaces.Add(new JsonObject
-            {
-                ["id"] = LogicalId.From(trimmed, IdsOf(spaces)),
-                ["name"] = trimmed,
-                ["resources"] = new JsonObject(),
-                ["activities"] = new JsonArray(),
-            });
-
-            return null;
-        });
+        );
     }
 
     /// <summary>Adds an Activity to a Space, optionally copying another one whole.</summary>
@@ -134,46 +139,56 @@ public static class HierarchyStore
 
         string trimmed = name.Trim();
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (FindById(spaces, spaceId) is not JsonObject space)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed($"'{spaceId}' is not a configured space.");
-            }
-
-            JsonArray activities = ArrayIn(space, "activities");
-
-            if (FindByName(activities, trimmed) is not null)
-            {
-                return ModeSaveOutcome.Failed($"'{trimmed}' is already an activity of this space.");
-            }
-
-            if (duplicateOf is not null)
-            {
-                if (FindById(activities, duplicateOf) is not JsonObject original)
+                if (FindById(spaces, spaceId) is not JsonObject space)
                 {
-                    return ModeSaveOutcome.Failed($"'{duplicateOf}' is not an activity of this space.");
+                    return ModeSaveOutcome.Failed($"'{spaceId}' is not a configured space.");
                 }
 
-                AddDuplicate(activities, original, trimmed, NodeLevel.Activity);
+                JsonArray activities = ArrayIn(space, "activities");
+
+                if (FindByName(activities, trimmed) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmed}' is already an activity of this space.");
+                }
+
+                if (duplicateOf is not null)
+                {
+                    if (FindById(activities, duplicateOf) is not JsonObject original)
+                    {
+                        return ModeSaveOutcome.Failed($"'{duplicateOf}' is not an activity of this space.");
+                    }
+
+                    AddDuplicate(activities, original, trimmed, NodeLevel.Activity);
+                    return null;
+                }
+
+                activities.Add(
+                    new JsonObject
+                    {
+                        ["id"] = LogicalId.From(trimmed, IdsOf(activities)),
+                        ["name"] = trimmed,
+                        ["resources"] = new JsonObject(),
+                        ["sources"] = new JsonArray(),
+                    }
+                );
+
                 return null;
             }
-
-            activities.Add(new JsonObject
-            {
-                ["id"] = LogicalId.From(trimmed, IdsOf(activities)),
-                ["name"] = trimmed,
-                ["resources"] = new JsonObject(),
-                ["sources"] = new JsonArray(),
-            });
-
-            return null;
-        });
+        );
     }
 
     /// <summary>Adds a Source to an Activity.</summary>
     public static ModeSaveOutcome CreateSource(
-        string? root, string spaceId, string activityId, string name, SourceKind kind)
+        string? root,
+        string spaceId,
+        string activityId,
+        string name,
+        SourceKind kind
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(spaceId);
         ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
@@ -181,30 +196,38 @@ public static class HierarchyStore
 
         string trimmed = name.Trim();
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, new NodeAddress(spaceId, activityId), out JsonObject? activity, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (
+                    Locate(spaces, new NodeAddress(spaceId, activityId), out JsonObject? activity, out string? missing)
+                    is false
+                )
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                JsonArray sources = ArrayIn(activity!, "sources");
+
+                if (FindByName(sources, trimmed) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmed}' is already a source of this activity.");
+                }
+
+                sources.Add(
+                    new JsonObject
+                    {
+                        ["id"] = LogicalId.From(trimmed, IdsOf(sources)),
+                        ["name"] = trimmed,
+                        ["kind"] = Write(kind),
+                        ["resources"] = new JsonObject(),
+                    }
+                );
+
+                return null;
             }
-
-            JsonArray sources = ArrayIn(activity!, "sources");
-
-            if (FindByName(sources, trimmed) is not null)
-            {
-                return ModeSaveOutcome.Failed($"'{trimmed}' is already a source of this activity.");
-            }
-
-            sources.Add(new JsonObject
-            {
-                ["id"] = LogicalId.From(trimmed, IdsOf(sources)),
-                ["name"] = trimmed,
-                ["kind"] = Write(kind),
-                ["resources"] = new JsonObject(),
-            });
-
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -219,24 +242,28 @@ public static class HierarchyStore
 
         string trimmed = name.Trim();
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? original, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (Locate(spaces, address, out JsonObject? original, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                JsonArray siblings = SiblingsOf(spaces, address)!;
+
+                if (FindByName(siblings, trimmed) is not null)
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{trimmed}' is already the name of another {Describe(address.Level)}."
+                    );
+                }
+
+                AddDuplicate(siblings, original!, trimmed, address.Level);
+                return null;
             }
-
-            JsonArray siblings = SiblingsOf(spaces, address)!;
-
-            if (FindByName(siblings, trimmed) is not null)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{trimmed}' is already the name of another {Describe(address.Level)}.");
-            }
-
-            AddDuplicate(siblings, original!, trimmed, address.Level);
-            return null;
-        });
+        );
     }
 
     /// <summary>Renames one node. References are unaffected: they point at ids.</summary>
@@ -247,23 +274,28 @@ public static class HierarchyStore
 
         string trimmed = newName.Trim();
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                JsonArray siblings = SiblingsOf(spaces, address)!;
+
+                if (FindByName(siblings, trimmed) is JsonObject other && !ReferenceEquals(other, node))
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{trimmed}' is already the name of another {Describe(address.Level)}."
+                    );
+                }
+
+                node!["name"] = trimmed;
+                return null;
             }
-
-            JsonArray siblings = SiblingsOf(spaces, address)!;
-
-            if (FindByName(siblings, trimmed) is JsonObject other && !ReferenceEquals(other, node))
-            {
-                return ModeSaveOutcome.Failed($"'{trimmed}' is already the name of another {Describe(address.Level)}.");
-            }
-
-            node!["name"] = trimmed;
-            return null;
-        });
+        );
     }
 
     /// <summary>Changes what kind of thing a Source is.</summary>
@@ -276,16 +308,19 @@ public static class HierarchyStore
             return ModeSaveOutcome.Failed("Only a source has a kind.");
         }
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
-            }
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
 
-            node!["kind"] = Write(kind);
-            return null;
-        });
+                node!["kind"] = Write(kind);
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -301,24 +336,27 @@ public static class HierarchyStore
             return ModeSaveOutcome.Failed("A space is not a target and cannot be enabled or disabled.");
         }
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(node!, "enabled");
+
+                // True is the document default, so re-enabling restores the compact
+                // shape existing configurations already use.
+                if (!enabled)
+                {
+                    node!["enabled"] = false;
+                }
+
+                return null;
             }
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(node!, "enabled");
-
-            // True is the document default, so re-enabling restores the compact
-            // shape existing configurations already use.
-            if (!enabled)
-            {
-                node!["enabled"] = false;
-            }
-
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -335,32 +373,40 @@ public static class HierarchyStore
         string? root,
         NodeAddress address,
         IReadOnlyDictionary<string, string>? favoriteReplacements = null,
-        string? startupReplacement = null)
+        string? startupReplacement = null
+    )
     {
         ArgumentNullException.ThrowIfNull(address);
 
         IReadOnlyList<string> removedKeys = [];
 
-        ModeSaveOutcome outcome = Edit(root, (document, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        ModeSaveOutcome outcome = Edit(
+            root,
+            (document, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                removedKeys = KeysUnder(spaces, address);
+
+                string? replacementProblem = ReplaceApplicationReferences(
+                    document,
+                    removedKeys,
+                    favoriteReplacements,
+                    startupReplacement
+                );
+
+                if (replacementProblem is not null)
+                {
+                    return ModeSaveOutcome.Failed(replacementProblem);
+                }
+
+                SiblingsOf(spaces, address)!.Remove(node);
+                return null;
             }
-
-            removedKeys = KeysUnder(spaces, address);
-
-            string? replacementProblem = ReplaceApplicationReferences(
-                document, removedKeys, favoriteReplacements, startupReplacement);
-
-            if (replacementProblem is not null)
-            {
-                return ModeSaveOutcome.Failed(replacementProblem);
-            }
-
-            SiblingsOf(spaces, address)!.Remove(node);
-            return null;
-        });
+        );
 
         if (outcome.Success)
         {
@@ -379,26 +425,29 @@ public static class HierarchyStore
     {
         ArgumentNullException.ThrowIfNull(address);
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+                {
+                    return ModeSaveOutcome.Failed(missing!);
+                }
+
+                JsonArray siblings = SiblingsOf(spaces, address)!;
+                int index = siblings.IndexOf(node);
+                int destination = up ? index - 1 : index + 1;
+
+                if (destination < 0 || destination >= siblings.Count)
+                {
+                    return ModeSaveOutcome.Failed(up ? "That is already first." : "That is already last.");
+                }
+
+                siblings.RemoveAt(index);
+                siblings.Insert(destination, node);
+                return null;
             }
-
-            JsonArray siblings = SiblingsOf(spaces, address)!;
-            int index = siblings.IndexOf(node);
-            int destination = up ? index - 1 : index + 1;
-
-            if (destination < 0 || destination >= siblings.Count)
-            {
-                return ModeSaveOutcome.Failed(up ? "That is already first." : "That is already last.");
-            }
-
-            siblings.RemoveAt(index);
-            siblings.Insert(destination, node);
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -413,45 +462,54 @@ public static class HierarchyStore
     /// mean opposite things.
     /// </remarks>
     public static ModeSaveOutcome SaveResources(
-        string? root, NodeAddress address, IReadOnlyDictionary<string, ResourceEdit> resources)
+        string? root,
+        NodeAddress address,
+        IReadOnlyDictionary<string, ResourceEdit> resources
+    )
     {
         ArgumentNullException.ThrowIfNull(address);
         ArgumentNullException.ThrowIfNull(resources);
 
-        return Edit(root, (_, spaces) =>
-        {
-            if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
+        return Edit(
+            root,
+            (_, spaces) =>
             {
-                return ModeSaveOutcome.Failed(missing!);
-            }
-
-            JsonObject holder = HardwareConfigurationStore.AsObject(node!, "resources");
-
-            foreach ((string key, ResourceEdit edit) in resources)
-            {
-                HardwareConfigurationStore.RemoveCaseInsensitive(holder, key);
-
-                switch (edit.Intent)
+                if (Locate(spaces, address, out JsonObject? node, out string? missing) is false)
                 {
-                    case ResourceIntent.Set:
-                        holder.Add(key, edit.Optional
-                            ? new JsonObject { ["value"] = edit.Value, ["optional"] = true }
-                            : JsonValue.Create(edit.Value)!);
-                        break;
-
-                    case ResourceIntent.Clear:
-                        holder.Add(key, null);
-                        break;
-
-                    default:
-                        // Inherit: the line is gone, which is how a document
-                        // says nothing about a resource.
-                        break;
+                    return ModeSaveOutcome.Failed(missing!);
                 }
-            }
 
-            return null;
-        });
+                JsonObject holder = HardwareConfigurationStore.AsObject(node!, "resources");
+
+                foreach ((string key, ResourceEdit edit) in resources)
+                {
+                    HardwareConfigurationStore.RemoveCaseInsensitive(holder, key);
+
+                    switch (edit.Intent)
+                    {
+                        case ResourceIntent.Set:
+                            holder.Add(
+                                key,
+                                edit.Optional
+                                    ? new JsonObject { ["value"] = edit.Value, ["optional"] = true }
+                                    : JsonValue.Create(edit.Value)!
+                            );
+                            break;
+
+                        case ResourceIntent.Clear:
+                            holder.Add(key, null);
+                            break;
+
+                        default:
+                            // Inherit: the line is gone, which is how a document
+                            // says nothing about a resource.
+                            break;
+                    }
+                }
+
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -510,8 +568,10 @@ public static class HierarchyStore
             // The same validation a real startup runs, against the same
             // production provider list -- not a second, hand-rolled check that
             // could disagree with it.
-            IReadOnlyList<IModeResourceProvider> providers =
-                EngineBootstrap.ProductionProviders(resolvedRoot, candidate);
+            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(
+                resolvedRoot,
+                candidate
+            );
 
             configuration = ModeConfiguration.Parse(candidate, providers, path);
         }
@@ -617,8 +677,10 @@ public static class HierarchyStore
 
             keys.Add(address.TargetKey!);
 
-            if (FindById(spaces, address.SpaceId) is JsonObject owner &&
-                FindById(ArrayIn(owner, "activities"), address.ActivityId) is JsonObject activity)
+            if (
+                FindById(spaces, address.SpaceId) is JsonObject owner
+                && FindById(ArrayIn(owner, "activities"), address.ActivityId) is JsonObject activity
+            )
             {
                 keys.AddRange(SourceKeys(address.SpaceId, address.ActivityId, activity));
             }
@@ -666,7 +728,8 @@ public static class HierarchyStore
         JsonObject document,
         IReadOnlyList<string> removedKeys,
         IReadOnlyDictionary<string, string>? favoriteReplacements,
-        string? startupReplacement)
+        string? startupReplacement
+    )
     {
         if (HardwareConfigurationStore.FindProperty(document, "application") is not JsonObject application)
         {
@@ -676,8 +739,10 @@ public static class HierarchyStore
         bool Removed(string? reference) =>
             reference is not null && removedKeys.Contains(reference.Trim(), StringComparer.OrdinalIgnoreCase);
 
-        if (HardwareConfigurationStore.FindProperty(application, "picker") is JsonObject picker &&
-            HardwareConfigurationStore.FindProperty(picker, "favorites") is JsonArray favorites)
+        if (
+            HardwareConfigurationStore.FindProperty(application, "picker") is JsonObject picker
+            && HardwareConfigurationStore.FindProperty(picker, "favorites") is JsonArray favorites
+        )
         {
             foreach (JsonNode? node in favorites)
             {
@@ -687,14 +752,16 @@ public static class HierarchyStore
                 }
 
                 string direction =
-                    HardwareConfigurationStore.FindProperty(favorite, "direction") is JsonValue directionValue &&
-                    directionValue.TryGetValue(out string? directionText)
+                    HardwareConfigurationStore.FindProperty(favorite, "direction") is JsonValue directionValue
+                    && directionValue.TryGetValue(out string? directionText)
                         ? directionText
                         : "?";
 
-                if (favoriteReplacements is null ||
-                    !favoriteReplacements.TryGetValue(direction, out string? replacement) ||
-                    string.IsNullOrWhiteSpace(replacement))
+                if (
+                    favoriteReplacements is null
+                    || !favoriteReplacements.TryGetValue(direction, out string? replacement)
+                    || string.IsNullOrWhiteSpace(replacement)
+                )
                 {
                     return $"The {direction} picker favorite names it. Choose a replacement for it first.";
                 }
@@ -717,8 +784,10 @@ public static class HierarchyStore
             }
         }
 
-        if (HardwareConfigurationStore.FindProperty(application, "startup") is JsonObject startup &&
-            Removed(TargetOf(startup)))
+        if (
+            HardwareConfigurationStore.FindProperty(application, "startup") is JsonObject startup
+            && Removed(TargetOf(startup))
+        )
         {
             if (startupReplacement is null)
             {
@@ -748,8 +817,10 @@ public static class HierarchyStore
             return null;
         }
 
-        if (HardwareConfigurationStore.FindProperty(application, "picker") is JsonObject picker &&
-            HardwareConfigurationStore.FindProperty(picker, "favorites") is JsonArray favorites)
+        if (
+            HardwareConfigurationStore.FindProperty(application, "picker") is JsonObject picker
+            && HardwareConfigurationStore.FindProperty(picker, "favorites") is JsonArray favorites
+        )
         {
             foreach (JsonNode? node in favorites)
             {
@@ -761,8 +832,8 @@ public static class HierarchyStore
                 if (!targets.TryResolve(reference, out _, out string? unresolved))
                 {
                     string direction =
-                        HardwareConfigurationStore.FindProperty(favorite, "direction") is JsonValue directionValue &&
-                        directionValue.TryGetValue(out string? directionText)
+                        HardwareConfigurationStore.FindProperty(favorite, "direction") is JsonValue directionValue
+                        && directionValue.TryGetValue(out string? directionText)
                             ? directionText
                             : "?";
 
@@ -773,13 +844,16 @@ public static class HierarchyStore
 
         if (HardwareConfigurationStore.FindProperty(application, "startup") is JsonObject startup)
         {
-            string? behavior = HardwareConfigurationStore.FindProperty(startup, "behavior") is JsonValue behaviorValue &&
-                behaviorValue.TryGetValue(out string? behaviorText)
+            string? behavior =
+                HardwareConfigurationStore.FindProperty(startup, "behavior") is JsonValue behaviorValue
+                && behaviorValue.TryGetValue(out string? behaviorText)
                     ? behaviorText
                     : null;
 
-            if (string.Equals(behavior, "switchToMode", StringComparison.OrdinalIgnoreCase) &&
-                !targets.TryResolve(TargetOf(startup), out _, out string? unresolved))
+            if (
+                string.Equals(behavior, "switchToMode", StringComparison.OrdinalIgnoreCase)
+                && !targets.TryResolve(TargetOf(startup), out _, out string? unresolved)
+            )
             {
                 return $"The startup target would be '{TargetOf(startup)}'. {unresolved}";
             }
@@ -833,9 +907,11 @@ public static class HierarchyStore
     {
         foreach (string name in (string[])["target", "mode"])
         {
-            if (HardwareConfigurationStore.FindProperty(holder, name) is JsonValue value &&
-                value.TryGetValue(out string? reference) &&
-                !string.IsNullOrWhiteSpace(reference))
+            if (
+                HardwareConfigurationStore.FindProperty(holder, name) is JsonValue value
+                && value.TryGetValue(out string? reference)
+                && !string.IsNullOrWhiteSpace(reference)
+            )
             {
                 return reference;
             }
@@ -851,19 +927,21 @@ public static class HierarchyStore
         holder["target"] = reference;
     }
 
-    private static string Write(SourceKind kind) => kind switch
-    {
-        SourceKind.ExternalDevice => "externalDevice",
-        SourceKind.TvApplication => "tvApplication",
-        _ => "pcApplication",
-    };
+    private static string Write(SourceKind kind) =>
+        kind switch
+        {
+            SourceKind.ExternalDevice => "externalDevice",
+            SourceKind.TvApplication => "tvApplication",
+            _ => "pcApplication",
+        };
 
-    private static string Describe(NodeLevel level) => level switch
-    {
-        NodeLevel.Space => "space",
-        NodeLevel.Activity => "activity",
-        _ => "source",
-    };
+    private static string Describe(NodeLevel level) =>
+        level switch
+        {
+            NodeLevel.Space => "space",
+            NodeLevel.Activity => "activity",
+            _ => "source",
+        };
 
     private static JsonArray ArrayIn(JsonObject parent, string name)
     {
@@ -928,26 +1006,26 @@ public static class HierarchyStore
     }
 
     private static ISet<string> IdsOf(JsonArray nodes) =>
-        new HashSet<string>(
-            nodes.OfType<JsonObject>().Select(IdOf).OfType<string>(),
-            StringComparer.OrdinalIgnoreCase);
+        new HashSet<string>(nodes.OfType<JsonObject>().Select(IdOf).OfType<string>(), StringComparer.OrdinalIgnoreCase);
 
     private static JsonObject? FindById(JsonArray nodes, string id) =>
-        nodes.OfType<JsonObject>().FirstOrDefault(node =>
-            string.Equals(IdOf(node), id.Trim(), StringComparison.OrdinalIgnoreCase));
+        nodes
+            .OfType<JsonObject>()
+            .FirstOrDefault(node => string.Equals(IdOf(node), id.Trim(), StringComparison.OrdinalIgnoreCase));
 
     private static JsonObject? FindByName(JsonArray nodes, string name) =>
-        nodes.OfType<JsonObject>().FirstOrDefault(node =>
-            string.Equals(NameOf(node), name, StringComparison.OrdinalIgnoreCase));
+        nodes
+            .OfType<JsonObject>()
+            .FirstOrDefault(node => string.Equals(NameOf(node), name, StringComparison.OrdinalIgnoreCase));
 
     private static string? IdOf(JsonObject node) => Text(node, "id");
 
     private static string? NameOf(JsonObject node) => Text(node, "name");
 
     private static string? Text(JsonObject node, string property) =>
-        HardwareConfigurationStore.FindProperty(node, property) is JsonValue value &&
-        value.TryGetValue(out string? text) &&
-        !string.IsNullOrWhiteSpace(text)
+        HardwareConfigurationStore.FindProperty(node, property) is JsonValue value
+        && value.TryGetValue(out string? text)
+        && !string.IsNullOrWhiteSpace(text)
             ? text.Trim()
             : null;
 }

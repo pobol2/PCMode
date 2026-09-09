@@ -28,7 +28,8 @@ public class RepeatedRegion : ItemsControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(RepeatedRegion),
-            new FrameworkPropertyMetadata(typeof(RepeatedRegion)));
+            new FrameworkPropertyMetadata(typeof(RepeatedRegion))
+        );
     }
 
     /// <summary>The contract this slot was matched to, once its block applied its template.</summary>

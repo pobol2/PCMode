@@ -6,13 +6,10 @@ public static class HostProtocolVersion
 
     public const int MinimumCompatible = 1;
 
-    public const string DefaultPipeName =
-        "PCMode.Audio.Host";
+    public const string DefaultPipeName = "PCMode.Audio.Host";
 
-    public static bool IsCompatible(
-        int version)
+    public static bool IsCompatible(int version)
     {
-        return version >= MinimumCompatible &&
-               version <= Current;
+        return version >= MinimumCompatible && version <= Current;
     }
 }

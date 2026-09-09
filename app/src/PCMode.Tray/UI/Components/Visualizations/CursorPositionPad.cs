@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-
 // The tray enables WinForms for the notify icon, whose implicit usings
 // bring System.Drawing's Point and System.Windows.Forms' Control into
 // scope alongside WPF's own.
@@ -39,51 +38,68 @@ public sealed class CursorPositionPad : Control
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(typeof(CursorPositionPad)));
+            new FrameworkPropertyMetadata(typeof(CursorPositionPad))
+        );
     }
 
-    public static readonly DependencyProperty XModeProperty =
-        DependencyProperty.Register(
-            nameof(XMode), typeof(string), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(
-                PercentageMode,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                OnPositionChanged));
+    public static readonly DependencyProperty XModeProperty = DependencyProperty.Register(
+        nameof(XMode),
+        typeof(string),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(
+            PercentageMode,
+            FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            OnPositionChanged
+        )
+    );
 
-    public static readonly DependencyProperty YModeProperty =
-        DependencyProperty.Register(
-            nameof(YMode), typeof(string), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(
-                PercentageMode,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                OnPositionChanged));
+    public static readonly DependencyProperty YModeProperty = DependencyProperty.Register(
+        nameof(YMode),
+        typeof(string),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(
+            PercentageMode,
+            FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            OnPositionChanged
+        )
+    );
 
-    public static readonly DependencyProperty XValueProperty =
-        DependencyProperty.Register(
-            nameof(XValue), typeof(double), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(50d, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnPositionChanged));
+    public static readonly DependencyProperty XValueProperty = DependencyProperty.Register(
+        nameof(XValue),
+        typeof(double),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(50d, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnPositionChanged)
+    );
 
-    public static readonly DependencyProperty YValueProperty =
-        DependencyProperty.Register(
-            nameof(YValue), typeof(double), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(50d, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnPositionChanged));
+    public static readonly DependencyProperty YValueProperty = DependencyProperty.Register(
+        nameof(YValue),
+        typeof(double),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(50d, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnPositionChanged)
+    );
 
     /// <summary>The real pixel width of the display this surface stands for.</summary>
-    public static readonly DependencyProperty TargetWidthProperty =
-        DependencyProperty.Register(
-            nameof(TargetWidth), typeof(double), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(1920d, OnPositionChanged));
+    public static readonly DependencyProperty TargetWidthProperty = DependencyProperty.Register(
+        nameof(TargetWidth),
+        typeof(double),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(1920d, OnPositionChanged)
+    );
 
-    public static readonly DependencyProperty TargetHeightProperty =
-        DependencyProperty.Register(
-            nameof(TargetHeight), typeof(double), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(1080d, OnPositionChanged));
+    public static readonly DependencyProperty TargetHeightProperty = DependencyProperty.Register(
+        nameof(TargetHeight),
+        typeof(double),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(1080d, OnPositionChanged)
+    );
 
     /// <summary>Whether there is a linked position to place at all; the marker is hidden and dragging refused when there is not.</summary>
-    public static readonly DependencyProperty IsActiveProperty =
-        DependencyProperty.Register(
-            nameof(IsActive), typeof(bool), typeof(CursorPositionPad),
-            new FrameworkPropertyMetadata(false, OnPositionChanged));
+    public static readonly DependencyProperty IsActiveProperty = DependencyProperty.Register(
+        nameof(IsActive),
+        typeof(bool),
+        typeof(CursorPositionPad),
+        new FrameworkPropertyMetadata(false, OnPositionChanged)
+    );
 
     public string XMode
     {
@@ -216,13 +232,15 @@ public sealed class CursorPositionPad : Control
         double xFraction = Math.Clamp(point.X / width, 0, 1);
         double yFraction = Math.Clamp(point.Y / height, 0, 1);
 
-        XValue = XMode == PercentageMode
-            ? Math.Round(xFraction * 100, 1, MidpointRounding.AwayFromZero)
-            : Math.Round((1 - xFraction) * Math.Max(1, TargetWidth), MidpointRounding.AwayFromZero);
+        XValue =
+            XMode == PercentageMode
+                ? Math.Round(xFraction * 100, 1, MidpointRounding.AwayFromZero)
+                : Math.Round((1 - xFraction) * Math.Max(1, TargetWidth), MidpointRounding.AwayFromZero);
 
-        YValue = YMode == PercentageMode
-            ? Math.Round(yFraction * 100, 1, MidpointRounding.AwayFromZero)
-            : Math.Round((1 - yFraction) * Math.Max(1, TargetHeight), MidpointRounding.AwayFromZero);
+        YValue =
+            YMode == PercentageMode
+                ? Math.Round(yFraction * 100, 1, MidpointRounding.AwayFromZero)
+                : Math.Round((1 - yFraction) * Math.Max(1, TargetHeight), MidpointRounding.AwayFromZero);
     }
 
     private void UpdateMarker()
@@ -245,13 +263,15 @@ public sealed class CursorPositionPad : Control
         double availableWidth = Math.Max(0, width - _marker.Width);
         double availableHeight = Math.Max(0, height - _marker.Height);
 
-        double xFraction = XMode == PercentageMode
-            ? Math.Clamp(XValue / 100, 0, 1)
-            : Math.Clamp((Math.Max(1, TargetWidth) - XValue) / Math.Max(1, TargetWidth), 0, 1);
+        double xFraction =
+            XMode == PercentageMode
+                ? Math.Clamp(XValue / 100, 0, 1)
+                : Math.Clamp((Math.Max(1, TargetWidth) - XValue) / Math.Max(1, TargetWidth), 0, 1);
 
-        double yFraction = YMode == PercentageMode
-            ? Math.Clamp(YValue / 100, 0, 1)
-            : Math.Clamp((Math.Max(1, TargetHeight) - YValue) / Math.Max(1, TargetHeight), 0, 1);
+        double yFraction =
+            YMode == PercentageMode
+                ? Math.Clamp(YValue / 100, 0, 1)
+                : Math.Clamp((Math.Max(1, TargetHeight) - YValue) / Math.Max(1, TargetHeight), 0, 1);
 
         Canvas.SetLeft(_marker, xFraction * availableWidth);
         Canvas.SetTop(_marker, yFraction * availableHeight);

@@ -20,11 +20,7 @@ public static class MonitorControlTypeChoice
     public const string Television = "Television";
 
     public static IReadOnlyList<MonitorControlTypeOption> Options { get; } =
-    [
-        new(None, "None"),
-        new(Ddc, "DDC/CI"),
-        new(Television, "Television"),
-    ];
+    [new(None, "None"), new(Ddc, "DDC/CI"), new(Television, "Television")];
 }
 
 public sealed record MonitorControlTypeOption(string Value, string Label);
@@ -56,7 +52,8 @@ public sealed class MonitorConfigurationSectionRow : ObservableObject, ISelectio
     public MonitorConfigurationSectionRow(
         LayoutMonitorRow monitor,
         MonitorDdcSectionViewModel ddc,
-        MonitorTelevisionSectionViewModel television)
+        MonitorTelevisionSectionViewModel television
+    )
     {
         ArgumentNullException.ThrowIfNull(monitor);
         ArgumentNullException.ThrowIfNull(ddc);
@@ -120,29 +117,28 @@ public sealed class MonitorConfigurationSectionRow : ObservableObject, ISelectio
     /// <summary>Whether the picker can still be changed -- locked once either side is actually bound.</summary>
     public bool CanChooseControlType => !Ddc.HasBinding && !Television.HasAssociation;
 
-    public bool ShowDdc =>
-        string.Equals(_controlType, MonitorControlTypeChoice.Ddc, StringComparison.Ordinal);
+    public bool ShowDdc => string.Equals(_controlType, MonitorControlTypeChoice.Ddc, StringComparison.Ordinal);
 
-    public bool ShowDdcCapabilityBadge =>
-        ShowDdc && Ddc.HasCapabilityBadge;
+    public bool ShowDdcCapabilityBadge => ShowDdc && Ddc.HasCapabilityBadge;
 
     public bool ShowTelevision =>
         string.Equals(_controlType, MonitorControlTypeChoice.Television, StringComparison.Ordinal);
 
     /// <summary>Whether nothing is picked yet -- shown in Advanced as a pointer back to Essential settings.</summary>
-    public bool ShowNone =>
-        string.Equals(_controlType, MonitorControlTypeChoice.None, StringComparison.Ordinal);
+    public bool ShowNone => string.Equals(_controlType, MonitorControlTypeChoice.None, StringComparison.Ordinal);
 
     private void OnChildStateChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (ReferenceEquals(sender, Ddc) &&
-            e.PropertyName == nameof(MonitorDdcSectionViewModel.HasCapabilityBadge))
+        if (ReferenceEquals(sender, Ddc) && e.PropertyName == nameof(MonitorDdcSectionViewModel.HasCapabilityBadge))
         {
             OnPropertyChanged(nameof(ShowDdcCapabilityBadge));
         }
 
-        if (e.PropertyName is nameof(MonitorDdcSectionViewModel.HasBinding)
-            or nameof(MonitorTelevisionSectionViewModel.HasAssociation))
+        if (
+            e.PropertyName
+            is nameof(MonitorDdcSectionViewModel.HasBinding)
+                or nameof(MonitorTelevisionSectionViewModel.HasAssociation)
+        )
         {
             RecomputeControlType();
         }
@@ -159,11 +155,10 @@ public sealed class MonitorConfigurationSectionRow : ObservableObject, ISelectio
 
     private void RecomputeControlType()
     {
-        string next = Ddc.HasBinding
-            ? MonitorControlTypeChoice.Ddc
-            : Television.HasAssociation
-                ? MonitorControlTypeChoice.Television
-                : MonitorControlTypeChoice.None;
+        string next =
+            Ddc.HasBinding ? MonitorControlTypeChoice.Ddc
+            : Television.HasAssociation ? MonitorControlTypeChoice.Television
+            : MonitorControlTypeChoice.None;
 
         if (SetProperty(ref _controlType, next, nameof(ControlType)))
         {
@@ -174,5 +169,4 @@ public sealed class MonitorConfigurationSectionRow : ObservableObject, ISelectio
             OnPropertyChanged(nameof(CanChooseControlType));
         }
     }
-
 }

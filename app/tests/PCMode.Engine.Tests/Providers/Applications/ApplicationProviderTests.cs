@@ -11,7 +11,8 @@ public sealed class ApplicationProviderTests
     private static (ApplicationProvider Provider, FakeProcessHost Desktop) Application(
         string name,
         string entry,
-        FakeProcessHost? desktop = null)
+        FakeProcessHost? desktop = null
+    )
     {
         FakeProcessHost host = desktop ?? new FakeProcessHost();
 
@@ -22,7 +23,8 @@ public sealed class ApplicationProviderTests
                 ProcessName = name,
                 Start = new LaunchCommand { Executable = name },
             },
-            host);
+            host
+        );
 
         using JsonDocument document = JsonDocument.Parse($$"""{ "{{name}}": {{entry}} }""");
 
@@ -40,7 +42,9 @@ public sealed class ApplicationProviderTests
     public void Reports_whether_the_application_is_running()
     {
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "process": "steam", "start": "steam://open/bigpicture" }""");
+            "Steam",
+            """{ "process": "steam", "start": "steam://open/bigpicture" }"""
+        );
 
         Assert.Equal("Stopped", steam.Read());
 
@@ -55,7 +59,9 @@ public sealed class ApplicationProviderTests
         // 'Stopped' would be a claim about the machine that nothing checked, and
         // acting on it means starting a second copy of whatever is already open.
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "process": "steam", "start": "steam://open/bigpicture" }""");
+            "Steam",
+            """{ "process": "steam", "start": "steam://open/bigpicture" }"""
+        );
 
         desktop.LookingFails = new InvalidOperationException("the process list could not be read.");
 
@@ -68,8 +74,10 @@ public sealed class ApplicationProviderTests
     public void Does_not_start_a_second_copy_of_something_already_running()
     {
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""",
-            new FakeProcessHost().AlreadyRunning("player"));
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }""",
+            new FakeProcessHost().AlreadyRunning("player")
+        );
 
         player.Apply("Running", CancellationToken.None);
 
@@ -83,8 +91,10 @@ public sealed class ApplicationProviderTests
         // running" is true and is not a reason to skip. The flag that makes the
         // engine dispatch anyway is on the policy; this is the other half of it.
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "process": "steam", "start": "steam://open/bigpicture", "reactivate": true }""",
-            new FakeProcessHost().AlreadyRunning("steam"));
+            "Steam",
+            """{ "process": "steam", "start": "steam://open/bigpicture", "reactivate": true }""",
+            new FakeProcessHost().AlreadyRunning("steam")
+        );
 
         Assert.True(steam.PolicyFor("Running").DispatchAtLeastOnce);
 
@@ -101,7 +111,8 @@ public sealed class ApplicationProviderTests
         // visibly opens and shuts for no reason anybody watching could explain.
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
             "Steam",
-            """{ "process": "steam", "start": "steam://open/bigpicture", "stop": "steam://exit", "reactivate": true }""");
+            """{ "process": "steam", "start": "steam://open/bigpicture", "stop": "steam://exit", "reactivate": true }"""
+        );
 
         Assert.False(steam.PolicyFor("Stopped").DispatchAtLeastOnce);
 
@@ -118,7 +129,8 @@ public sealed class ApplicationProviderTests
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
             "Steam",
             """{ "process": "steam", "start": "steam://open/bigpicture", "stop": "steam://exit" }""",
-            new FakeProcessHost().AlreadyRunning("steam").Closing("steam://exit", "steam"));
+            new FakeProcessHost().AlreadyRunning("steam").Closing("steam://exit", "steam")
+        );
 
         steam.Apply("Stopped", CancellationToken.None);
 
@@ -130,8 +142,10 @@ public sealed class ApplicationProviderTests
     public void Ends_an_application_that_offers_no_way_to_be_asked()
     {
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""",
-            new FakeProcessHost().AlreadyRunning("player"));
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }""",
+            new FakeProcessHost().AlreadyRunning("player")
+        );
 
         player.Apply("Stopped", CancellationToken.None);
 
@@ -146,7 +160,8 @@ public sealed class ApplicationProviderTests
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
             "Player",
             """{ "process": "player", "start": "C:\\player.exe", "restartWhen": [ "display" ] }""",
-            new FakeProcessHost().AlreadyRunning("player").Launching("C:\\player.exe", "player"));
+            new FakeProcessHost().AlreadyRunning("player").Launching("C:\\player.exe", "player")
+        );
 
         // Nothing has moved yet, so a running copy is exactly what was asked for.
         player.Preceded(Changed());
@@ -160,9 +175,7 @@ public sealed class ApplicationProviderTests
 
         player.Apply("Running", CancellationToken.None);
 
-        Assert.Equal(
-            ["kill player", "wait for player to stop", "start C:\\player.exe"],
-            desktop.Did);
+        Assert.Equal(["kill player", "wait for player to stop", "start C:\\player.exe"], desktop.Did);
 
         // And it is fresh again immediately -- otherwise the readback would find
         // it stale all over again, because the display did still change, and the
@@ -178,7 +191,8 @@ public sealed class ApplicationProviderTests
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
             "Player",
             """{ "process": "player", "start": "C:\\player.exe", "restartWhen": [ "display" ] }""",
-            new FakeProcessHost().AlreadyRunning("player"));
+            new FakeProcessHost().AlreadyRunning("player")
+        );
 
         player.Preceded(Changed("audio", "theme"));
 
@@ -203,13 +217,15 @@ public sealed class ApplicationProviderTests
               "ready": { "activate": true, "keys": "f" }
             }
             """,
-            new FakeProcessHost().Launching("C:\\player.exe", "player"));
+            new FakeProcessHost().Launching("C:\\player.exe", "player")
+        );
 
         player.Apply("Running", CancellationToken.None);
 
         Assert.Equal(
             ["start C:\\player.exe", "wait for player's window", "activate player", "type 'f' at player"],
-            desktop.Did);
+            desktop.Did
+        );
     }
 
     [Fact]
@@ -227,7 +243,8 @@ public sealed class ApplicationProviderTests
               "ready": { "activate": true, "keys": "f" }
             }
             """,
-            new FakeProcessHost().AlreadyRunning("player"));
+            new FakeProcessHost().AlreadyRunning("player")
+        );
 
         player.Apply("Running", CancellationToken.None);
 
@@ -249,7 +266,8 @@ public sealed class ApplicationProviderTests
               "ready": { "activate": true, "keys": "f" }
             }
             """,
-            new FakeProcessHost().Launching("C:\\player.exe", "player"));
+            new FakeProcessHost().Launching("C:\\player.exe", "player")
+        );
 
         desktop.ActivationWorks = false;
 
@@ -273,7 +291,8 @@ public sealed class ApplicationProviderTests
               "ready": { "keys": "f" }
             }
             """,
-            new FakeProcessHost().Launching("C:\\player.exe", "player"));
+            new FakeProcessHost().Launching("C:\\player.exe", "player")
+        );
 
         desktop.WindowAppears = false;
 
@@ -292,11 +311,10 @@ public sealed class ApplicationProviderTests
         // would be doing the opposite of what it was asked.
         (ApplicationProvider player, _) = Application(
             "Player",
-            """{ "process": "player", "start": "C:\\player.exe", "requires": { "display": "TVOnly" } }""");
+            """{ "process": "player", "start": "C:\\player.exe", "requires": { "display": "TVOnly" } }"""
+        );
 
-        Assert.Equal(
-            [new ResourceRequirement("display", "TVOnly")],
-            player.RequirementsFor("Running"));
+        Assert.Equal([new ResourceRequirement("display", "TVOnly")], player.RequirementsFor("Running"));
 
         Assert.Empty(player.RequirementsFor("Stopped"));
     }
@@ -308,7 +326,9 @@ public sealed class ApplicationProviderTests
         // it unavailable would make every mode that tidies up after itself refuse
         // to run on a machine with one fewer program.
         (ApplicationProvider player, _) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""");
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }"""
+        );
 
         Assert.Equal(AvailabilityState.Unavailable, player.AvailabilityOf("Running").State);
         Assert.Equal(AvailabilityState.Available, player.AvailabilityOf("Stopped").State);
@@ -321,13 +341,17 @@ public sealed class ApplicationProviderTests
         // from a slow one: the launch appears to succeed, nothing ever arrives,
         // and the mode fails on a timeout rather than saying Steam is not here.
         (ApplicationProvider missing, _) = Application(
-            "Steam", """{ "process": "steam", "start": "steam://open/bigpicture" }""");
+            "Steam",
+            """{ "process": "steam", "start": "steam://open/bigpicture" }"""
+        );
 
         Assert.Equal(AvailabilityState.Unavailable, missing.AvailabilityOf("Running").State);
 
         (ApplicationProvider installed, _) = Application(
-            "Steam", """{ "process": "steam", "start": "steam://open/bigpicture" }""",
-            new FakeProcessHost().Handles("steam"));
+            "Steam",
+            """{ "process": "steam", "start": "steam://open/bigpicture" }""",
+            new FakeProcessHost().Handles("steam")
+        );
 
         Assert.Equal(AvailabilityState.Available, installed.AvailabilityOf("Running").State);
     }
@@ -336,7 +360,9 @@ public sealed class ApplicationProviderTests
     public void A_lookup_that_failed_has_not_established_that_anything_is_missing()
     {
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""");
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }"""
+        );
 
         desktop.Files.Clear();
 
@@ -353,7 +379,9 @@ public sealed class ApplicationProviderTests
     public void Takes_running_and_stopped_in_any_case(string value)
     {
         (ApplicationProvider player, _) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""");
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }"""
+        );
 
         Assert.True(player.IsValidValue(value, out _));
     }
@@ -364,8 +392,10 @@ public sealed class ApplicationProviderTests
         // 'Runnning' falling through to the stop case closes somebody's game, and
         // nothing about the failure would connect it to the typo.
         (ApplicationProvider player, FakeProcessHost desktop) = Application(
-            "Player", """{ "process": "player", "start": "C:\\player.exe" }""",
-            new FakeProcessHost().AlreadyRunning("player"));
+            "Player",
+            """{ "process": "player", "start": "C:\\player.exe" }""",
+            new FakeProcessHost().AlreadyRunning("player")
+        );
 
         Assert.False(player.IsValidValue("Runnning", out string? problem));
         Assert.Contains("Running", problem);
@@ -379,8 +409,7 @@ public sealed class ApplicationProviderTests
     [Fact]
     public void A_launch_only_application_is_dispatched_once_rather_than_polled()
     {
-        (ApplicationProvider steam, _) = Application(
-            "Steam", """{ "start": "steam://open/bigpicture" }""");
+        (ApplicationProvider steam, _) = Application("Steam", """{ "start": "steam://open/bigpicture" }""");
 
         Assert.False(steam.Definition.CanObserve);
         Assert.Equal(ConvergencePolicy.DispatchOnce, steam.PolicyFor("Running"));
@@ -390,8 +419,10 @@ public sealed class ApplicationProviderTests
     public void A_launch_only_application_never_claims_a_readback_state()
     {
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "start": "steam://open/bigpicture" }""",
-            new FakeProcessHost().AlreadyRunning("steam"));
+            "Steam",
+            """{ "start": "steam://open/bigpicture" }""",
+            new FakeProcessHost().AlreadyRunning("steam")
+        );
 
         // Even though the host would say it is running, nothing was configured
         // that PCMode trusts as this application's identity.
@@ -402,7 +433,9 @@ public sealed class ApplicationProviderTests
     public void A_launch_only_application_dispatches_the_start_command_and_nothing_more()
     {
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "start": "steam://open/bigpicture" }""");
+            "Steam",
+            """{ "start": "steam://open/bigpicture" }"""
+        );
 
         steam.Apply("Running", CancellationToken.None);
 
@@ -413,7 +446,9 @@ public sealed class ApplicationProviderTests
     public void A_launch_only_application_cannot_be_stopped()
     {
         (ApplicationProvider steam, FakeProcessHost desktop) = Application(
-            "Steam", """{ "start": "steam://open/bigpicture" }""");
+            "Steam",
+            """{ "start": "steam://open/bigpicture" }"""
+        );
 
         Assert.False(steam.IsValidValue("Stopped", out string? problem));
         Assert.Contains("launch-only", problem, StringComparison.OrdinalIgnoreCase);

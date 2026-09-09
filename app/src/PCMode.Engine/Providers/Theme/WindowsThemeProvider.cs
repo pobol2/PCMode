@@ -53,9 +53,7 @@ public sealed class WindowsThemeProvider : IConvergentProvider
     private readonly IThemeStore _store;
 
     public WindowsThemeProvider()
-        : this(new RegistryThemeStore())
-    {
-    }
+        : this(new RegistryThemeStore()) { }
 
     public WindowsThemeProvider(IThemeStore store)
     {
@@ -80,14 +78,15 @@ public sealed class WindowsThemeProvider : IConvergentProvider
     /// A second attempt, and no more. Once a write has landed and been undone,
     /// writing it a third time is arguing with whatever is undoing it.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 2,
-        RetryInterval = TimeSpan.FromSeconds(2),
-        PollInterval = TimeSpan.FromMilliseconds(200),
-        Settle = TimeSpan.Zero,
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 2,
+            RetryInterval = TimeSpan.FromSeconds(2),
+            PollInterval = TimeSpan.FromMilliseconds(200),
+            Settle = TimeSpan.Zero,
+        };
 
     public bool IsValidValue(string value, out string? problem)
     {
@@ -164,8 +163,7 @@ public sealed class WindowsThemeProvider : IConvergentProvider
 /// </remarks>
 public sealed class RegistryThemeStore : IThemeStore
 {
-    private const string PersonalizeKey =
-        @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
 
     private const string AppsValue = "AppsUseLightTheme";
     private const string SystemValue = "SystemUsesLightTheme";
@@ -242,9 +240,11 @@ public sealed class RegistryThemeStore : IThemeStore
 
     public void WriteUsesLightTheme(bool light)
     {
-        using RegistryKey key = Registry.CurrentUser.CreateSubKey(PersonalizeKey, writable: true)
+        using RegistryKey key =
+            Registry.CurrentUser.CreateSubKey(PersonalizeKey, writable: true)
             ?? throw new InvalidOperationException(
-                $"Could not open HKCU\\{PersonalizeKey} to change the Windows theme.");
+                $"Could not open HKCU\\{PersonalizeKey} to change the Windows theme."
+            );
 
         int value = light ? 1 : 0;
 
@@ -277,7 +277,8 @@ public sealed class RegistryThemeStore : IThemeStore
             "ImmersiveColorSet",
             SmtoAbortIfHung,
             millisecondsTimeout: 1000,
-            out _);
+            out _
+        );
     }
 
     private const int WmSettingChange = 0x001A;
@@ -292,5 +293,6 @@ public sealed class RegistryThemeStore : IThemeStore
         string lParam,
         uint flags,
         uint millisecondsTimeout,
-        out nint result);
+        out nint result
+    );
 }

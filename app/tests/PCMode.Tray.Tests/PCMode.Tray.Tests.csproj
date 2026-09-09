@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <!--
     Target's own architecture, kept honest: navigation validity, page
     construction, page lifecycle/caching, the shared configuration ViewModel
@@ -42,5 +41,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PCMode.Tray\PCMode.Tray.csproj" />
   </ItemGroup>
-
 </Project>

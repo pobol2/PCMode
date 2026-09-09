@@ -23,12 +23,9 @@ public sealed class LgTvProviderSetTests
     {
         // The ordinary machine, and every document this build has ever written.
         // A second set here would be a second socket to the same television.
-        IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Television", "192.0.2.31")));
+        IReadOnlyList<IModeResourceProvider> providers = Providers(Section(("Television", "192.0.2.31")));
 
-        Assert.Equal(
-            ["tvPower", "tvInput", "tvSignal", "tvProfile"],
-            providers.Select(provider => provider.Key));
+        Assert.Equal(["tvPower", "tvInput", "tvSignal", "tvProfile"], providers.Select(provider => provider.Key));
 
         Assert.Single(providers.OfType<TvPowerProvider>());
         Assert.Single(Connections(providers));
@@ -58,12 +55,22 @@ public sealed class LgTvProviderSetTests
     public void Two_televisions_are_two_connections_and_only_the_default_keeps_the_historical_keys()
     {
         IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Living Room"));
+            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Living Room")
+        );
 
         Assert.Equal(
-            ["tv.Bedroom.input", "tv.Bedroom.power", "tv.Bedroom.profile", "tv.Bedroom.signal",
-             "tvInput", "tvPower", "tvProfile", "tvSignal"],
-            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase));
+            [
+                "tv.Bedroom.input",
+                "tv.Bedroom.power",
+                "tv.Bedroom.profile",
+                "tv.Bedroom.signal",
+                "tvInput",
+                "tvPower",
+                "tvProfile",
+                "tvSignal",
+            ],
+            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase)
+        );
 
         Assert.Equal(2, Connections(providers).Count);
     }
@@ -72,7 +79,8 @@ public sealed class LgTvProviderSetTests
     public void The_default_is_the_only_thing_that_decides_which_television_the_historical_keys_mean()
     {
         IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Bedroom"));
+            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Bedroom")
+        );
 
         TvPowerProvider historical = Historical(providers);
 
@@ -92,7 +100,8 @@ public sealed class LgTvProviderSetTests
         // So that adding a television never silently re-points existing modes at
         // a different device just because of where it landed in the file.
         IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32")));
+            Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"))
+        );
 
         Assert.Equal("Bedroom", Historical(providers).TelevisionName);
     }
@@ -130,10 +139,7 @@ public sealed class LgTvProviderSetTests
             ["macAddress"] = "00:00:5E:00:53:32",
         };
 
-        var section = new JsonObject
-        {
-            ["televisions"] = new JsonObject { ["Bedroom"] = bedroom },
-        };
+        var section = new JsonObject { ["televisions"] = new JsonObject { ["Bedroom"] = bedroom } };
 
         IReadOnlyList<IModeResourceProvider> providers = Providers(section);
 
@@ -150,7 +156,11 @@ public sealed class LgTvProviderSetTests
     {
         // The failure this exists to catch: a mode switching the bedroom's input
         // being satisfied by the living room being on.
-        JsonObject section = Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Living Room");
+        JsonObject section = Section(
+            ("Living Room", "192.0.2.31"),
+            ("Bedroom", "192.0.2.32"),
+            defaultName: "Living Room"
+        );
         AddInputsAndProfile(section, "Bedroom");
 
         IReadOnlyList<IModeResourceProvider> providers = Providers(section);
@@ -163,7 +173,8 @@ public sealed class LgTvProviderSetTests
 
         Assert.Equal(
             ["tv.Bedroom.power", "tv.Bedroom.input"],
-            signal.RequirementsFor("Movie").Select(requirement => requirement.Key));
+            signal.RequirementsFor("Movie").Select(requirement => requirement.Key)
+        );
 
         Assert.Equal("tv.Bedroom.signal", Assert.Single(picture.RequirementsFor("Movie")).Key);
     }
@@ -172,7 +183,11 @@ public sealed class LgTvProviderSetTests
     public void The_default_televisions_dependencies_use_the_historical_keys_throughout()
     {
         // Mixing the two spellings would put one television in a plan twice.
-        JsonObject section = Section(("Living Room", "192.0.2.31"), ("Bedroom", "192.0.2.32"), defaultName: "Living Room");
+        JsonObject section = Section(
+            ("Living Room", "192.0.2.31"),
+            ("Bedroom", "192.0.2.32"),
+            defaultName: "Living Room"
+        );
         AddInputsAndProfile(section, "Living Room");
 
         IReadOnlyList<IModeResourceProvider> providers = Providers(section);
@@ -190,7 +205,8 @@ public sealed class LgTvProviderSetTests
         // Retry, repair and health all read the display name. "Television power"
         // is not an answer to which device somebody has to go and look at.
         IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Living Room", "192.0.2.31"), defaultName: "Living Room"));
+            Section(("Living Room", "192.0.2.31"), defaultName: "Living Room")
+        );
 
         Assert.Equal("Living Room television power", Historical(providers).DisplayName);
     }
@@ -209,23 +225,19 @@ public sealed class LgTvProviderSetTests
     private static TvPowerProvider Historical(IReadOnlyList<IModeResourceProvider> providers) =>
         (TvPowerProvider)Historical(providers, typeof(TvPowerProvider));
 
-    private static IModeResourceProvider Historical(
-        IReadOnlyList<IModeResourceProvider> providers,
-        Type kind) =>
+    private static IModeResourceProvider Historical(IReadOnlyList<IModeResourceProvider> providers, Type kind) =>
         providers.Single(provider =>
-            provider.GetType() == kind &&
-            !provider.Key.StartsWith("tv.", StringComparison.OrdinalIgnoreCase));
+            provider.GetType() == kind && !provider.Key.StartsWith("tv.", StringComparison.OrdinalIgnoreCase)
+        );
 
     private static TvPowerProvider Named(IReadOnlyList<IModeResourceProvider> providers, string key) =>
         (TvPowerProvider)Named(providers, key, typeof(TvPowerProvider));
 
-    private static IModeResourceProvider Named(
-        IReadOnlyList<IModeResourceProvider> providers,
-        string key,
-        Type kind)
+    private static IModeResourceProvider Named(IReadOnlyList<IModeResourceProvider> providers, string key, Type kind)
     {
         IModeResourceProvider found = providers.Single(provider =>
-            string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase));
+            string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase)
+        );
 
         Assert.IsType(kind, found);
         return found;
@@ -240,32 +252,28 @@ public sealed class LgTvProviderSetTests
     /// television is serialized through.
     /// </remarks>
     private static IReadOnlyList<LgTvConnection> Connections(IReadOnlyList<IModeResourceProvider> providers) =>
-        [.. providers.OfType<TvPowerProvider>()
-            .Select(power => power.Connection)
-            .Distinct(ReferenceEqualityComparer.Instance)
-            .Cast<LgTvConnection>()];
+        [
+            .. providers
+                .OfType<TvPowerProvider>()
+                .Select(power => power.Connection)
+                .Distinct(ReferenceEqualityComparer.Instance)
+                .Cast<LgTvConnection>(),
+        ];
 
     /// <summary>Builds a <c>providers.lgTv</c> body naming one or more televisions.</summary>
-    private static JsonObject Section(
-        params (string Name, string Host)[] televisions)
+    private static JsonObject Section(params (string Name, string Host)[] televisions)
     {
         var map = new JsonObject();
 
         foreach ((string name, string host) in televisions)
         {
-            map[name] = new JsonObject
-            {
-                ["host"] = host,
-                ["macAddress"] = "00:00:5E:00:53:31",
-            };
+            map[name] = new JsonObject { ["host"] = host, ["macAddress"] = "00:00:5E:00:53:31" };
         }
 
         return new JsonObject { ["televisions"] = map };
     }
 
-    private static JsonObject Section(
-        (string Name, string Host)[] televisions,
-        string? defaultName)
+    private static JsonObject Section((string Name, string Host)[] televisions, string? defaultName)
     {
         JsonObject section = Section(televisions);
 
@@ -277,16 +285,14 @@ public sealed class LgTvProviderSetTests
         return section;
     }
 
-    private static JsonObject Section(
-        (string Name, string Host) television,
-        string? defaultName = null) =>
+    private static JsonObject Section((string Name, string Host) television, string? defaultName = null) =>
         Section([television], defaultName);
 
     private static JsonObject Section(
         (string Name, string Host) first,
         (string Name, string Host) second,
-        string? defaultName = null) =>
-        Section([first, second], defaultName);
+        string? defaultName = null
+    ) => Section([first, second], defaultName);
 
     private static void AddInputsAndProfile(JsonObject section, string televisionName)
     {
@@ -347,8 +353,7 @@ public sealed class LgTvProviderSetTests
 
         using var root = new TemporaryRoot(json);
 
-        IReadOnlyList<IModeResourceProvider> providers =
-            EngineBootstrap.TelevisionProviders(json, root.Path);
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.TelevisionProviders(json, root.Path);
 
         ModeConfiguration.Parse(json, providers);
 

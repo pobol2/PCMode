@@ -1,0 +1,71 @@
+# C/C++ formatting policy for PCMode.
+#
+# .editorconfig owns indentation width and line endings for every language in
+# this repository; it cannot express layout, and the C/C++ formatter reads only
+# this file. The two are kept in agreement by hand: 4 spaces, 120 columns.
+#
+# The subject is the WDK/ACX virtual endpoint driver under app/driver, so two
+# settings here are correctness constraints rather than taste:
+#   - SortIncludes is Never, because wdm.h and its siblings must be included in
+#     a specific order and reordering them does not compile.
+#   - ReflowComments is Never, so the hand-wrapped explanatory comment blocks in
+#     the driver keep the shape their author gave them.
+
+---
+Language: Cpp
+BasedOnStyle: Microsoft
+
+ColumnLimit: 120
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: All
+
+BreakBeforeBraces: Allman
+BreakAfterReturnType: Automatic
+IndentCaseLabels: true
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+AlignAfterOpenBracket: Align
+AlignEscapedNewlines: Left
+AlignTrailingComments: true
+BinPackArguments: false
+BinPackParameters: false
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceAfterCStyleCast: false
+SpacesBeforeTrailingComments: 1
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+
+SortIncludes: Never
+ReflowComments: Never
+InsertNewlineAtEOF: true
+
+# .editorconfig says crlf for these files; state it here too, or clang-format
+# derives the ending from the file it is given and the two disagree.
+LineEnding: CRLF
+
+# Source-annotation language macros. Without this clang-format treats them as
+# ordinary identifiers and inserts breaks in the middle of a declaration.
+AttributeMacros:
+  - _In_
+  - _In_opt_
+  - _Out_
+  - _Out_opt_
+  - _Inout_
+  - _Inout_opt_
+  - _Must_inspect_result_
+  - _IRQL_requires_max_
+  - _IRQL_requires_same_
+  - PAGED_CODE_SEG
+  - INIT_CODE_SEG

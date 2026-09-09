@@ -58,9 +58,8 @@ internal sealed class FakeAudioEndpoints : IAudioEndpoints
 
     public IReadOnlyList<AudioEndpoint> ActivePlayback() => Fails is null ? _active : throw Fails;
 
-    public AudioEndpoint? DefaultPlayback() => Fails is not null
-        ? throw Fails
-        : _active.FirstOrDefault(endpoint => endpoint.Id == Default);
+    public AudioEndpoint? DefaultPlayback() =>
+        Fails is not null ? throw Fails : _active.FirstOrDefault(endpoint => endpoint.Id == Default);
 
     public void MakeDefault(string endpointId)
     {
@@ -77,9 +76,10 @@ internal sealed class FakeAudioEndpoints : IAudioEndpoints
         }
     }
 
-    public double? ReadVolume(string endpointId) => Fails is not null
-        ? throw Fails
-        : WithoutVolume.Contains(endpointId) ? null : Volumes.GetValueOrDefault(endpointId, 0.5);
+    public double? ReadVolume(string endpointId) =>
+        Fails is not null ? throw Fails
+        : WithoutVolume.Contains(endpointId) ? null
+        : Volumes.GetValueOrDefault(endpointId, 0.5);
 
     public void SetVolume(string endpointId, double level)
     {

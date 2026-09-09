@@ -34,7 +34,8 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
     public static bool TryParse(
         JsonElement written,
         out IReadOnlyDictionary<string, AudioProcessingProfileSettings>? profiles,
-        out string? problem)
+        out string? problem
+    )
     {
         profiles = null;
 
@@ -77,7 +78,8 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
         string name,
         JsonElement written,
         out AudioProcessingProfileSettings? profile,
-        out string? problem)
+        out string? problem
+    )
     {
         profile = null;
         string where = $"'{SettingsPath}.{name}'";
@@ -95,13 +97,16 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
         {
             if (field.NameEquals("preampGainDb"))
             {
-                if (!TryReadNumber(
+                if (
+                    !TryReadNumber(
                         field.Value,
                         $"{where}.preampGainDb",
                         ParametricEqProfile.MinPreampGainDb,
                         ParametricEqProfile.MaxPreampGainDb,
                         out preampGainDb,
-                        out problem))
+                        out problem
+                    )
+                )
                 {
                     return false;
                 }
@@ -176,7 +181,11 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
             {
                 string? text = field.Value.ValueKind == JsonValueKind.String ? field.Value.GetString() : null;
 
-                if (text is null || !Enum.TryParse(text, ignoreCase: true, out EqFilterType parsed) || !Enum.IsDefined(parsed))
+                if (
+                    text is null
+                    || !Enum.TryParse(text, ignoreCase: true, out EqFilterType parsed)
+                    || !Enum.IsDefined(parsed)
+                )
                 {
                     problem = $"{where}.type must be one of: {string.Join(", ", Enum.GetNames<EqFilterType>())}.";
                     return false;
@@ -193,7 +202,16 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
             }
             else if (field.NameEquals("gainDb"))
             {
-                if (!TryReadNumber(field.Value, $"{where}.gainDb", EqBand.MinGainDb, EqBand.MaxGainDb, out gainDb, out problem))
+                if (
+                    !TryReadNumber(
+                        field.Value,
+                        $"{where}.gainDb",
+                        EqBand.MinGainDb,
+                        EqBand.MaxGainDb,
+                        out gainDb,
+                        out problem
+                    )
+                )
                 {
                     return false;
                 }
@@ -207,7 +225,8 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
             }
             else
             {
-                problem = $"{where} does not understand '{field.Name}'. It takes 'type', 'frequencyHz', 'gainDb' and 'q'.";
+                problem =
+                    $"{where} does not understand '{field.Name}'. It takes 'type', 'frequencyHz', 'gainDb' and 'q'.";
                 return false;
             }
         }
@@ -233,12 +252,22 @@ public sealed record AudioProcessingProfileSettings(string Name, float PreampGai
     }
 
     private static bool TryReadNumber(
-        JsonElement written, string where, double lowest, double highest, out double value, out string? problem)
+        JsonElement written,
+        string where,
+        double lowest,
+        double highest,
+        out double value,
+        out string? problem
+    )
     {
         value = 0;
 
-        if (written.ValueKind != JsonValueKind.Number || !written.TryGetDouble(out value) ||
-            double.IsNaN(value) || double.IsInfinity(value))
+        if (
+            written.ValueKind != JsonValueKind.Number
+            || !written.TryGetDouble(out value)
+            || double.IsNaN(value)
+            || double.IsInfinity(value)
+        )
         {
             problem = $"'{where}' must be a number.";
             return false;

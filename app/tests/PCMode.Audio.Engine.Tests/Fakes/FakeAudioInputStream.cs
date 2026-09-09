@@ -3,8 +3,7 @@ using PCMode.Audio.Engine.Contracts;
 
 namespace PCMode.Audio.Engine.Tests.Fakes;
 
-internal sealed class FakeAudioInputStream :
-    IAudioInputStream
+internal sealed class FakeAudioInputStream : IAudioInputStream
 {
     private readonly float[] _samples;
     private int _samplePosition;
@@ -15,9 +14,7 @@ internal sealed class FakeAudioInputStream :
 
     public bool IsDisposed { get; private set; }
 
-    public FakeAudioInputStream(
-        AudioFormat format,
-        IEnumerable<float> samples)
+    public FakeAudioInputStream(AudioFormat format, IEnumerable<float> samples)
     {
         ArgumentNullException.ThrowIfNull(samples);
 
@@ -26,50 +23,38 @@ internal sealed class FakeAudioInputStream :
 
         if (_samples.Length % format.ChannelCount != 0)
         {
-            throw new ArgumentException(
-                "Fake input must contain complete audio frames.",
-                nameof(samples));
+            throw new ArgumentException("Fake input must contain complete audio frames.", nameof(samples));
         }
     }
 
     public void Start()
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         IsStarted = true;
     }
 
     public int Read(Span<float> destination)
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!IsStarted)
         {
-            throw new InvalidOperationException(
-                "The fake input is not started.");
+            throw new InvalidOperationException("The fake input is not started.");
         }
 
-        int remainingSamples =
-            _samples.Length - _samplePosition;
+        int remainingSamples = _samples.Length - _samplePosition;
 
-        int sampleCount =
-            Math.Min(destination.Length, remainingSamples);
+        int sampleCount = Math.Min(destination.Length, remainingSamples);
 
-        sampleCount -=
-            sampleCount % Format.ChannelCount;
+        sampleCount -= sampleCount % Format.ChannelCount;
 
         if (sampleCount == 0)
         {
             return 0;
         }
 
-        _samples
-            .AsSpan(_samplePosition, sampleCount)
-            .CopyTo(destination);
+        _samples.AsSpan(_samplePosition, sampleCount).CopyTo(destination);
 
         _samplePosition += sampleCount;
 
@@ -78,9 +63,7 @@ internal sealed class FakeAudioInputStream :
 
     public void Stop()
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         IsStarted = false;
     }
@@ -92,8 +75,7 @@ internal sealed class FakeAudioInputStream :
     }
 }
 
-internal sealed class FakeAudioInputStreamFactory :
-    IAudioInputStreamFactory
+internal sealed class FakeAudioInputStreamFactory : IAudioInputStreamFactory
 {
     private readonly AudioFormat _format;
     private readonly float[] _samples;
@@ -102,9 +84,7 @@ internal sealed class FakeAudioInputStreamFactory :
 
     public FakeAudioInputStream? LastStream { get; private set; }
 
-    public FakeAudioInputStreamFactory(
-        AudioFormat format,
-        params float[] samples)
+    public FakeAudioInputStreamFactory(AudioFormat format, params float[] samples)
     {
         _format = format;
         _samples = samples;
@@ -114,9 +94,7 @@ internal sealed class FakeAudioInputStreamFactory :
     {
         CreateCount++;
 
-        LastStream = new FakeAudioInputStream(
-            _format,
-            _samples);
+        LastStream = new FakeAudioInputStream(_format, _samples);
 
         return LastStream;
     }

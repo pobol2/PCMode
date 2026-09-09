@@ -63,7 +63,8 @@ public sealed class ApplicationDiscoverer(IReadOnlyList<IModeResourceProvider> p
                 definition.Name,
                 HardwareItemStatus.NotDetected,
                 Capitalize(availability.Explain()),
-                details);
+                details
+            );
         }
 
         if (availability.State == AvailabilityState.Unknown)
@@ -72,7 +73,8 @@ public sealed class ApplicationDiscoverer(IReadOnlyList<IModeResourceProvider> p
                 definition.Name,
                 HardwareItemStatus.Error,
                 Capitalize(availability.Explain()),
-                details);
+                details
+            );
         }
 
         string? running = SafeRead(application);

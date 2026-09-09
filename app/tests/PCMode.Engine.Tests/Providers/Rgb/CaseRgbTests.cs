@@ -33,7 +33,8 @@ internal sealed class FakeOpenRgbClient : IOpenRgbClient
         IReadOnlyList<KeyValuePair<int, string>> devices,
         string rgb,
         TimeSpan within,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -80,7 +81,8 @@ public sealed class CaseRgbTests
               "executable": "{{LegacyOpenRgb.Replace("\\", "\\\\")}}",
               "devices": { "1": "Static", "0": "Direct" }
             }
-            """);
+            """
+        );
 
     [Fact]
     public void Is_switched_off_on_a_machine_that_never_asked_for_it()
@@ -121,9 +123,7 @@ public sealed class CaseRgbTests
 
         Assert.Equal("0020FF", rgb);
         Assert.Equal(TimeSpan.FromSeconds(4), within);
-        Assert.Equal(
-            [new KeyValuePair<int, string>(0, "Direct"), new KeyValuePair<int, string>(1, "Static")],
-            devices);
+        Assert.Equal([new KeyValuePair<int, string>(0, "Direct"), new KeyValuePair<int, string>(1, "Static")], devices);
     }
 
     [Fact]
@@ -183,8 +183,9 @@ public sealed class CaseRgbTests
         (CaseRgbProvider provider, FakeOpenRgbClient client) = Lighting();
         client.WriteException = new InvalidOperationException("no such controller");
 
-        Exception failure = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("0020FF", CancellationToken.None));
+        Exception failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("0020FF", CancellationToken.None)
+        );
 
         Assert.Contains("0020FF", failure.Message, StringComparison.Ordinal);
         Assert.Contains("no such controller", failure.Message, StringComparison.Ordinal);
@@ -198,8 +199,7 @@ public sealed class CaseRgbTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        Assert.Throws<OperationCanceledException>(
-            () => provider.Apply("0020FF", cancellation.Token));
+        Assert.Throws<OperationCanceledException>(() => provider.Apply("0020FF", cancellation.Token));
     }
 
     [Fact]
@@ -207,8 +207,7 @@ public sealed class CaseRgbTests
     {
         var provider = new CaseRgbProvider(new FakeOpenRgbClient());
 
-        using JsonDocument document = JsonDocument.Parse(
-            """{ "enabled": true, "devices": {} }""");
+        using JsonDocument document = JsonDocument.Parse("""{ "enabled": true, "devices": {} }""");
 
         Assert.False(provider.TryConfigure(document.RootElement.Clone(), out string? problem));
         Assert.Contains("no devices", problem);

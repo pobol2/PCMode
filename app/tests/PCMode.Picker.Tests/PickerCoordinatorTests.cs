@@ -10,8 +10,11 @@ namespace PCMode.Picker.Tests;
 /// </remarks>
 public sealed class PickerCoordinatorTests
 {
-    private static readonly PickerGeometry Layout =
-        PickerGeometry.Create(new PixelRect(0, 0, 1920, 1040), 1.0, FavoriteSet.Default);
+    private static readonly PickerGeometry Layout = PickerGeometry.Create(
+        new PixelRect(0, 0, 1920, 1040),
+        1.0,
+        FavoriteSet.Default
+    );
 
     private static TimeSpan At(double milliseconds) => TimeSpan.FromMilliseconds(milliseconds);
 
@@ -214,10 +217,7 @@ public sealed class PickerCoordinatorTests
 
         picker.SelectDirection(PickerDirection.Right, At(1000));
 
-        picker.PointerMoved(
-            new PickerPoint(Layout.Center, Layout.Center),
-            new PickerPoint(123, 456),
-            At(1010));
+        picker.PointerMoved(new PickerPoint(Layout.Center, Layout.Center), new PickerPoint(123, 456), At(1010));
 
         Assert.Equal(PickerDirection.Right, picker.Selected);
     }
@@ -227,11 +227,17 @@ public sealed class PickerCoordinatorTests
     [Fact]
     public void An_unassigned_position_stays_visible_and_launches_nothing()
     {
-        FavoriteSet favorites = FavoriteSet.Create(
-        [
-            .. FavoriteSet.Default.All.Select(favorite => favorite.Direction == PickerDirection.Up
-                ? favorite with { ModeName = string.Empty, Label = "Not assigned", Icon = FavoriteIcon.None }
-                : favorite),
+        FavoriteSet favorites = FavoriteSet.Create([
+            .. FavoriteSet.Default.All.Select(favorite =>
+                favorite.Direction == PickerDirection.Up
+                    ? favorite with
+                    {
+                        ModeName = string.Empty,
+                        Label = "Not assigned",
+                        Icon = FavoriteIcon.None,
+                    }
+                    : favorite
+            ),
         ]);
         var picker = new PickerCoordinator(favorites);
         picker.Show(At(0), null, Layout, new PickerPoint(0, 0));
@@ -277,11 +283,10 @@ public sealed class PickerCoordinatorTests
     {
         // The one coupling this port exists to break. A favorite may be
         // labelled anything; PCMode is only ever handed the mode name.
-        FavoriteSet renamed = FavoriteSet.Create(
-        [
-            .. FavoriteSet.Default.All.Select(favorite => favorite.Direction == PickerDirection.Up
-                ? favorite with { Label = "Work" }
-                : favorite)
+        FavoriteSet renamed = FavoriteSet.Create([
+            .. FavoriteSet.Default.All.Select(favorite =>
+                favorite.Direction == PickerDirection.Up ? favorite with { Label = "Work" } : favorite
+            ),
         ]);
 
         var picker = new PickerCoordinator(renamed);
@@ -373,7 +378,8 @@ public sealed class PickerCoordinatorTests
 
         Assert.True(
             picker.Alpha <= whenCancelled,
-            $"Opacity rose from {whenCancelled} to {picker.Alpha} on the way out.");
+            $"Opacity rose from {whenCancelled} to {picker.Alpha} on the way out."
+        );
     }
 
     [Fact]

@@ -11,13 +11,10 @@ public enum PageId
     Displays,
     Spaces,
     Settings,
-    Diagnostics
+    Diagnostics,
 }
 
-public sealed record NavigationItem(
-    PageId Page,
-    string Label,
-    PageId? Parent = null)
+public sealed record NavigationItem(PageId Page, string Label, PageId? Parent = null)
 {
     public bool IsChild => Parent is not null;
 }
@@ -33,7 +30,7 @@ public static class NavigationRegistry
         new(PageId.Rgb, "Case lighting", PageId.Spaces),
         new(PageId.Applications, "Applications", PageId.Spaces),
         new(PageId.Settings, "Settings"),
-        new(PageId.Diagnostics, "Diagnostics")
+        new(PageId.Diagnostics, "Diagnostics"),
     ];
 
     /// <summary>
@@ -61,9 +58,7 @@ public static class NavigationRegistry
         NavigationValidation.Report(errors);
     }
 
-    private static void ValidateDuplicatePages(
-        IReadOnlyCollection<NavigationItem> items,
-        ICollection<string> errors)
+    private static void ValidateDuplicatePages(IReadOnlyCollection<NavigationItem> items, ICollection<string> errors)
     {
         PageId[] duplicates = items
             .GroupBy(item => item.Page)
@@ -78,9 +73,7 @@ public static class NavigationRegistry
         }
     }
 
-    private static void ValidateParents(
-        IReadOnlyCollection<NavigationItem> items,
-        ICollection<string> errors)
+    private static void ValidateParents(IReadOnlyCollection<NavigationItem> items, ICollection<string> errors)
     {
         HashSet<PageId> registeredPages = items.Select(item => item.Page).ToHashSet();
 
@@ -104,16 +97,11 @@ public static class NavigationRegistry
         }
     }
 
-    private static void ValidateCycles(
-        IReadOnlyCollection<NavigationItem> items,
-        ICollection<string> errors)
+    private static void ValidateCycles(IReadOnlyCollection<NavigationItem> items, ICollection<string> errors)
     {
-        Dictionary<PageId, PageId?> parentByPage =
-            items
-                .GroupBy(item => item.Page)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.First().Parent);
+        Dictionary<PageId, PageId?> parentByPage = items
+            .GroupBy(item => item.Page)
+            .ToDictionary(group => group.Key, group => group.First().Parent);
 
         var visited = new HashSet<PageId>();
 
@@ -133,15 +121,9 @@ public static class NavigationRegistry
             {
                 if (pathIndexes.TryGetValue(current, out int cycleStartIndex))
                 {
-                    PageId[] cycle = path
-                        .Skip(cycleStartIndex)
-                        .Append(current)
-                        .ToArray();
+                    PageId[] cycle = path.Skip(cycleStartIndex).Append(current).ToArray();
 
-                    errors.Add(
-                        "Navigation hierarchy contains a cycle: "
-                        + string.Join(" -> ", cycle)
-                        + ".");
+                    errors.Add("Navigation hierarchy contains a cycle: " + string.Join(" -> ", cycle) + ".");
 
                     break;
                 }
@@ -154,8 +136,7 @@ public static class NavigationRegistry
                 pathIndexes[current] = path.Count;
                 path.Add(current);
 
-                if (!parentByPage.TryGetValue(current, out PageId? parent)
-                    || parent is null)
+                if (!parentByPage.TryGetValue(current, out PageId? parent) || parent is null)
                 {
                     break;
                 }
@@ -203,10 +184,9 @@ public static class NavigationValidation
 
         throw new InvalidOperationException(
             "Navigation configuration is invalid:"
-            + Environment.NewLine
-            + string.Join(
-                Environment.NewLine,
-                errors.Select(error => $" - {error}")));
+                + Environment.NewLine
+                + string.Join(Environment.NewLine, errors.Select(error => $" - {error}"))
+        );
     }
 }
 

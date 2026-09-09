@@ -71,8 +71,8 @@ internal static class DdcCapabilityParser
                     block[codeStart..index],
                     NumberStyles.HexNumber,
                     CultureInfo.InvariantCulture,
-                    out byte code) &&
-                (code == (byte)DdcVcpCode.Brightness || code == (byte)DdcVcpCode.InputSource);
+                    out byte code
+                ) && (code == (byte)DdcVcpCode.Brightness || code == (byte)DdcVcpCode.InputSource);
 
             var values = new List<uint>();
 
@@ -82,8 +82,7 @@ internal static class DdcCapabilityParser
                 {
                     foreach (string token in valuesText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        if (uint.TryParse(
-                                token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
+                        if (uint.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
                         {
                             values.Add(value);
                         }
@@ -129,8 +128,7 @@ internal static class DdcCapabilityParser
     /// parenthesis -- so a caller resuming a scan never has to re-derive it from
     /// the extracted text's length.
     /// </summary>
-    private static bool TryExtractParenthesised(
-        string text, int openParenIndex, out string content, out int afterClose)
+    private static bool TryExtractParenthesised(string text, int openParenIndex, out string content, out int afterClose)
     {
         content = string.Empty;
         afterClose = openParenIndex;

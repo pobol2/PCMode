@@ -70,7 +70,8 @@ public interface ILgTvNetwork
         string host,
         int port,
         string? pinnedFingerprint,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     /// <summary>
     /// Sends a Wake-on-LAN packet to the television.

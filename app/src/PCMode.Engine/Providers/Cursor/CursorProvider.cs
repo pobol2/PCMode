@@ -50,12 +50,7 @@ public interface ICursorDevice
 /// out of shot, where what matters is the distance from the corner and not the
 /// screen's size.
 /// </remarks>
-public sealed record CursorPosition(
-    string Name,
-    double? XPercent,
-    int? XFromRight,
-    double? YPercent,
-    int? YFromBottom)
+public sealed record CursorPosition(string Name, double? XPercent, int? XFromRight, double? YPercent, int? YFromBottom)
 {
     /// <summary>The screen coordinate this position means on a given display.</summary>
     public (int X, int Y) Resolve(DisplayRect bounds)
@@ -75,7 +70,8 @@ public sealed record CursorPosition(
         // which looks like the position being wrong rather than out of range.
         return (
             Math.Clamp(x, bounds.Left, bounds.Left + bounds.Width - 1),
-            Math.Clamp(y, bounds.Top, bounds.Top + bounds.Height - 1));
+            Math.Clamp(y, bounds.Top, bounds.Top + bounds.Height - 1)
+        );
     }
 }
 
@@ -109,13 +105,12 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
     private readonly ICursorDevice _cursor;
     private readonly IDisplaySurface _display;
 
-    private IReadOnlyDictionary<string, CursorPosition> _positions =
-        new Dictionary<string, CursorPosition>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, CursorPosition> _positions = new Dictionary<string, CursorPosition>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     public CursorProvider()
-        : this(new WindowsCursorDevice(), new WindowsPrimaryDisplay())
-    {
-    }
+        : this(new WindowsCursorDevice(), new WindowsPrimaryDisplay()) { }
 
     public CursorProvider(ICursorDevice cursor, IDisplaySurface display)
     {
@@ -165,8 +160,7 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
     public ConvergencePolicy PolicyFor(string target) => ConvergencePolicy.DispatchOnce;
 
     /// <summary>The configured position names, in name order.</summary>
-    public IReadOnlyList<string> PositionNames =>
-        [.. _positions.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> PositionNames => [.. _positions.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
     /// The configured positions themselves, in name order -- for a graphical
@@ -200,8 +194,7 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         {
             if (!property.NameEquals("positions"))
             {
-                problem =
-                    $"'providers.cursor' does not understand '{property.Name}'. It takes 'positions'.";
+                problem = $"'providers.cursor' does not understand '{property.Name}'. It takes 'positions'.";
 
                 return false;
             }
@@ -252,8 +245,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         if (_positions.Count == 0)
         {
             problem =
-                $"'{value.Trim()}' cannot be applied because no cursor positions are defined. " +
-                $"Add one under '{SettingsPath}'.";
+                $"'{value.Trim()}' cannot be applied because no cursor positions are defined. "
+                + $"Add one under '{SettingsPath}'.";
 
             return false;
         }
@@ -261,8 +254,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         if (!_positions.ContainsKey(value.Trim()))
         {
             problem =
-                $"'{value.Trim()}' is not a cursor position. " +
-                $"'{SettingsPath}' defines: {string.Join(", ", PositionNames)}.";
+                $"'{value.Trim()}' is not a cursor position. "
+                + $"'{SettingsPath}' defines: {string.Join(", ", PositionNames)}.";
 
             return false;
         }
@@ -276,8 +269,7 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
 
     public void Apply(string value, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(value) ||
-            !_positions.TryGetValue(value.Trim(), out CursorPosition? position))
+        if (string.IsNullOrWhiteSpace(value) || !_positions.TryGetValue(value.Trim(), out CursorPosition? position))
         {
             // Unreachable through the engine, which validates first. Kept so a
             // direct caller cannot park the pointer at a place nobody defined.
@@ -291,8 +283,9 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         if (bounds.Width <= 0 || bounds.Height <= 0)
         {
             throw new InvalidOperationException(
-                $"The display reported no size ({bounds.Width}x{bounds.Height}), " +
-                "so there is nowhere to put the pointer.");
+                $"The display reported no size ({bounds.Width}x{bounds.Height}), "
+                    + "so there is nowhere to put the pointer."
+            );
         }
 
         (int x, int y) = position.Resolve(bounds);
@@ -318,7 +311,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         string name,
         JsonElement element,
         out CursorPosition? position,
-        out string? problem)
+        out string? problem
+    )
     {
         position = null;
         problem = null;
@@ -375,8 +369,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
             else
             {
                 problem =
-                    $"{where} does not understand '{rule.Name}'. " +
-                    "Use xPercent or xFromRight, and yPercent or yFromBottom.";
+                    $"{where} does not understand '{rule.Name}'. "
+                    + "Use xPercent or xFromRight, and yPercent or yFromBottom.";
 
                 return false;
             }
@@ -417,8 +411,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         if (!rule.Value.TryGetDouble(out double read) || double.IsNaN(read) || read < 0 || read > 100)
         {
             problem =
-                $"{where} sets {rule.Name} to " +
-                $"{rule.Value.GetRawText()}, which is not a percentage between 0 and 100.";
+                $"{where} sets {rule.Name} to "
+                + $"{rule.Value.GetRawText()}, which is not a percentage between 0 and 100.";
 
             return false;
         }
@@ -435,8 +429,8 @@ public sealed class CursorProvider : IConfigurableProvider, IDependentProvider, 
         if (!rule.Value.TryGetInt32(out int read) || read < 0)
         {
             problem =
-                $"{where} sets {rule.Name} to " +
-                $"{rule.Value.GetRawText()}, which is not a whole number of pixels from the edge.";
+                $"{where} sets {rule.Name} to "
+                + $"{rule.Value.GetRawText()}, which is not a whole number of pixels from the edge.";
 
             return false;
         }
@@ -465,9 +459,10 @@ public sealed class WindowsCursorDevice : ICursorDevice
         if (!SetCursorPos(x, y))
         {
             throw new InvalidOperationException(
-                $"Windows refused to move the pointer to {x.ToString(CultureInfo.InvariantCulture)}, " +
-                $"{y.ToString(CultureInfo.InvariantCulture)} " +
-                $"(error {Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture)}).");
+                $"Windows refused to move the pointer to {x.ToString(CultureInfo.InvariantCulture)}, "
+                    + $"{y.ToString(CultureInfo.InvariantCulture)} "
+                    + $"(error {Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture)})."
+            );
         }
     }
 
@@ -499,7 +494,8 @@ public sealed class WindowsPrimaryDisplay : IDisplaySurface
             // instance. Refusing here means the mode reports that it could not
             // park the pointer, instead of parking it at (0, 0).
             throw new InvalidOperationException(
-                "Windows reported no primary display, so there is nowhere to put the pointer.");
+                "Windows reported no primary display, so there is nowhere to put the pointer."
+            );
         }
 
         return new DisplayRect(0, 0, width, height);

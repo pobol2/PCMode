@@ -1,8 +1,11 @@
 namespace PCMode.Engine.Tests;
 
 /// <summary>A discoverer that answers exactly what a test tells it to.</summary>
-internal sealed class FakeDiscoverer(string category, IReadOnlyList<HardwareItem>? items = null, Exception? fails = null)
-    : IHardwareDiscoverer
+internal sealed class FakeDiscoverer(
+    string category,
+    IReadOnlyList<HardwareItem>? items = null,
+    Exception? fails = null
+) : IHardwareDiscoverer
 {
     public string Category => category;
 
@@ -18,7 +21,10 @@ public sealed class HardwareInspectorTests
     [Fact]
     public void Runs_every_discoverer_and_keeps_their_order()
     {
-        var displays = new FakeDiscoverer("Displays", [new HardwareItem("Monitor", HardwareItemStatus.Ok, "1920x1080", [])]);
+        var displays = new FakeDiscoverer(
+            "Displays",
+            [new HardwareItem("Monitor", HardwareItemStatus.Ok, "1920x1080", [])]
+        );
         var audio = new FakeDiscoverer("Audio outputs", []);
 
         IReadOnlyList<HardwareCategoryResult> results = HardwareInspector.Discover([displays, audio]);
@@ -33,8 +39,14 @@ public sealed class HardwareInspectorTests
     public void One_category_failing_does_not_stop_the_others()
     {
         var displays = new FakeDiscoverer("Displays", [new HardwareItem("Monitor", HardwareItemStatus.Ok, "ok", [])]);
-        var audio = new FakeDiscoverer("Audio outputs", fails: new InvalidOperationException("Core Audio could not be reached."));
-        var controllers = new FakeDiscoverer("Controllers", [new HardwareItem("Controller 1", HardwareItemStatus.NotDetected, "Not connected.", [])]);
+        var audio = new FakeDiscoverer(
+            "Audio outputs",
+            fails: new InvalidOperationException("Core Audio could not be reached.")
+        );
+        var controllers = new FakeDiscoverer(
+            "Controllers",
+            [new HardwareItem("Controller 1", HardwareItemStatus.NotDetected, "Not connected.", [])]
+        );
 
         IReadOnlyList<HardwareCategoryResult> results = HardwareInspector.Discover([displays, audio, controllers]);
 

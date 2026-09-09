@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!--
     The application service: what PCMode knows and what it does.
 
@@ -52,5 +51,4 @@
     <ProjectReference Include="..\PCMode.Audio.Protocol\PCMode.Audio.Protocol.csproj" />
     <ProjectReference Include="..\PCMode.Audio.Client\PCMode.Audio.Client.csproj" />
   </ItemGroup>
-
 </Project>

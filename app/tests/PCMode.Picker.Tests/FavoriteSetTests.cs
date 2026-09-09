@@ -11,22 +11,23 @@ namespace PCMode.Picker.Tests;
 /// </remarks>
 public sealed class FavoriteSetTests
 {
-    private static ModeFavorite Favorite(PickerDirection direction, string name) => new()
-    {
-        Id = name.ToLowerInvariant(),
-        Direction = direction,
-        ModeName = name,
-        Label = name,
-        Color = PickerColor.Parse("112233"),
-    };
+    private static ModeFavorite Favorite(PickerDirection direction, string name) =>
+        new()
+        {
+            Id = name.ToLowerInvariant(),
+            Direction = direction,
+            ModeName = name,
+            Label = name,
+            Color = PickerColor.Parse("112233"),
+        };
 
     private static ModeFavorite[] Four() =>
-    [
-        Favorite(PickerDirection.Up, "One"),
-        Favorite(PickerDirection.Right, "Two"),
-        Favorite(PickerDirection.Down, "Three"),
-        Favorite(PickerDirection.Left, "Four"),
-    ];
+        [
+            Favorite(PickerDirection.Up, "One"),
+            Favorite(PickerDirection.Right, "Two"),
+            Favorite(PickerDirection.Down, "Three"),
+            Favorite(PickerDirection.Left, "Four"),
+        ];
 
     [Fact]
     public void Ships_four_favorites_in_compass_order()
@@ -37,9 +38,7 @@ public sealed class FavoriteSetTests
         // which of the two broke something.
         FavoriteSet defaults = FavoriteSet.Default;
 
-        Assert.Equal(
-            ["Desktop", "YouTube", "Gaming", "Movie"],
-            defaults.All.Select(favorite => favorite.ModeName));
+        Assert.Equal(["Desktop", "YouTube", "Gaming", "Movie"], defaults.All.Select(favorite => favorite.ModeName));
 
         Assert.Equal(PickerDirection.Up, defaults.ByModeName("Desktop")!.Direction);
         Assert.Equal(PickerDirection.Right, defaults.ByModeName("YouTube")!.Direction);
@@ -61,8 +60,7 @@ public sealed class FavoriteSetTests
     [Fact]
     public void Orders_the_favorites_by_compass_point_however_they_arrive()
     {
-        FavoriteSet set = FavoriteSet.Create(
-        [
+        FavoriteSet set = FavoriteSet.Create([
             Favorite(PickerDirection.Left, "Four"),
             Favorite(PickerDirection.Up, "One"),
             Favorite(PickerDirection.Down, "Three"),
@@ -71,7 +69,8 @@ public sealed class FavoriteSetTests
 
         Assert.Equal(
             [PickerDirection.Up, PickerDirection.Right, PickerDirection.Down, PickerDirection.Left],
-            set.All.Select(favorite => favorite.Direction));
+            set.All.Select(favorite => favorite.Direction)
+        );
     }
 
     [Fact]
@@ -110,9 +109,15 @@ public sealed class FavoriteSetTests
         // registration order.
         ModeFavorite[] clashing =
         [
-            .. Four().Select(favorite => favorite.Direction is PickerDirection.Up or PickerDirection.Down
-                ? favorite with { Hotkey = 'x' }
-                : favorite)
+            .. Four()
+                .Select(favorite =>
+                    favorite.Direction is PickerDirection.Up or PickerDirection.Down
+                        ? favorite with
+                        {
+                            Hotkey = 'x',
+                        }
+                        : favorite
+                ),
         ];
 
         ArgumentException failure = Assert.Throws<ArgumentException>(() => FavoriteSet.Create(clashing));
@@ -123,10 +128,7 @@ public sealed class FavoriteSetTests
     [Fact]
     public void Refuses_two_favorites_sharing_an_identity()
     {
-        ModeFavorite[] clashing =
-        [
-            .. Four().Select(favorite => favorite with { Id = "same" })
-        ];
+        ModeFavorite[] clashing = [.. Four().Select(favorite => favorite with { Id = "same" })];
 
         Assert.Throws<ArgumentException>(() => FavoriteSet.Create(clashing));
     }
@@ -136,9 +138,10 @@ public sealed class FavoriteSetTests
     {
         ModeFavorite[] empty =
         [
-            .. Four().Select(favorite => favorite.Direction == PickerDirection.Up
-                ? favorite with { ModeName = "  " }
-                : favorite)
+            .. Four()
+                .Select(favorite =>
+                    favorite.Direction == PickerDirection.Up ? favorite with { ModeName = "  " } : favorite
+                ),
         ];
 
         FavoriteSet set = FavoriteSet.Create(empty);
@@ -168,7 +171,10 @@ public sealed class FavoriteSetTests
     public void Lets_a_label_differ_from_the_mode_it_applies()
     {
         // The coupling this whole type exists to break.
-        ModeFavorite favorite = FavoriteSet.Default.All[0] with { Label = "Work" };
+        ModeFavorite favorite = FavoriteSet.Default.All[0] with
+        {
+            Label = "Work",
+        };
 
         Assert.Equal("Work", favorite.Label);
         Assert.Equal("Desktop", favorite.ModeName);

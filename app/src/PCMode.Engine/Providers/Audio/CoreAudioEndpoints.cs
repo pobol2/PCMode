@@ -40,8 +40,13 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
         try
         {
             Check(
-                enumerator.EnumAudioEndpoints(EDataFlow.Render, DeviceState.Active, out IMMDeviceCollection? collection),
-                "list the playback devices");
+                enumerator.EnumAudioEndpoints(
+                    EDataFlow.Render,
+                    DeviceState.Active,
+                    out IMMDeviceCollection? collection
+                ),
+                "list the playback devices"
+            );
 
             if (collection is null)
             {
@@ -185,7 +190,8 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(endpointId);
 
-        Wasapi.IAudioEndpointVolume volume = OpenVolume(endpointId, out string what)
+        Wasapi.IAudioEndpointVolume volume =
+            OpenVolume(endpointId, out string what)
             ?? throw new InvalidOperationException($"{what} has no volume control that Windows will let PCMode set.");
 
         try
@@ -194,7 +200,8 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
 
             Check(
                 volume.SetMasterVolumeLevelScalar((float)Math.Clamp(level, 0, 1), ref context),
-                $"set the volume of {what}");
+                $"set the volume of {what}"
+            );
         }
         finally
         {
@@ -230,11 +237,9 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
     /// list unavailable. It simply matches nothing, which is exactly what an
     /// unnamed device should do.
     /// </summary>
-    private static string ReadFriendlyName(IMMDevice device) =>
-        CoreAudioEndpointInterop.GetFriendlyName(device);
+    private static string ReadFriendlyName(IMMDevice device) => CoreAudioEndpointInterop.GetFriendlyName(device);
 
-    private static IMMDeviceEnumerator CreateEnumerator() =>
-        CoreAudioEndpointInterop.CreateEnumerator();
+    private static IMMDeviceEnumerator CreateEnumerator() => CoreAudioEndpointInterop.CreateEnumerator();
 
     private static IPolicyConfig CreatePolicyConfig() =>
         Create<IPolicyConfig>(PolicyConfigClsid, "the Windows audio policy service");
@@ -247,14 +252,11 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
             Type? type = Type.GetTypeFromCLSID(clsid);
             object? instance = type is null ? null : Activator.CreateInstance(type);
 
-            return instance as T
-                ?? throw new InvalidOperationException($"{what} is not available on this machine.");
+            return instance as T ?? throw new InvalidOperationException($"{what} is not available on this machine.");
         }
         catch (Exception exception) when (exception is not InvalidOperationException)
         {
-            throw new InvalidOperationException(
-                $"{what} could not be reached. {exception.Message}",
-                exception);
+            throw new InvalidOperationException($"{what} could not be reached. {exception.Message}", exception);
         }
     }
 
@@ -263,8 +265,8 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
         if (hr != 0)
         {
             throw new InvalidOperationException(
-                $"Windows could not {attempted} " +
-                $"(0x{hr.ToString("X8", CultureInfo.InvariantCulture)}).");
+                $"Windows could not {attempted} " + $"(0x{hr.ToString("X8", CultureInfo.InvariantCulture)})."
+            );
         }
     }
 
@@ -289,13 +291,22 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
     {
         int GetMixFormat([MarshalAs(UnmanagedType.LPWStr)] string id, nint format);
 
-        int GetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string id, [MarshalAs(UnmanagedType.Bool)] bool isDefault, nint format);
+        int GetDeviceFormat(
+            [MarshalAs(UnmanagedType.LPWStr)] string id,
+            [MarshalAs(UnmanagedType.Bool)] bool isDefault,
+            nint format
+        );
 
         int ResetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string id);
 
         int SetDeviceFormat([MarshalAs(UnmanagedType.LPWStr)] string id, nint endpointFormat, nint mixFormat);
 
-        int GetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string id, [MarshalAs(UnmanagedType.Bool)] bool isDefault, out long defaultPeriod, out long minimumPeriod);
+        int GetProcessingPeriod(
+            [MarshalAs(UnmanagedType.LPWStr)] string id,
+            [MarshalAs(UnmanagedType.Bool)] bool isDefault,
+            out long defaultPeriod,
+            out long minimumPeriod
+        );
 
         int SetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string id, long period);
 
@@ -309,6 +320,9 @@ public sealed class CoreAudioEndpoints : IAudioEndpoints
 
         int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, ERole role);
 
-        int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string id, [MarshalAs(UnmanagedType.Bool)] bool visible);
+        int SetEndpointVisibility(
+            [MarshalAs(UnmanagedType.LPWStr)] string id,
+            [MarshalAs(UnmanagedType.Bool)] bool visible
+        );
     }
 }

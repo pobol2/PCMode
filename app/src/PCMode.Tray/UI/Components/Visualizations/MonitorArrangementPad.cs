@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-
 // The tray enables WinForms for the notify icon, whose implicit usings
 // bring System.Drawing's own Point into scope alongside WPF's.
 using MouseEventHandler = System.Windows.Input.MouseEventHandler;
@@ -33,30 +32,39 @@ public sealed class MonitorArrangementPad : ItemsControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(MonitorArrangementPad),
-            new FrameworkPropertyMetadata(typeof(MonitorArrangementPad)));
+            new FrameworkPropertyMetadata(typeof(MonitorArrangementPad))
+        );
     }
 
     public MonitorArrangementPad()
     {
-        AddHandler(PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler(OnPreviewMouseLeftButtonDown), handledEventsToo: true);
+        AddHandler(
+            PreviewMouseLeftButtonDownEvent,
+            new MouseButtonEventHandler(OnPreviewMouseLeftButtonDown),
+            handledEventsToo: true
+        );
         AddHandler(PreviewMouseMoveEvent, new MouseEventHandler(OnPreviewMouseMove), handledEventsToo: true);
-        AddHandler(PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler(OnPreviewMouseLeftButtonUp), handledEventsToo: true);
+        AddHandler(
+            PreviewMouseLeftButtonUpEvent,
+            new MouseButtonEventHandler(OnPreviewMouseLeftButtonUp),
+            handledEventsToo: true
+        );
         AddHandler(LostMouseCaptureEvent, new MouseEventHandler((_, _) => ResetDrag()), handledEventsToo: true);
     }
 
     /// <summary>Run with the clicked item as its parameter, on press rather than on click -- a drag selects what it is about to move.</summary>
-    public static readonly DependencyProperty SelectCommandProperty =
-        DependencyProperty.Register(
-            nameof(SelectCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(MonitorArrangementPad));
+    public static readonly DependencyProperty SelectCommandProperty = DependencyProperty.Register(
+        nameof(SelectCommand),
+        typeof(System.Windows.Input.ICommand),
+        typeof(MonitorArrangementPad)
+    );
 
     /// <summary>Run with a <see cref="MonitorDrop"/> once a real drag ends. A press that never moved is a selection, not a drop.</summary>
-    public static readonly DependencyProperty SnapCommandProperty =
-        DependencyProperty.Register(
-            nameof(SnapCommand),
-            typeof(System.Windows.Input.ICommand),
-            typeof(MonitorArrangementPad));
+    public static readonly DependencyProperty SnapCommandProperty = DependencyProperty.Register(
+        nameof(SnapCommand),
+        typeof(System.Windows.Input.ICommand),
+        typeof(MonitorArrangementPad)
+    );
 
     public System.Windows.Input.ICommand? SelectCommand
     {
@@ -77,8 +85,10 @@ public sealed class MonitorArrangementPad : ItemsControl
 
     private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is not DependencyObject source ||
-            ContainerFromElement(this, source) is not FrameworkElement container)
+        if (
+            e.OriginalSource is not DependencyObject source
+            || ContainerFromElement(this, source) is not FrameworkElement container
+        )
         {
             return;
         }
@@ -104,17 +114,21 @@ public sealed class MonitorArrangementPad : ItemsControl
 
     private void OnPreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed ||
-            _container is not { RenderTransform: TranslateTransform transform })
+        if (
+            e.LeftButton != MouseButtonState.Pressed
+            || _container is not { RenderTransform: TranslateTransform transform }
+        )
         {
             return;
         }
 
         Vector movement = e.GetPosition(this) - _start;
 
-        if (!_dragging &&
-            Math.Abs(movement.X) < SystemParameters.MinimumHorizontalDragDistance &&
-            Math.Abs(movement.Y) < SystemParameters.MinimumVerticalDragDistance)
+        if (
+            !_dragging
+            && Math.Abs(movement.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(movement.Y) < SystemParameters.MinimumVerticalDragDistance
+        )
         {
             return;
         }
@@ -154,7 +168,8 @@ public sealed class MonitorArrangementPad : ItemsControl
         var drop = new MonitorDrop(
             item,
             (double.IsNaN(left) ? 0 : left) + movement.X,
-            (double.IsNaN(top) ? 0 : top) + movement.Y);
+            (double.IsNaN(top) ? 0 : top) + movement.Y
+        );
 
         if (SnapCommand is { } snap && snap.CanExecute(drop))
         {

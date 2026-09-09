@@ -1,4 +1,3 @@
-
 using PCMode.Audio.Core.Buffers;
 using PCMode.Audio.Core.Models;
 using Xunit;
@@ -13,10 +12,7 @@ public sealed class AudioBlockTests
         var format = new AudioFormat(48_000, 2);
         var samples = new float[8];
 
-        var block = new AudioBlock(
-            samples,
-            format,
-            framePosition: 128);
+        var block = new AudioBlock(samples, format, framePosition: 128);
 
         Assert.Equal(8, block.Samples.Length);
         Assert.Equal(4, block.FrameCount);
@@ -27,8 +23,7 @@ public sealed class AudioBlockTests
     [Fact]
     public void AudioBlock_rejects_partial_frames()
     {
-        Assert.Throws<ArgumentException>(
-            ConstructBlockWithPartialFrame);
+        Assert.Throws<ArgumentException>(ConstructBlockWithPartialFrame);
     }
 
     private static void ConstructBlockWithPartialFrame()

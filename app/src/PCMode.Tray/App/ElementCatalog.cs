@@ -28,7 +28,8 @@ public sealed class ElementCatalog
             if (!composed.TryAdd(page, element))
             {
                 throw new InvalidOperationException(
-                    $"Application composition contains more than one Element for '{page}'.");
+                    $"Application composition contains more than one Element for '{page}'."
+                );
             }
         }
 
@@ -40,8 +41,7 @@ public sealed class ElementCatalog
     public object Get(PageId page) =>
         _elements.TryGetValue(page, out object? element)
             ? element
-            : throw new InvalidOperationException(
-                $"No application Element is composed for '{page}'.");
+            : throw new InvalidOperationException($"No application Element is composed for '{page}'.");
 
     /// <summary>
     /// Ensures navigation and application composition describe the same set

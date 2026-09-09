@@ -164,9 +164,7 @@ public sealed class IConfigurationSectionTests
         public override bool CanSave => HasUnsavedChanges && !IsBusy && ValidationProblem is null;
 
         public override string? ValidationProblem =>
-            _sections
-                .Select(section => section.ValidationProblem)
-                .FirstOrDefault(problem => problem is not null);
+            _sections.Select(section => section.ValidationProblem).FirstOrDefault(problem => problem is not null);
 
         public override void SelectKey(object key)
         {
@@ -183,9 +181,7 @@ public sealed class IConfigurationSectionTests
             ClearDirtyState();
         }
 
-        public override void Refresh()
-        {
-        }
+        public override void Refresh() { }
 
         protected override string? SaveChangesCore()
         {

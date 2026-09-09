@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
 using PCMode.Tray.Platform.Themes;
-using PCMode.Tray.Elements.Settings;
 using PCMode.Tray.Tests;
 
 namespace PCMode.Tray.Tests.Shell;
@@ -29,7 +28,8 @@ public sealed class ApplicationThemeServiceTests
     public void Resolves_explicit_and_system_theme_choices(
         ApplicationTheme selected,
         EffectiveTheme windows,
-        EffectiveTheme expected)
+        EffectiveTheme expected
+    )
     {
         Assert.Equal(expected, ApplicationThemeService.Resolve(selected, windows));
     }
@@ -137,11 +137,14 @@ public sealed class ApplicationThemeServiceTests
             ResourceDictionary resources = Palette();
             _ = new ApplicationThemeService(resources, new FakeSystemTheme(EffectiveTheme.Light));
 
-            Assert.All(ApplicationThemeService.SemanticResourceKeys, key =>
-            {
-                Assert.IsType<SolidColorBrush>(resources[$"Dark.{key}"]);
-                Assert.IsType<SolidColorBrush>(resources[$"Light.{key}"]);
-            });
+            Assert.All(
+                ApplicationThemeService.SemanticResourceKeys,
+                key =>
+                {
+                    Assert.IsType<SolidColorBrush>(resources[$"Dark.{key}"]);
+                    Assert.IsType<SolidColorBrush>(resources[$"Light.{key}"]);
+                }
+            );
         });
     }
 
@@ -169,7 +172,8 @@ public sealed class ApplicationThemeServiceTests
     }
 
     private sealed class ObservableFakeSystemTheme(EffectiveTheme value)
-        : ISystemThemePreference, ISystemThemeChangeSource
+        : ISystemThemePreference,
+            ISystemThemeChangeSource
     {
         private EffectiveTheme _value = value;
 

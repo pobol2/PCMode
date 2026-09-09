@@ -1,12 +1,20 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:configuration="clr-namespace:PCMode.Tray.Elements.Configuration"
-    xmlns:migration="clr-namespace:PCMode.Tray.UI.Components.Migration"
-    xmlns:selection="clr-namespace:PCMode.Tray.UI.Components.Selection"
-    xmlns:framework="clr-namespace:PCMode.Tray.UI.Framework"
-    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:audio="clr-namespace:PCMode.Tray.Elements.Audio"
+                    xmlns:applications="clr-namespace:PCMode.Tray.Elements.Applications"
+                    xmlns:configuration="clr-namespace:PCMode.Tray.Elements.Configuration"
+                    xmlns:displays="clr-namespace:PCMode.Tray.Elements.Displays"
+                    xmlns:displaySections="clr-namespace:PCMode.Tray.Elements.Displays.Sections"
+                    xmlns:rgb="clr-namespace:PCMode.Tray.Elements.Rgb"
+                    xmlns:spaces="clr-namespace:PCMode.Tray.Elements.Spaces"
+                    xmlns:actions="clr-namespace:PCMode.Tray.UI.Components.Actions"
+                    xmlns:content="clr-namespace:PCMode.Tray.UI.Components.Content"
+                    xmlns:inputs="clr-namespace:PCMode.Tray.UI.Components.Inputs"
+                    xmlns:migration="clr-namespace:PCMode.Tray.UI.Components.Migration"
+                    xmlns:selection="clr-namespace:PCMode.Tray.UI.Components.Selection"
+                    xmlns:visualizations="clr-namespace:PCMode.Tray.UI.Components.Visualizations"
+                    xmlns:framework="clr-namespace:PCMode.Tray.UI.Framework"
+                    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
     <!--
         This is the Element-to-Tree seam. Elements supply only the parameter
         objects above; these implicit templates select legal generic nodes.
@@ -14,68 +22,1399 @@
         FinalUiComponent boundary and can be migrated independently.
     -->
 
+    <DataTemplate x:Key="SpacesTargetTemplate" DataType="{x:Type spaces:SpacesViewModel}">
+        <content:EditorBoxContent>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding Selected.Name, TargetNullValue=No space selected}"
+                               FontSize="16"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Selected.DisplayPath}" Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+                <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                    <Button Content="Move up"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding MoveUpCommand}" />
+                    <Button Content="Move down"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding MoveDownCommand}" />
+                    <Button Content="Activate"
+                            Style="{StaticResource CompactPrimaryButtonStyle}"
+                            Command="{Binding ActivateCommand}"
+                            IsEnabled="{Binding CanActivateSelected}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+            <content:InformationContent Label="Enabled" Visibility="{Binding Selected.IsActivatable, Converter={StaticResource BooleanToVisibility}}">
+                <CheckBox IsChecked="{Binding Selected.TargetEnabled, Mode=OneWay}" Command="{Binding ToggleEnabledCommand}" />
+            </content:InformationContent>
+            <TextBlock Text="Settings on this level flow down to the activities and sources beneath it." Style="{StaticResource MutedTextStyle}" />
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="SpacesResourceGroupsTemplate">
+        <ItemsControl ItemsSource="{Binding}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Expander Header="{Binding Name}"
+                              IsExpanded="True"
+                              Margin="0,0,0,8">
+                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,8,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8">
+                                        <content:EditorBoxContent>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="170" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="180" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding StateSummary}"
+                                                               Style="{StaticResource MutedTextStyle}"
+                                                               FontSize="11" />
+                                                </StackPanel>
+                                                <ComboBox Grid.Column="1"
+                                                          ItemsSource="{Binding Choices}"
+                                                          Text="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                          IsEditable="True"
+                                                          Margin="8,0" />
+                                                <ComboBox Grid.Column="2"
+                                                          ItemsSource="{Binding RequirementChoices}"
+                                                          DisplayMemberPath="Label"
+                                                          SelectedValuePath="Value"
+                                                          SelectedValue="{Binding Requirement, Mode=TwoWay}" />
+                                            </Grid>
+                                            <CheckBox Content="Best effort"
+                                                      IsChecked="{Binding UseBestEffort, Mode=TwoWay}"
+                                                      Visibility="{Binding IsOptional, Converter={StaticResource BooleanToVisibility}}" />
+                                            <TextBlock Text="{Binding InheritedMessage}"
+                                                       Style="{StaticResource MutedTextStyle}"
+                                                       Visibility="{Binding HasInheritedMessage, Converter={StaticResource BooleanToVisibility}}" />
+                                            <TextBlock Text="{Binding AvailabilityMessage}"
+                                                       Foreground="{DynamicResource WarningBrush}"
+                                                       TextWrapping="Wrap"
+                                                       Visibility="{Binding HasAvailabilityMessage, Converter={StaticResource BooleanToVisibility}}" />
+                                        </content:EditorBoxContent>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </DataTemplate>
+
+    <DataTemplate x:Key="SpacesQuickAccessTemplate" DataType="{x:Type spaces:SpacesViewModel}">
+        <content:EditorBoxContent>
+            <TextBlock Text="Put an activatable target on the four-way picker, assign direct Ctrl+Alt shortcuts, or use both." Style="{StaticResource MutedTextStyle}" />
+            <content:InputContent Label="Picker position">
+                <ComboBox ItemsSource="{Binding PickerPositionOptions}"
+                          DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedPickerPosition, Mode=TwoWay}" />
+            </content:InputContent>
+            <content:InputContent Label="Direct shortcuts" Hint="Comma-separated letters used with Ctrl+Alt.">
+                <TextBox Text="{Binding DirectShortcutKeys, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </content:InputContent>
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="RgbSceneTemplate" DataType="{x:Type rgb:RgbViewModel}">
+        <StackPanel>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding SelectedScene.Name, TargetNullValue=No lighting scene selected}"
+                               FontSize="16"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding CurrentLightingText}" Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+                <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                    <Button Content="Rename"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Rename}" />
+                    <Button Content="Duplicate"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Duplicate}" />
+                    <Button Content="Delete"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Delete}" />
+                    <Button Content="Activate"
+                            Style="{StaticResource CompactPrimaryButtonStyle}"
+                            Command="{Binding Commands.Activate}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding SceneDevices}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                            <content:EditorBoxContent>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding ControllerName}"
+                                               FontWeight="SemiBold"
+                                               FontSize="16" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding StateText}"
+                                               Style="{StaticResource MutedTextStyle}"
+                                               ToolTip="{Binding StateDetail}" />
+                                </Grid>
+                                <content:InputContent Label="Mode">
+                                    <ComboBox ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </content:InputContent>
+                                <content:InputContent Label="Color">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="32" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding UsePerLed, Converter={StaticResource InverseBool}}" />
+                                        <Border Grid.Column="1"
+                                                Margin="8,0,0,0"
+                                                CornerRadius="4"
+                                                Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                    </Grid>
+                                </content:InputContent>
+                                <content:InputContent Label="Individual LEDs"
+                                                      Hint="{Binding PerLedHint}"
+                                                      Visibility="{Binding HasLeds, Converter={StaticResource BooleanToVisibility}}">
+                                    <CheckBox IsChecked="{Binding UsePerLed, Mode=TwoWay}" IsEnabled="{Binding CanConfigurePerLed}" />
+                                </content:InputContent>
+                                <ItemsControl ItemsSource="{Binding Leds}" Visibility="{Binding UsePerLed, Converter={StaticResource BooleanToVisibility}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <content:InputContent Label="{Binding Name}" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="32" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Text="{Binding Color, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <Border Grid.Column="1"
+                                                            Margin="8,0,0,0"
+                                                            CornerRadius="4"
+                                                            Background="{Binding Color, Converter={StaticResource HexToBrush}}" />
+                                                </Grid>
+                                            </content:InputContent>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </content:EditorBoxContent>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="RgbAdvancedTemplate" DataType="{x:Type rgb:RgbViewModel}">
+        <content:EditorBoxContent>
+            <TextBlock Text="OpenRGB SDK settings apply to all lighting scenes." Style="{StaticResource MutedTextStyle}" />
+            <content:InputContent Label="SDK timeout">
+                <inputs:UnitTextBox Unit="ms" Text="{Binding WithinMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+            </content:InputContent>
+            <content:InformationContent Label="Current lighting">
+                <TextBlock Text="{Binding CurrentLightingText}" />
+            </content:InformationContent>
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="RgbHardwareTemplate">
+        <StackPanel>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="OpenRGB controllers visible to the SDK server." Style="{StaticResource MutedTextStyle}" />
+                <Button Grid.Column="1"
+                        Content="Rescan"
+                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                        Command="{Binding DataContext.RescanControllersCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+            </Grid>
+            <TextBlock Text="{Binding Problem}"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       Visibility="{Binding HasProblem, Converter={StaticResource BooleanToVisibility}}" />
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding FriendlyName}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Name}"
+                                               Style="{StaticResource MutedTextStyle}"
+                                               Visibility="{Binding ShowUnderlyingDevice, Converter={StaticResource BooleanToVisibility}}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding BadgeText}"
+                                           Foreground="{DynamicResource SuccessBrush}"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ApplicationEssentialTemplate" DataType="{x:Type applications:ApplicationsViewModel}">
+        <content:EditorBoxContent>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding SelectedApplication, TargetNullValue=No application selected}"
+                               FontSize="16"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SelectedApplicationStatus}" Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+                <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                    <Button Content="Rename"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Rename}" />
+                    <Button Content="Duplicate"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Duplicate}" />
+                    <Button Content="Delete"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding Commands.Delete}" />
+                    <Button Content="{Binding Commands.ActivateLabel}"
+                            Style="{StaticResource CompactPrimaryButtonStyle}"
+                            Command="{Binding Commands.Activate}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+            <content:InputContent Label="Start command">
+                <content:HorizontalSpacingPanel Spacing="16">
+                    <RadioButton Content="Program"
+                                 GroupName="StartKind"
+                                 IsChecked="{Binding IsStartUri, Converter={StaticResource InverseBool}, Mode=TwoWay}" />
+                    <RadioButton Content="URI"
+                                 GroupName="StartKind"
+                                 IsChecked="{Binding IsStartUri, Mode=TwoWay}" />
+                </content:HorizontalSpacingPanel>
+            </content:InputContent>
+            <content:EditorBoxContent Visibility="{Binding IsStartUri, Converter={StaticResource InverseBoolToVisibility}}">
+                <content:InputContent Label="Program">
+                    <TextBox Text="{Binding StartPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+                <content:InputContent Label="Arguments" Hint="One argument per line.">
+                    <TextBox AcceptsReturn="True"
+                             MinLines="2"
+                             MaxLines="4"
+                             VerticalScrollBarVisibility="Auto"
+                             Text="{Binding StartArgumentsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+            </content:EditorBoxContent>
+            <content:InputContent Label="Web address" Visibility="{Binding IsStartUri, Converter={StaticResource BooleanToVisibility}}">
+                <TextBox Text="{Binding StartUri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </content:InputContent>
+            <TextBlock Text="{Binding AvailabilityMessage}"
+                       Foreground="{DynamicResource WarningBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding HasAvailabilityMessage, Converter={StaticResource BooleanToVisibility}}" />
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ApplicationAdvancedTemplate" DataType="{x:Type applications:ApplicationsViewModel}">
+        <content:EditorBoxContent>
+            <content:InputContent Label="Monitor a running process">
+                <CheckBox IsChecked="{Binding IsLaunchOnly, Converter={StaticResource InverseBool}, Mode=TwoWay}" />
+            </content:InputContent>
+            <content:InputContent Label="Process name" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <TextBox Text="{Binding ProcessName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip="Without .exe" />
+            </content:InputContent>
+            <content:InputContent Label="Use a custom Stop command" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <CheckBox IsChecked="{Binding HasStop, Mode=TwoWay}" />
+            </content:InputContent>
+            <content:EditorBoxContent IsEnabled="{Binding HasStop}" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <content:InputContent Label="Stop command">
+                    <content:HorizontalSpacingPanel Spacing="16">
+                        <RadioButton Content="Program"
+                                     GroupName="StopKind"
+                                     IsChecked="{Binding IsStopUri, Converter={StaticResource InverseBool}, Mode=TwoWay}" />
+                        <RadioButton Content="URI"
+                                     GroupName="StopKind"
+                                     IsChecked="{Binding IsStopUri, Mode=TwoWay}" />
+                    </content:HorizontalSpacingPanel>
+                </content:InputContent>
+                <content:InputContent Label="Program" Visibility="{Binding IsStopUri, Converter={StaticResource InverseBoolToVisibility}}">
+                    <TextBox Text="{Binding StopPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+                <content:InputContent Label="Arguments" Visibility="{Binding IsStopUri, Converter={StaticResource InverseBoolToVisibility}}">
+                    <TextBox AcceptsReturn="True"
+                             MinLines="2"
+                             MaxLines="4"
+                             Text="{Binding StopArgumentsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+                <content:InputContent Label="Web address" Visibility="{Binding IsStopUri, Converter={StaticResource BooleanToVisibility}}">
+                    <TextBox Text="{Binding StopUri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+            </content:EditorBoxContent>
+            <content:InputContent Label="Re-issue Launch when already running" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <CheckBox IsChecked="{Binding Reactivate, Mode=TwoWay}" />
+            </content:InputContent>
+            <content:InputContent Label="Restart when" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <TextBox Text="{Binding RestartWhenText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </content:InputContent>
+            <content:InputContent Label="Run an action when a window appears" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <CheckBox IsChecked="{Binding ReadyEnabled, Mode=TwoWay}" />
+            </content:InputContent>
+            <content:EditorBoxContent IsEnabled="{Binding ReadyEnabled}" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <content:InputContent Label="Bring to front">
+                    <CheckBox IsChecked="{Binding ReadyActivate, Mode=TwoWay}" />
+                </content:InputContent>
+                <content:InputContent Label="Keys to type">
+                    <TextBox Text="{Binding ReadyKeys, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </content:InputContent>
+                <content:InputContent Label="Window timeout">
+                    <inputs:UnitTextBox Unit="ms" Text="{Binding ReadyWithinMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                </content:InputContent>
+            </content:EditorBoxContent>
+            <content:InputContent Label="Launch timeout">
+                <inputs:UnitTextBox Unit="ms" Text="{Binding StartWithinMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+            </content:InputContent>
+            <content:InputContent Label="Stop timeout" Visibility="{Binding IsLaunchOnly, Converter={StaticResource InverseBoolToVisibility}}">
+                <inputs:UnitTextBox Unit="ms" Text="{Binding StopWithinMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+            </content:InputContent>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Dependencies"
+                           Style="{StaticResource SectionTitleStyle}"
+                           Margin="0" />
+                <Button Grid.Column="1"
+                        Content="Add dependency"
+                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                        Command="{Binding AddRequirementCommand}" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding Requires}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding ResourceKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="Resource key" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     ToolTip="Required value" />
+                            <Button Grid.Column="2"
+                                    Content="Remove"
+                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    Command="{Binding DataContext.RemoveRequirementCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DisplayLayoutTemplate" DataType="{x:Type displaySections:LayoutSectionViewModel}">
+        <StackPanel x:Name="LayoutRoot">
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Arrange the monitors used by this layout, choose the primary display, and set refresh behavior."
+                           Style="{StaticResource MutedTextStyle}"
+                           VerticalAlignment="Center" />
+                <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                    <Button Content="Rename"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DataContext.RenameLayoutCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+                    <Button Content="Duplicate"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DataContext.DuplicateLayoutCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+                    <Button Content="Delete"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DataContext.DeleteLayoutCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+                    <Button Content="Activate"
+                            Style="{StaticResource CompactPrimaryButtonStyle}"
+                            Command="{Binding DataContext.ActivateLayoutCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+
+            <TextBlock Text="{Binding TopologyProblem}"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding TopologyProblem, Converter={StaticResource StringToVisibility}}"
+                       Margin="0,0,0,10" />
+
+            <Border Background="{DynamicResource WindowBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    Padding="8"
+                    Margin="0,0,0,12">
+                <Viewbox Stretch="Uniform" Height="320">
+                    <visualizations:MonitorArrangementPad ItemsSource="{Binding Rows}" SelectCommand="{Binding DataContext.SelectMonitorCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}">
+                        <visualizations:MonitorArrangementPad.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="{Binding PreviewWidth}"
+                                        Height="{Binding PreviewHeight}"
+                                        Background="{DynamicResource SurfaceBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="2"
+                                        CornerRadius="5"
+                                        Padding="8">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Primary}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="BorderThickness" Value="4" />
+                                                    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding MonitorName}"
+                                               FontWeight="SemiBold"
+                                               FontSize="24"
+                                               TextAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                                </Border>
+                            </DataTemplate>
+                        </visualizations:MonitorArrangementPad.ItemTemplate>
+                    </visualizations:MonitorArrangementPad>
+                </Viewbox>
+            </Border>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Monitors"
+                           Style="{StaticResource SectionTitleStyle}"
+                           Margin="0" />
+                <Button Grid.Column="1"
+                        Content="Add monitor"
+                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                        Command="{Binding DataContext.AddMonitorCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding DataContext.MonitorSections, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                            <content:EditorBoxContent>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding MonitorName}"
+                                               FontWeight="SemiBold"
+                                               FontSize="16" />
+                                    <Button Grid.Column="1"
+                                            Content="Remove"
+                                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                                            Command="{Binding DataContext.RemoveMonitorCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}"
+                                            CommandParameter="{Binding}" />
+                                </Grid>
+                                <content:InputContent Label="Primary monitor">
+                                    <CheckBox IsChecked="{Binding Monitor.Primary, Mode=TwoWay}" />
+                                </content:InputContent>
+                                <content:InputContent Label="Control type" IsEnabled="{Binding CanChooseControlType}">
+                                    <ComboBox ItemsSource="{Binding ControlTypeOptions}"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Value"
+                                              SelectedValue="{Binding ControlType, Mode=TwoWay}" />
+                                </content:InputContent>
+                                <content:InputContent Label="Cursor position" Visibility="{Binding Monitor.Primary, Converter={StaticResource BooleanToVisibility}}">
+                                    <ComboBox ItemsSource="{Binding DataContext.LayoutSection.CursorPositionChoices, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" SelectedItem="{Binding DataContext.LayoutSection.CursorPositionName, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}, Mode=TwoWay}" />
+                                </content:InputContent>
+                                <content:EditorBoxContent Visibility="{Binding Monitor.Primary, Converter={StaticResource InverseBoolToVisibility}}">
+                                    <content:InputContent Label="Position">
+                                        <ComboBox ItemsSource="{Binding Monitor.DirectionOptions}"
+                                                  DisplayMemberPath="Label"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding Monitor.Direction, Mode=TwoWay}" />
+                                    </content:InputContent>
+                                    <content:InputContent Label="Relative to">
+                                        <ComboBox ItemsSource="{Binding Monitor.AnchorChoices}" SelectedItem="{Binding Monitor.Anchor, Mode=TwoWay}" />
+                                    </content:InputContent>
+                                    <content:InputContent Label="Alignment">
+                                        <ComboBox ItemsSource="{Binding Monitor.AlignmentOptions}"
+                                                  DisplayMemberPath="Label"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding Monitor.Alignment, Mode=TwoWay}" />
+                                    </content:InputContent>
+                                    <content:InputContent Label="Offset (px)">
+                                        <TextBox Text="{Binding Monitor.Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </content:InputContent>
+                                </content:EditorBoxContent>
+                                <content:InputContent Label="Refresh rate">
+                                    <ComboBox ItemsSource="{Binding Monitor.RefreshChoices}" SelectedItem="{Binding Monitor.SelectedRefresh, Mode=TwoWay}" />
+                                </content:InputContent>
+                            </content:EditorBoxContent>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DisplayCursorTemplate" DataType="{x:Type displaySections:CursorSectionViewModel}">
+        <content:EditorBoxContent>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding LinkedPositionName, TargetNullValue=No cursor position linked}" FontWeight="SemiBold" />
+                    <TextBlock Text="Drag the marker or enter exact coordinates for the cursor position linked to this layout." Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+                <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                    <Button Content="Create"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding CreateCommand}" />
+                    <Button Content="Rename"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding RenameCommand}" />
+                    <Button Content="Duplicate"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DuplicateCommand}" />
+                    <Button Content="Delete"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DeleteCommand}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+            <visualizations:CursorPositionPad HorizontalAlignment="Left"
+                                              IsActive="{Binding HasLinkedPosition}"
+                                              XMode="{Binding XMode, Mode=TwoWay}"
+                                              YMode="{Binding YMode, Mode=TwoWay}"
+                                              XValue="{Binding XValue, Mode=TwoWay}"
+                                              YValue="{Binding YValue, Mode=TwoWay}"
+                                              TargetWidth="{Binding TargetWidth}"
+                                              TargetHeight="{Binding TargetHeight}" />
+            <content:InputContent Label="Horizontal position" IsEnabled="{Binding HasLinkedPosition}">
+                <content:HorizontalSpacingPanel Spacing="8">
+                    <ComboBox ItemsSource="{Binding XModeChoices}" SelectedItem="{Binding XMode, Mode=TwoWay}" />
+                    <inputs:UnitTextBox Unit="{Binding XUnit}" Text="{Binding XValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.##}}" />
+                </content:HorizontalSpacingPanel>
+            </content:InputContent>
+            <content:InputContent Label="Vertical position" IsEnabled="{Binding HasLinkedPosition}">
+                <content:HorizontalSpacingPanel Spacing="8">
+                    <ComboBox ItemsSource="{Binding YModeChoices}" SelectedItem="{Binding YMode, Mode=TwoWay}" />
+                    <inputs:UnitTextBox Unit="{Binding YUnit}" Text="{Binding YValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.##}}" />
+                </content:HorizontalSpacingPanel>
+            </content:InputContent>
+            <TextBlock Text="{Binding ValidationProblem}"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding ValidationProblem, Converter={StaticResource StringToVisibility}}" />
+        </content:EditorBoxContent>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DisplayMonitorControlsTemplate">
+        <StackPanel>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Configure DDC/CI or television control for each monitor in the selected layout." Style="{StaticResource MutedTextStyle}" />
+                <Button Grid.Column="1"
+                        Content="Rescan"
+                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                        Command="{Binding DataContext.RescanMonitorControlsCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}}" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                            <content:EditorBoxContent>
+                                <TextBlock Text="{Binding MonitorName}"
+                                           FontWeight="SemiBold"
+                                           FontSize="16" />
+                                <TextBlock Text="Pick a control type in the Layout section to configure it here."
+                                           Style="{StaticResource MutedTextStyle}"
+                                           Visibility="{Binding ShowNone, Converter={StaticResource BooleanToVisibility}}" />
+
+                                <content:EditorBoxContent DataContext="{Binding Ddc}" Visibility="{Binding DataContext.ShowDdc, RelativeSource={RelativeSource AncestorType={x:Type Border}}, Converter={StaticResource BooleanToVisibility}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="DDC/CI"
+                                                       Style="{StaticResource SectionTitleStyle}"
+                                                       Margin="0" />
+                                            <TextBlock Text="{Binding CapabilityStatus}" Style="{StaticResource MutedTextStyle}" />
+                                        </StackPanel>
+                                        <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                                            <Button Content="Add"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding CreateBindingCommand}" />
+                                            <Button Content="Rename"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding RenameBindingCommand}" />
+                                            <Button Content="Remove"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding RemoveBindingCommand}" />
+                                        </content:HorizontalSpacingPanel>
+                                    </Grid>
+                                    <content:InformationContent Label="Status">
+                                        <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" />
+                                    </content:InformationContent>
+                                    <content:InputContent Label="Brightness" Visibility="{Binding BrightnessSupported, Converter={StaticResource BooleanToVisibility}}">
+                                        <Slider Minimum="0"
+                                                Maximum="100"
+                                                TickFrequency="1"
+                                                Value="{Binding PendingBrightness, Mode=TwoWay}"
+                                                IsEnabled="{Binding CanUseLiveControls}" />
+                                        <content:InputContent.Trailing>
+                                            <content:HorizontalSpacingPanel Spacing="8">
+                                                <inputs:UnitTextBox Unit="%" Text="{Binding PendingBrightness, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}" />
+                                                <Button Content="Apply"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding ApplyBrightnessCommand}" />
+                                            </content:HorizontalSpacingPanel>
+                                        </content:InputContent.Trailing>
+                                    </content:InputContent>
+                                    <content:InputContent Label="Input" Visibility="{Binding InputSupported, Converter={StaticResource BooleanToVisibility}}">
+                                        <ComboBox ItemsSource="{Binding InputChoices}"
+                                                  SelectedItem="{Binding PendingInput, Mode=TwoWay}"
+                                                  IsEnabled="{Binding CanUseLiveControls}" />
+                                        <content:InputContent.Trailing>
+                                            <Button Content="Apply"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding ApplyInputCommand}" />
+                                        </content:InputContent.Trailing>
+                                    </content:InputContent>
+                                </content:EditorBoxContent>
+
+                                <content:EditorBoxContent DataContext="{Binding Television}" Visibility="{Binding DataContext.ShowTelevision, RelativeSource={RelativeSource AncestorType={x:Type Border}}, Converter={StaticResource BooleanToVisibility}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Television"
+                                                       Style="{StaticResource SectionTitleStyle}"
+                                                       Margin="0" />
+                                            <TextBlock Text="{Binding TelevisionName, TargetNullValue=No television linked}" Style="{StaticResource MutedTextStyle}" />
+                                        </StackPanel>
+                                        <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                                            <Button Content="Add"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding CreateCommand}" />
+                                            <Button Content="Link existing"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding LinkCommand}" />
+                                            <Button Content="Rename"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding RenameCommand}" />
+                                            <Button Content="Unlink"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding UnlinkCommand}" />
+                                            <Button Content="Delete"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding DeleteCommand}" />
+                                        </content:HorizontalSpacingPanel>
+                                    </Grid>
+                                    <content:InputContent Label="Enabled">
+                                        <CheckBox IsChecked="{Binding Enabled, Mode=OneWay}" Command="{Binding ToggleEnabledCommand}" />
+                                    </content:InputContent>
+                                    <content:InputContent Label="Address">
+                                        <TextBox Text="{Binding Host, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </content:InputContent>
+                                    <content:InputContent Label="MAC address">
+                                        <TextBox Text="{Binding MacAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    </content:InputContent>
+                                    <content:InformationContent Label="Power">
+                                        <content:HorizontalSpacingPanel Spacing="8">
+                                            <TextBlock Text="{Binding PowerStateText}" VerticalAlignment="Center" />
+                                            <Button Content="On"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding PowerOnCommand}" />
+                                            <Button Content="Off"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding PowerOffCommand}" />
+                                            <Button Content="Pair"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding PairCommand}" />
+                                        </content:HorizontalSpacingPanel>
+                                    </content:InformationContent>
+                                    <content:ActionContent>
+                                        <Button Content="Make default"
+                                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                Command="{Binding MakeDefaultCommand}" />
+                                        <Button Content="Add input"
+                                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                Command="{Binding AddInputCommand}" />
+                                        <Button Content="Add picture profile"
+                                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                Command="{Binding AddProfileCommand}" />
+                                    </content:ActionContent>
+                                    <TextBlock Text="Inputs" Style="{StaticResource SectionTitleStyle}" />
+                                    <ItemsControl ItemsSource="{Binding Inputs}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0" />
+                                                    <ComboBox Grid.Column="1"
+                                                              ItemsSource="{Binding HdmiChoices}"
+                                                              DisplayMemberPath="Label"
+                                                              SelectedValuePath="Value"
+                                                              SelectedValue="{Binding Input, Mode=TwoWay}" />
+                                                    <Button Grid.Column="2"
+                                                            Content="Remove"
+                                                            Margin="8,0,0,0"
+                                                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                            Command="{Binding DataContext.RemoveInputCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="Picture profiles"
+                                               Style="{StaticResource SectionTitleStyle}"
+                                               Margin="0,8,0,10" />
+                                    <ItemsControl ItemsSource="{Binding Profiles}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,8">
+                                                    <content:EditorBoxContent>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                            <Button Grid.Column="1"
+                                                                    Content="Remove"
+                                                                    Margin="8,0,0,0"
+                                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                                    Command="{Binding DataContext.RemoveProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </Grid>
+                                                        <content:InputContent Label="Picture mode">
+                                                            <ComboBox ItemsSource="{Binding PictureModeChoices}"
+                                                                      DisplayMemberPath="Label"
+                                                                      SelectedValuePath="Value"
+                                                                      SelectedValue="{Binding PictureMode, Mode=TwoWay}" />
+                                                        </content:InputContent>
+                                                        <content:InputContent Label="Input" Visibility="{Binding HasMultipleInputs, Converter={StaticResource BooleanToVisibility}}">
+                                                            <ComboBox ItemsSource="{Binding InputChoices}" SelectedItem="{Binding Input, Mode=TwoWay}" />
+                                                        </content:InputContent>
+                                                    </content:EditorBoxContent>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               Foreground="{DynamicResource ErrorBrush}"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibility}}" />
+                                </content:EditorBoxContent>
+                            </content:EditorBoxContent>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="DisplayHardwareTemplate" DataType="{x:Type displaySections:DisplayRegistrationSectionViewModel}">
+        <StackPanel>
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Name the displays Windows reports so layouts and hardware controls can address them reliably." Style="{StaticResource MutedTextStyle}" />
+                <Button Grid.Column="1"
+                        Content="Rescan"
+                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                        Command="{Binding RescanCommand}" />
+            </Grid>
+            <TextBlock Text="{Binding Inventory.Problem}"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding Inventory.HasProblem, Converter={StaticResource BooleanToVisibility}}"
+                       Margin="0,0,0,10" />
+            <ItemsControl ItemsSource="{Binding Inventory.Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding FriendlyName}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Name}"
+                                               Style="{StaticResource MutedTextStyle}"
+                                               Visibility="{Binding ShowUnderlyingDevice, Converter={StaticResource BooleanToVisibility}}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="{Binding ActionLabel}"
+                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                        Command="{Binding DataContext.AliasCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="AudioEditorTemplate" DataType="{x:Type audio:AudioTargetEditorViewModel}">
+        <StackPanel>
+            <StackPanel.Resources>
+                <visualizations:ResponseCurveConverter x:Key="ResponseCurve" />
+                <visualizations:WaveformEnvelopeConverter x:Key="WaveformEnvelope" />
+            </StackPanel.Resources>
+
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="Configure output routing, processing, alignment, and the Windows endpoints available to PCMode." Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+                <content:HorizontalSpacingPanel Grid.Column="1"
+                                                Spacing="8"
+                                                VerticalAlignment="Top">
+                    <Button Content="Rename"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding RenameCommand}" />
+                    <Button Content="Duplicate"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DuplicateCommand}" />
+                    <Button Content="Delete"
+                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                            Command="{Binding DeleteCommand}" />
+                    <Button Content="Activate"
+                            Style="{StaticResource CompactPrimaryButtonStyle}"
+                            Command="{Binding ActivateCommand}" />
+                </content:HorizontalSpacingPanel>
+            </Grid>
+
+            <Border Style="{StaticResource CardStyle}"
+                    Margin="0,0,0,12"
+                    DataContext="{Binding Waveform}">
+                <Border Background="{DynamicResource WindowBackgroundBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Width="420"
+                        Height="90"
+                        HorizontalAlignment="Left">
+                    <Canvas Width="420"
+                            Height="90"
+                            ClipToBounds="True">
+                        <Line X1="0"
+                              Y1="45"
+                              X2="420"
+                              Y2="45"
+                              Stroke="{DynamicResource BorderBrush}"
+                              StrokeThickness="1"
+                              StrokeDashArray="2,2" />
+                        <Path Data="{Binding Buckets, Converter={StaticResource WaveformEnvelope}}" Fill="{DynamicResource AccentBrush}">
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property="Opacity" Value="0.7" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                            <Setter Property="Opacity" Value="0.25" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                    </Canvas>
+                </Border>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                <content:EditorBoxContent>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Essential settings"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0" />
+                        <Button Grid.Column="1"
+                                Content="{Binding AddLabel}"
+                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                Command="{Binding AddCommand}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding EssentialItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                                    <content:EditorBoxContent>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox ItemsSource="{Binding AvailableSelections}"
+                                                      SelectedItem="{Binding Selection, Mode=TwoWay}"
+                                                      Style="{StaticResource TitleFieldComboBoxStyle}" />
+                                            <Button Grid.Column="1"
+                                                    Content="Remove"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+
+                                        <content:InputContent Label="Reference output" Visibility="{Binding DataContext.ShowAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}, Converter={StaticResource BooleanToVisibility}}">
+                                            <CheckBox IsChecked="{Binding IsReference, Mode=OneWay}"
+                                                      Command="{Binding DataContext.SetReferenceCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                      CommandParameter="{Binding}" />
+                                        </content:InputContent>
+
+                                        <content:InputContent Label="Windows volume">
+                                            <Slider Minimum="0"
+                                                    Maximum="1"
+                                                    TickFrequency="0.01"
+                                                    Value="{Binding Volume, Mode=TwoWay}" />
+                                            <content:InputContent.Trailing>
+                                                <inputs:UnitTextBox Unit="%" Text="{Binding VolumePercent, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}" />
+                                            </content:InputContent.Trailing>
+                                        </content:InputContent>
+
+                                        <content:InputContent Label="Processing profile">
+                                            <ComboBox ItemsSource="{Binding DataContext.ProfileChoices, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}" SelectedItem="{Binding ProfileName, Mode=TwoWay}" />
+                                        </content:InputContent>
+
+                                        <content:InformationContent Label="Runtime" Visibility="{Binding HasRuntimeText, Converter={StaticResource BooleanToVisibility}}">
+                                            <TextBlock Text="{Binding RuntimeText}" Style="{StaticResource MutedTextStyle}" />
+                                        </content:InformationContent>
+                                    </content:EditorBoxContent>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="No output routes yet. Add an output to configure this target.">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource MutedTextStyle}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding EssentialItems.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </content:EditorBoxContent>
+            </Border>
+
+            <Expander Header="Advanced"
+                      IsExpanded="False"
+                      Margin="0,0,0,12">
+                <StackPanel Margin="0,12,0,0">
+                    <TextBlock Text="Processing profile editor" Style="{StaticResource SectionTitleStyle}" />
+                    <ItemsControl ItemsSource="{Binding ProfileItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                                    <content:EditorBoxContent>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Subtitle}" Style="{StaticResource MutedTextStyle}" />
+                                            </StackPanel>
+                                            <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                                                <Button Content="Create"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding CreateProfileCommand}" />
+                                                <Button Content="Edit"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding EditProfileCommand}" />
+                                                <Button Content="Rename"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding RenameProfileCommand}" />
+                                                <Button Content="Delete"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding DeleteProfileCommand}" />
+                                            </content:HorizontalSpacingPanel>
+                                        </Grid>
+
+                                        <content:EditorBoxContent DataContext="{Binding Route}" Visibility="{Binding IsExpanded, Converter={StaticResource BooleanToVisibility}}">
+                                            <content:InputContent Label="Preamp">
+                                                <Slider Minimum="-24"
+                                                        Maximum="24"
+                                                        TickFrequency="0.1"
+                                                        Value="{Binding ProfilePreampGainDb, Mode=TwoWay}" />
+                                                <content:InputContent.Trailing>
+                                                    <inputs:UnitTextBox Unit="dB" Text="{Binding ProfilePreampGainDb, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" />
+                                                </content:InputContent.Trailing>
+                                            </content:InputContent>
+
+                                            <ItemsControl ItemsSource="{Binding ProfileBands}" Tag="{Binding}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,0,0,8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <content:HorizontalSpacingPanel Spacing="8">
+                                                                <ComboBox ItemsSource="{Binding AvailableTypes}" SelectedItem="{Binding Type, Mode=TwoWay}" />
+                                                                <inputs:UnitTextBox Unit="Hz" Text="{Binding FrequencyHz, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0}}" />
+                                                                <inputs:UnitTextBox Unit="dB" Text="{Binding GainDb, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" />
+                                                                <inputs:UnitTextBox ToolTip="Q factor" Text="{Binding Q, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.###}}" />
+                                                            </content:HorizontalSpacingPanel>
+                                                            <Button Grid.Column="1"
+                                                                    Content="Remove"
+                                                                    Margin="8,0,0,0"
+                                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                                    Command="{Binding DataContext.RemoveBandCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <content:CustomContent>
+                                                <Border Width="420"
+                                                        Height="140"
+                                                        HorizontalAlignment="Left"
+                                                        Background="{DynamicResource SurfaceBrush}"
+                                                        BorderBrush="{DynamicResource BorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4">
+                                                    <Canvas Width="420"
+                                                            Height="140"
+                                                            ClipToBounds="True">
+                                                        <Line X1="0"
+                                                              Y1="70"
+                                                              X2="420"
+                                                              Y2="70"
+                                                              Stroke="{DynamicResource BorderBrush}"
+                                                              StrokeThickness="1"
+                                                              StrokeDashArray="2,2" />
+                                                        <ItemsControl ItemsSource="{Binding BandCurves}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <Canvas Width="420" Height="140" />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Polyline Points="{Binding Converter={StaticResource ResponseCurve}}"
+                                                                              Stroke="{DynamicResource AccentBrush}"
+                                                                              StrokeThickness="1"
+                                                                              Opacity="0.35" />
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <Polyline Points="{Binding ResponseCurve, Converter={StaticResource ResponseCurve}}"
+                                                                  Stroke="{DynamicResource AccentBrush}"
+                                                                  StrokeThickness="2" />
+                                                    </Canvas>
+                                                </Border>
+                                            </content:CustomContent>
+
+                                            <content:InformationContent Label="Peak response">
+                                                <TextBlock Text="{Binding PeakResponseText}" />
+                                            </content:InformationContent>
+                                            <content:InformationContent Label="Headroom">
+                                                <TextBlock Text="{Binding HeadroomText}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsHeadroomWarning}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </content:InformationContent>
+                                            <content:InformationContent Label="Status">
+                                                <TextBlock Text="{Binding HeadroomStatusText}" FontWeight="SemiBold" />
+                                            </content:InformationContent>
+                                            <content:ActionContent DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type Border}}}">
+                                                <Button Content="Add band"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding AddBandCommand}" />
+                                                <Button Content="Save profile"
+                                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                        Command="{Binding SaveProfileCommand}" />
+                                            </content:ActionContent>
+                                        </content:EditorBoxContent>
+                                    </content:EditorBoxContent>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Visibility="{Binding ShowAlignment, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Text="Multi-output alignment"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0,8,0,10" />
+                        <ItemsControl ItemsSource="{Binding AlignmentItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ItemCardStyle}"
+                                            Margin="0,0,0,10"
+                                            Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibility}}">
+                                        <content:EditorBoxContent DataContext="{Binding Fields}">
+                                            <TextBlock Text="{Binding DataContext.Title, RelativeSource={RelativeSource AncestorType={x:Type Border}}}" FontWeight="SemiBold" />
+                                            <content:InputContent Label="Level offset">
+                                                <Slider Minimum="0"
+                                                        Maximum="2"
+                                                        TickFrequency="0.01"
+                                                        Value="{Binding Gain, Mode=TwoWay}" />
+                                                <content:InputContent.Trailing>
+                                                    <inputs:UnitTextBox Unit="dB" Text="{Binding LevelOffsetDb, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.0}}" />
+                                                </content:InputContent.Trailing>
+                                            </content:InputContent>
+                                            <content:InputContent Label="Delay">
+                                                <Slider Minimum="0"
+                                                        Maximum="1000"
+                                                        TickFrequency="1"
+                                                        Value="{Binding DelayMs, Mode=TwoWay}" />
+                                                <content:InputContent.Trailing>
+                                                    <inputs:UnitTextBox Unit="ms" Text="{Binding DelayMs, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                </content:InputContent.Trailing>
+                                            </content:InputContent>
+                                        </content:EditorBoxContent>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </Expander>
+
+            <Expander Header="Current hardware" IsExpanded="False">
+                <StackPanel DataContext="{Binding Hardware}" Margin="0,12,0,0">
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Windows playback endpoints"
+                                   Style="{StaticResource MutedTextStyle}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Content="Rescan"
+                                Style="{StaticResource CompactSecondaryButtonStyle}"
+                                Command="{Binding RescanCommand}" />
+                    </Grid>
+                    <TextBlock Text="{Binding Problem}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasProblem, Converter={StaticResource BooleanToVisibility}}"
+                               Margin="0,0,0,10" />
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding FriendlyName}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Summary}" Style="{StaticResource MutedTextStyle}" />
+                                            <TextBlock Text="{Binding EndpointName}"
+                                                       Style="{StaticResource MutedTextStyle}"
+                                                       Visibility="{Binding ShowUnderlyingDevice, Converter={StaticResource BooleanToVisibility}}" />
+                                        </StackPanel>
+                                        <content:HorizontalSpacingPanel Grid.Column="1"
+                                                                        Spacing="8"
+                                                                        VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding BadgeText}"
+                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="{Binding HasBadge, Converter={StaticResource BooleanToVisibility}}" />
+                                            <Button Content="Switch"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding DataContext.SwitchCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{Binding ActionLabel}"
+                                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                                    Command="{Binding DataContext.AliasCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                    CommandParameter="{Binding}" />
+                                        </content:HorizontalSpacingPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Expander>
+        </StackPanel>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type configuration:ConfigurationMigrationEditorPresentation}">
-    <framework:FinalUiComponent
-        HorizontalContentAlignment="Stretch"
-        VerticalContentAlignment="Stretch">
-
-        <migration:MigrationContent
-            Description="{Binding Description}"
-            Source="{Binding Source}" />
-
-    </framework:FinalUiComponent>
-</DataTemplate>
+        <framework:FinalUiComponent HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <migration:MigrationContent Description="{Binding Description}" Source="{Binding Source}" />
+        </framework:FinalUiComponent>
+    </DataTemplate>
     <DataTemplate DataType="{x:Type configuration:ConfigurationPageViewModelBase}">
-        <tree:ConfigurationPageBlock
-            Title="{Binding TreePresentation.Title}"
-            Selector="{Binding TreePresentation.Selector}"
-            Editor="{Binding TreePresentation.Editor}"
-            ValidationProblem="{Binding ValidationProblem}"
-            DiscardCommand="{Binding Commands.Discard}"
-            SaveCommand="{Binding Commands.Save}"
-            IsBusy="{Binding IsBusy}" />
+        <tree:ConfigurationPageBlock Title="{Binding TreePresentation.Title}"
+                                     Selector="{Binding TreePresentation.Selector}"
+                                     Editor="{Binding TreePresentation.Editor}"
+                                     ValidationProblem="{Binding ValidationProblem}"
+                                     DiscardCommand="{Binding Commands.Discard}"
+                                     SaveCommand="{Binding Commands.Save}"
+                                     IsBusy="{Binding IsBusy}" />
     </DataTemplate>
 
     <DataTemplate x:Key="ConfigurationElementSelectorItemTemplate">
         <framework:FinalUiComponent HorizontalContentAlignment="Stretch">
-            <selection:SelectorItem
-                Title="{Binding Title}"
-                Summary="{Binding Summary}"
-                Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationSelectorBlock}}}"
-                CommandParameter="{Binding}" />
+            <selection:SelectorItem Title="{Binding Title}"
+                                    Summary="{Binding Summary}"
+                                    Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ConfigurationSelectorBlock}}}"
+                                    CommandParameter="{Binding}">
+                <selection:SelectorItem.IsSelected>
+                    <MultiBinding Converter="{StaticResource ValuesEqual}">
+                        <Binding Path="Key" />
+                        <Binding Path="DataContext.SelectedKey" RelativeSource="{RelativeSource AncestorType={x:Type tree:ConfigurationPageBlock}}" />
+                    </MultiBinding>
+                </selection:SelectorItem.IsSelected>
+            </selection:SelectorItem>
         </framework:FinalUiComponent>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type configuration:ConfigurationSelectorPresentation}">
-        <tree:ConfigurationSelectorBlock
-            Title="{Binding Title}"
-            Items="{Binding Items}"
-            ItemTemplate="{StaticResource ConfigurationElementSelectorItemTemplate}"
-            CreateCommand="{Binding CreateCommand}"
-            ShowCreateButton="{Binding ShowCreateButton}" />
+        <tree:ConfigurationSelectorBlock Title="{Binding Title}"
+                                         Items="{Binding Items}"
+                                         ItemTemplate="{StaticResource ConfigurationElementSelectorItemTemplate}"
+                                         CreateCommand="{Binding CreateCommand}"
+                                         ShowCreateButton="{Binding ShowCreateButton}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type configuration:ConfigurationEditorPresentation}">
-        <tree:ConfigurationEditorBlock
-            EssentialSections="{Binding EssentialSections}"
-            AdvancedSections="{Binding AdvancedSections}"
-            ExtraSections="{Binding ExtraSections}"
-            HardwareSections="{Binding HardwareSections}" />
+        <tree:ConfigurationEditorBlock EssentialSections="{Binding EssentialSections}"
+                                       AdvancedSections="{Binding AdvancedSections}"
+                                       ExtraSections="{Binding ExtraSections}"
+                                       HardwareSections="{Binding HardwareSections}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type configuration:EditorSectionPresentation}">
-        <tree:EditorSectionBlock
-            Title="{Binding Title}"
-            Content="{Binding Content}"
-            IsCollapsible="{Binding IsCollapsible}"
-            IsExpanded="{Binding IsExpanded}"
-            ShowChrome="{Binding ShowChrome}" />
+        <tree:EditorSectionBlock Title="{Binding Title}"
+                                 Content="{Binding Content}"
+                                 IsCollapsible="{Binding IsCollapsible}"
+                                 IsExpanded="{Binding IsExpanded}"
+                                 ShowChrome="{Binding ShowChrome}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type configuration:TerminalElementContent}">
-        <migration:MigrationContent
-            Description="{Binding Description}"
-            Source="{Binding Source}" />
+        <ContentControl Content="{Binding Source}">
+            <ContentControl.Style>
+                <Style TargetType="ContentControl">
+                    <Setter Property="ContentTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <migration:MigrationContent Description="Terminal UI is ready to migrate." Source="{Binding}" />
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Description}" Value="Audio editor migration boundary">
+                            <Setter Property="ContentTemplate" Value="{StaticResource AudioEditorTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Monitor arrangement and layout membership">
+                            <Setter Property="ContentTemplate" Value="{StaticResource DisplayLayoutTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Cursor positions and layout links">
+                            <Setter Property="ContentTemplate" Value="{StaticResource DisplayCursorTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Per-monitor DDC and television settings">
+                            <Setter Property="ContentTemplate" Value="{StaticResource DisplayMonitorControlsTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Display registration">
+                            <Setter Property="ContentTemplate" Value="{StaticResource DisplayHardwareTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Selected space, activity, or source">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SpacesTargetTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Settings controlled at this hierarchy level">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SpacesResourceGroupsTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Settings inherited from parent levels">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SpacesResourceGroupsTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Settings available to control here">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SpacesResourceGroupsTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Picker favorite and direct shortcut">
+                            <Setter Property="ContentTemplate" Value="{StaticResource SpacesQuickAccessTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Lighting scene and controller colors">
+                            <Setter Property="ContentTemplate" Value="{StaticResource RgbSceneTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="OpenRGB connection settings">
+                            <Setter Property="ContentTemplate" Value="{StaticResource RgbAdvancedTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Discovered RGB controllers">
+                            <Setter Property="ContentTemplate" Value="{StaticResource RgbHardwareTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Application launch and detection settings">
+                            <Setter Property="ContentTemplate" Value="{StaticResource ApplicationEssentialTemplate}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Description}" Value="Readiness rules and resource requirements">
+                            <Setter Property="ContentTemplate" Value="{StaticResource ApplicationAdvancedTemplate}" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ContentControl.Style>
+        </ContentControl>
     </DataTemplate>
-
 </ResourceDictionary>

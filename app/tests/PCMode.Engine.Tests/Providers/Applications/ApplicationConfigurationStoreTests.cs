@@ -21,7 +21,11 @@ public sealed class ApplicationConfigurationStoreTests
         }
         """;
 
-    private static ApplicationEdit BasicEdit(string name, string process = "media", string executable = @"C:\Media\media.exe") =>
+    private static ApplicationEdit BasicEdit(
+        string name,
+        string process = "media",
+        string executable = @"C:\Media\media.exe"
+    ) =>
         new(
             name,
             ApplicationObservationKind.Process,
@@ -33,7 +37,8 @@ public sealed class ApplicationConfigurationStoreTests
             RestartWhen: [],
             Ready: null,
             StartWithinMs: 3000,
-            StopWithinMs: 5000);
+            StopWithinMs: 5000
+        );
 
     [Fact]
     public void Creates_an_application_that_ApplicationCatalog_then_reads_back()
@@ -42,7 +47,10 @@ public sealed class ApplicationConfigurationStoreTests
         root.Write(Document);
 
         ModeSaveOutcome outcome = ApplicationConfigurationStore.SaveApplication(
-            root.Path, previousName: null, BasicEdit("Media Player"));
+            root.Path,
+            previousName: null,
+            BasicEdit("Media Player")
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -69,7 +77,8 @@ public sealed class ApplicationConfigurationStoreTests
             RestartWhen: [],
             Ready: null,
             StartWithinMs: 3000,
-            StopWithinMs: 5000);
+            StopWithinMs: 5000
+        );
 
         Assert.True(ApplicationConfigurationStore.SaveApplication(root.Path, null, edit).Success);
 
@@ -146,7 +155,8 @@ public sealed class ApplicationConfigurationStoreTests
             RestartWhen: [],
             Ready: null,
             StartWithinMs: 3000,
-            StopWithinMs: 5000);
+            StopWithinMs: 5000
+        );
 
         Assert.True(ApplicationConfigurationStore.SaveApplication(root.Path, "Steam", edit).Success);
 
@@ -174,19 +184,25 @@ public sealed class ApplicationConfigurationStoreTests
             RestartWhen: [],
             Ready: null,
             StartWithinMs: 3000,
-            StopWithinMs: 5000);
+            StopWithinMs: 5000
+        );
 
         ModeSaveOutcome outcome = ApplicationConfigurationStore.SaveApplication(root.Path, "Steam", edit);
         Assert.True(outcome.Success, outcome.Problem);
 
         (string json, _) = ModeConfiguration.ReadOrCreate(root.Path);
-        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ApplicationProviders(json, new FakeProcessHost(), []);
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ApplicationProviders(
+            json,
+            new FakeProcessHost(),
+            []
+        );
         ModeConfiguration configuration = ModeConfiguration.Parse(json, providers);
 
         Assert.Equal(["Big Picture"], providers.Select(provider => provider.Key));
 
-        ConfiguredResource gaming = configuration.Find("Gaming")!.Resources
-            .Single(resource => resource.Key == "Big Picture");
+        ConfiguredResource gaming = configuration
+            .Find("Gaming")!
+            .Resources.Single(resource => resource.Key == "Big Picture");
         Assert.Equal("Running", gaming.Value);
 
         Assert.DoesNotContain(configuration.Find("Gaming")!.Resources, resource => resource.Key == "Steam");
@@ -209,7 +225,8 @@ public sealed class ApplicationConfigurationStoreTests
             RestartWhen: [],
             Ready: null,
             StartWithinMs: 3000,
-            StopWithinMs: 5000);
+            StopWithinMs: 5000
+        );
 
         ModeSaveOutcome outcome = ApplicationConfigurationStore.SaveApplication(root.Path, previousName: null, edit);
         Assert.True(outcome.Success, outcome.Problem);
@@ -251,14 +268,21 @@ public sealed class ApplicationConfigurationStoreTests
     [Theory]
     [InlineData("", "media", "a name")]
     [InlineData("Media Player", "", "process name")]
-    public void Refuses_a_blank_name_or_process_and_leaves_the_file_untouched(string name, string process, string expected)
+    public void Refuses_a_blank_name_or_process_and_leaves_the_file_untouched(
+        string name,
+        string process,
+        string expected
+    )
     {
         using var root = new TemporaryRoot();
         root.Write(Document);
         string before = File.ReadAllText(root.ConfigurationFile);
 
         ModeSaveOutcome outcome = ApplicationConfigurationStore.SaveApplication(
-            root.Path, null, BasicEdit(name, process));
+            root.Path,
+            null,
+            BasicEdit(name, process)
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains(expected, outcome.Problem, StringComparison.OrdinalIgnoreCase);
@@ -378,10 +402,16 @@ public sealed class ApplicationConfigurationStoreTests
     private static ApplicationDefinition ReadDefinition(TemporaryRoot root, string name)
     {
         (string json, _) = ModeConfiguration.ReadOrCreate(root.Path);
-        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ApplicationProviders(json, new FakeProcessHost(), []);
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ApplicationProviders(
+            json,
+            new FakeProcessHost(),
+            []
+        );
         ModeConfiguration.Parse(json, providers);
 
-        return ((ApplicationProvider)providers.Single(provider =>
-            string.Equals(provider.Key, name, StringComparison.OrdinalIgnoreCase))).Definition;
+        return (
+            (ApplicationProvider)
+                providers.Single(provider => string.Equals(provider.Key, name, StringComparison.OrdinalIgnoreCase))
+        ).Definition;
     }
 }

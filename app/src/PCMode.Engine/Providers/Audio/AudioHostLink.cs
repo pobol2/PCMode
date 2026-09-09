@@ -72,8 +72,9 @@ public sealed class AudioHostLink : IAudioRuntime
     private readonly Func<Process>? _launch;
     private readonly Func<bool> _installed;
 
-    private AudioRuntimeStatus _status =
-        AudioRuntimeStatus.Unreachable("The PCMode audio Host has not been contacted yet.");
+    private AudioRuntimeStatus _status = AudioRuntimeStatus.Unreachable(
+        "The PCMode audio Host has not been contacted yet."
+    );
 
     /// <summary>
     /// When <see cref="_status"/> was taken, or null before the first answer.
@@ -101,11 +102,11 @@ public sealed class AudioHostLink : IAudioRuntime
         : this(
             new AudioHostClient(
                 HostProtocolVersion.DefaultPipeName,
-                connectTimeoutMilliseconds: ConnectTimeoutMilliseconds),
+                connectTimeoutMilliseconds: ConnectTimeoutMilliseconds
+            ),
             () => new AudioHostLauncher(HostPath(), HostProtocolVersion.DefaultPipeName).Launch(),
-            () => File.Exists(HostPath()))
-    {
-    }
+            () => File.Exists(HostPath())
+        ) { }
 
     /// <summary>
     /// Where the shipped Host is.
@@ -121,9 +122,7 @@ public sealed class AudioHostLink : IAudioRuntime
     {
         string folder = Path.Combine(AppContext.BaseDirectory, "AudioHost", "PCMode.Audio.Host.exe");
 
-        return File.Exists(folder)
-            ? folder
-            : Path.Combine(AppContext.BaseDirectory, "PCMode.Audio.Host.exe");
+        return File.Exists(folder) ? folder : Path.Combine(AppContext.BaseDirectory, "PCMode.Audio.Host.exe");
     }
 
     /// <param name="client">How to talk to a Host.</param>
@@ -140,9 +139,7 @@ public sealed class AudioHostLink : IAudioRuntime
     /// constructor must not add a filesystem check of its own guessing at where.
     /// </remarks>
     public AudioHostLink(IAudioHostClient client, Func<Process>? launch)
-        : this(client, launch, installed: () => true)
-    {
-    }
+        : this(client, launch, installed: () => true) { }
 
     /// <param name="installed">
     /// Whether the Host is installed at all, checked before every connection
@@ -186,9 +183,11 @@ public sealed class AudioHostLink : IAudioRuntime
                 return _status;
             }
 
-            if (!_status.Reachable &&
-                _statusTaken is long taken &&
-                Environment.TickCount64 - taken < AbsenceHeldMilliseconds)
+            if (
+                !_status.Reachable
+                && _statusTaken is long taken
+                && Environment.TickCount64 - taken < AbsenceHeldMilliseconds
+            )
             {
                 // Recently established that there is no Host. See
                 // AbsenceHeldMilliseconds.
@@ -196,6 +195,36 @@ public sealed class AudioHostLink : IAudioRuntime
             }
 
             return Record(Probe());
+        }
+    }
+
+    /// <summary>
+    /// Straight to the Host's dedicated waveform request, bypassing
+    /// <see cref="_gate"/>, <see cref="Probe"/> and the absence-caching
+    /// <see cref="Refresh"/> relies on: those exist to protect a settings
+    /// page's occasional redraw, not a waveform's many-times-a-second one,
+    /// and serializing this behind the same lock as <see cref="Apply"/> would
+    /// make an open Audio page's redraw loop wait on whatever the user is
+    /// doing to the target at that moment, and vice versa.
+    /// </summary>
+    public async Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken)
+    {
+        if (_disposed || !_installed())
+        {
+            return [];
+        }
+
+        try
+        {
+            return await _client.GetWaveformAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // No Host, or it did not answer in time: the same as nothing
+            // playing, from a waveform's point of view. A redraw loop ticking
+            // many times a second must not throw the caller into its own
+            // error handling over what is, for this purpose, silence.
+            return [];
         }
     }
 
@@ -231,7 +260,8 @@ public sealed class AudioHostLink : IAudioRuntime
 
                 throw new InvalidOperationException(
                     $"The PCMode audio Host could not play '{target.Name}'. {Explain(exception)}",
-                    exception);
+                    exception
+                );
             }
 
             Record(Probe());
@@ -244,10 +274,10 @@ public sealed class AudioHostLink : IAudioRuntime
         bool muted,
         TimeSpan delay,
         AudioProcessingProfile processing,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            processing);
+        ArgumentNullException.ThrowIfNull(processing);
 
         lock (_gate)
         {
@@ -258,20 +288,16 @@ public sealed class AudioHostLink : IAudioRuntime
             if (!Record(Probe()).Reachable)
             {
                 throw new InvalidOperationException(
-                    "The PCMode audio Host is not running, so nothing can be calibrated.");
+                    "The PCMode audio Host is not running, so nothing can be calibrated."
+                );
             }
 
             try
             {
                 Wait(
-                    token => _client.RecalibrateRouteAsync(
-                        endpointId,
-                        volume,
-                        muted,
-                        delay,
-                        processing,
-                        token),
-                    cancellationToken);
+                    token => _client.RecalibrateRouteAsync(endpointId, volume, muted, delay, processing, token),
+                    cancellationToken
+                );
             }
             catch (OperationCanceledException)
             {
@@ -284,7 +310,8 @@ public sealed class AudioHostLink : IAudioRuntime
 
                 throw new InvalidOperationException(
                     $"The PCMode audio Host could not calibrate '{endpointId}'. {Explain(exception)}",
-                    exception);
+                    exception
+                );
             }
 
             Record(Probe());
@@ -314,8 +341,9 @@ public sealed class AudioHostLink : IAudioRuntime
             }
             catch (Exception exception)
             {
-                Record(AudioRuntimeStatus.Unreachable(
-                    $"The PCMode audio Host did not stop cleanly. {Explain(exception)}"));
+                Record(
+                    AudioRuntimeStatus.Unreachable($"The PCMode audio Host did not stop cleanly. {Explain(exception)}")
+                );
 
                 return;
             }
@@ -349,8 +377,9 @@ public sealed class AudioHostLink : IAudioRuntime
             // ordinary state for a machine using only direct outputs, so it must
             // not cost the same timeout as a Host that failed to answer.
             return AudioRuntimeStatus.Unreachable(
-                "The PCMode audio Host is not installed. Native Audio is an optional beta capability; " +
-                "direct outputs do not need it.");
+                "The PCMode audio Host is not installed. Native Audio is an optional beta capability; "
+                    + "direct outputs do not need it."
+            );
         }
 
         try
@@ -385,7 +414,8 @@ public sealed class AudioHostLink : IAudioRuntime
         if (_launch is null)
         {
             throw new InvalidOperationException(
-                $"The PCMode audio Host is not running and this engine may not start one. {problem}");
+                $"The PCMode audio Host is not running and this engine may not start one. {problem}"
+            );
         }
 
         Process process;
@@ -397,10 +427,11 @@ public sealed class AudioHostLink : IAudioRuntime
         catch (Exception exception)
         {
             throw new InvalidOperationException(
-                "The PCMode audio Host could not be started. " +
-                $"{Explain(exception)} PCMode audio targets need the PCMode audio subsystem installed; " +
-                "single outputs work without it.",
-                exception);
+                "The PCMode audio Host could not be started. "
+                    + $"{Explain(exception)} PCMode audio targets need the PCMode audio subsystem installed; "
+                    + "single outputs work without it.",
+                exception
+            );
         }
 
         var waited = Stopwatch.StartNew();
@@ -422,7 +453,8 @@ public sealed class AudioHostLink : IAudioRuntime
                 }
 
                 throw new InvalidOperationException(
-                    $"The PCMode audio Host stopped immediately (exit code {process.ExitCode}).");
+                    $"The PCMode audio Host stopped immediately (exit code {process.ExitCode})."
+                );
             }
 
             AudioRuntimeStatus current = Probe();
@@ -444,13 +476,11 @@ public sealed class AudioHostLink : IAudioRuntime
             process.Kill(entireProcessTree: true);
             process.WaitForExit(5_000);
         }
-        catch
-        {
-        }
+        catch { }
 
         throw new InvalidOperationException(
-            "The PCMode audio Host was started and did not answer within " +
-            $"{StartupTimeout.TotalSeconds:0} seconds.");
+            "The PCMode audio Host was started and did not answer within " + $"{StartupTimeout.TotalSeconds:0} seconds."
+        );
     }
 
     /// <summary>
@@ -461,16 +491,17 @@ public sealed class AudioHostLink : IAudioRuntime
     /// is the same as a Host that refused the target -- so they are told apart
     /// here rather than folded into "audio failed".
     /// </remarks>
-    private static string Explain(Exception exception) => exception switch
-    {
-        AudioHostProtocolException protocol =>
-            $"The PCMode audio Host speaks a different version of the control protocol. {protocol.Message}",
-        AudioHostRequestException request => request.Message,
-        TimeoutException => "The PCMode audio Host is not running.",
-        FileNotFoundException => "PCMode.Audio.Host.exe was not found beside PCMode.",
-        AggregateException aggregate when aggregate.InnerException is not null => Explain(aggregate.InnerException),
-        _ => exception.Message,
-    };
+    private static string Explain(Exception exception) =>
+        exception switch
+        {
+            AudioHostProtocolException protocol =>
+                $"The PCMode audio Host speaks a different version of the control protocol. {protocol.Message}",
+            AudioHostRequestException request => request.Message,
+            TimeoutException => "The PCMode audio Host is not running.",
+            FileNotFoundException => "PCMode.Audio.Host.exe was not found beside PCMode.",
+            AggregateException aggregate when aggregate.InnerException is not null => Explain(aggregate.InnerException),
+            _ => exception.Message,
+        };
 
     /// <summary>
     /// Runs one pipe exchange to completion, from whichever thread asked.

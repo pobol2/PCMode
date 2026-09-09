@@ -1,6 +1,7 @@
 using System.Globalization;
 using PCMode.Picker;
 using PCMode.Tray.Elements.Settings;
+using PCMode.Tray.Platform.Picker;
 
 namespace PCMode.Tray;
 
@@ -78,8 +79,9 @@ public sealed record TrayOptions
 
         var options = new TrayOptions();
         var favoriteOverrides = new List<string>();
-        Dictionary<PickerDirection, ModeFavorite> favorites =
-            FavoriteSet.Default.All.ToDictionary(favorite => favorite.Direction);
+        Dictionary<PickerDirection, ModeFavorite> favorites = FavoriteSet.Default.All.ToDictionary(favorite =>
+            favorite.Direction
+        );
 
         for (int index = 0; index < arguments.Count; index++)
         {
@@ -153,8 +155,9 @@ public sealed record TrayOptions
 
                 default:
                     return Failed(
-                        $"'{argument}' is not an option PCMode understands. Valid options are: " +
-                        "--background, --no-input, --no-controller, --data-root, --picker-monitor, --favorite.");
+                        $"'{argument}' is not an option PCMode understands. Valid options are: "
+                            + "--background, --no-input, --no-controller, --data-root, --picker-monitor, --favorite."
+                    );
             }
         }
 
@@ -182,8 +185,9 @@ public sealed record TrayOptions
     {
         ArgumentNullException.ThrowIfNull(persisted);
 
-        Dictionary<PickerDirection, ModeFavorite> favorites =
-            persisted.Favorites.All.ToDictionary(favorite => favorite.Direction);
+        Dictionary<PickerDirection, ModeFavorite> favorites = persisted.Favorites.All.ToDictionary(favorite =>
+            favorite.Direction
+        );
 
         foreach (string text in FavoriteOverrides)
         {
@@ -205,8 +209,10 @@ public sealed record TrayOptions
                 string[] halves = text.Split('=', 2);
                 string[] parts = halves.Length == 2 ? halves[1].Split(':') : [];
 
-                if (parts.Length <= 3 ||
-                    !Enum.TryParse(halves[0].Trim(), ignoreCase: true, out PickerDirection direction))
+                if (
+                    parts.Length <= 3
+                    || !Enum.TryParse(halves[0].Trim(), ignoreCase: true, out PickerDirection direction)
+                )
                 {
                     continue;
                 }
@@ -217,7 +223,8 @@ public sealed record TrayOptions
                 if (hotkey.Length == 0)
                 {
                     shortcuts.RemoveAll(shortcut =>
-                        string.Equals(shortcut.Target, favorite.ModeName, StringComparison.OrdinalIgnoreCase));
+                        string.Equals(shortcut.Target, favorite.ModeName, StringComparison.OrdinalIgnoreCase)
+                    );
                     continue;
                 }
 
@@ -267,7 +274,8 @@ public sealed record TrayOptions
         string text,
         IReadOnlyDictionary<PickerDirection, ModeFavorite> current,
         out ModeFavorite? favorite,
-        out string? problem)
+        out string? problem
+    )
     {
         favorite = null;
         problem = null;
@@ -306,8 +314,9 @@ public sealed record TrayOptions
             if (!Enum.TryParse(parts[1].Trim(), ignoreCase: true, out icon))
             {
                 problem =
-                    $"'{parts[1]}' is not an icon. Use one of: " +
-                    string.Join(", ", Enum.GetNames<FavoriteIcon>()) + ".";
+                    $"'{parts[1]}' is not an icon. Use one of: "
+                    + string.Join(", ", Enum.GetNames<FavoriteIcon>())
+                    + ".";
 
                 return false;
             }
@@ -353,10 +362,10 @@ public sealed record TrayOptions
 
             // The label follows the mode name unless it was already something
             // different, so the common case needs no second argument.
-            Label = !existing.IsAssigned ||
-                    string.Equals(existing.Label, existing.ModeName, StringComparison.Ordinal)
-                ? modeName
-                : existing.Label,
+            Label =
+                !existing.IsAssigned || string.Equals(existing.Label, existing.ModeName, StringComparison.Ordinal)
+                    ? modeName
+                    : existing.Label,
 
             Icon = icon,
             Color = color,

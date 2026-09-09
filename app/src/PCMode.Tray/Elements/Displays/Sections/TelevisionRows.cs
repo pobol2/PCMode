@@ -11,18 +11,19 @@ public sealed record TelevisionChoice(string Label, string Value);
 
 internal static class TelevisionUiChoices
 {
-    private static readonly IReadOnlyDictionary<string, string> SignalLabels =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["uhddeepcolor_hdmi{n}"] = "HDMI Deep Color",
-            ["hdmipcmode_hdmi{n}"] = "PC mode",
-            ["gamemode_hdmi{n}"] = "Game mode",
-            ["gameoptimization_hdmi{n}"] = "Game Optimizer",
-            ["gameoptimization"] = "Game Optimizer (global)",
-            ["freesyncoled_hdmi{n}"] = "AMD FreeSync",
-            ["freesync"] = "FreeSync (global)",
-            ["inputoptimization"] = "Input latency",
-        };
+    private static readonly IReadOnlyDictionary<string, string> SignalLabels = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["uhddeepcolor_hdmi{n}"] = "HDMI Deep Color",
+        ["hdmipcmode_hdmi{n}"] = "PC mode",
+        ["gamemode_hdmi{n}"] = "Game mode",
+        ["gameoptimization_hdmi{n}"] = "Game Optimizer",
+        ["gameoptimization"] = "Game Optimizer (global)",
+        ["freesyncoled_hdmi{n}"] = "AMD FreeSync",
+        ["freesync"] = "FreeSync (global)",
+        ["inputoptimization"] = "Input latency",
+    };
 
     /// <summary>
     /// Every socket the engine will accept, and nothing this file decided.
@@ -33,14 +34,17 @@ internal static class TelevisionUiChoices
     /// The list of sockets is <see cref="LgTvSettings.HdmiInputIds"/>'s to state.
     /// </remarks>
     public static readonly IReadOnlyList<TelevisionChoice> HdmiInputs =
-        [.. LgTvSettings.HdmiInputIds.Select(id =>
-            new TelevisionChoice($"HDMI {id["HDMI_".Length..]}", id))];
+    [
+        .. LgTvSettings.HdmiInputIds.Select(id => new TelevisionChoice($"HDMI {id["HDMI_".Length..]}", id)),
+    ];
 
     public static readonly IReadOnlyList<TelevisionChoice> SignalSettings =
-        [.. LgTvProfile.SignalNames.Keys.Select(key =>
-            new TelevisionChoice(
-                SignalLabels.TryGetValue(key, out string? label) ? label : key,
-                key))];
+    [
+        .. LgTvProfile.SignalNames.Keys.Select(key => new TelevisionChoice(
+            SignalLabels.TryGetValue(key, out string? label) ? label : key,
+            key
+        )),
+    ];
 
     public static readonly IReadOnlyList<TelevisionChoice> PictureModes =
     [
@@ -57,18 +61,18 @@ internal static class TelevisionUiChoices
     ];
 
     public static IReadOnlyList<TelevisionChoice> SignalValues(string key) =>
-        [.. LgTvProfile.SignalValuesFor(key)
-            .Select(value => new TelevisionChoice(FriendlyValue(value), value))];
+        [.. LgTvProfile.SignalValuesFor(key).Select(value => new TelevisionChoice(FriendlyValue(value), value))];
 
-    private static string FriendlyValue(string value) => value.ToLowerInvariant() switch
-    {
-        "auto" => "Automatic",
-        "on" => "On",
-        "off" => "Off",
-        "standard" => "Standard",
-        "boost" => "Boost",
-        _ => value,
-    };
+    private static string FriendlyValue(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "auto" => "Automatic",
+            "on" => "On",
+            "off" => "Off",
+            "standard" => "Standard",
+            "boost" => "Boost",
+            _ => value,
+        };
 }
 
 /// <summary>One input row being edited: a name a mode can use, and the HDMI socket it means.</summary>
@@ -126,8 +130,7 @@ public sealed class TelevisionSettingRow : ObservableEditableRow
 
     public IReadOnlyList<TelevisionChoice> SignalKeyChoices => TelevisionUiChoices.SignalSettings;
 
-    public IReadOnlyList<TelevisionChoice> SignalValueChoices =>
-        TelevisionUiChoices.SignalValues(_key);
+    public IReadOnlyList<TelevisionChoice> SignalValueChoices => TelevisionUiChoices.SignalValues(_key);
 
     public string Value
     {
@@ -164,7 +167,8 @@ public sealed class TelevisionProfileRow : ObservableEditableRow
         string pictureMode,
         string input,
         Func<IReadOnlyList<string>> inputNames,
-        Action onChanged)
+        Action onChanged
+    )
         : base(onChanged)
     {
         _name = name;
@@ -234,9 +238,12 @@ public sealed class TelevisionProfileRow : ObservableEditableRow
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(_pictureMode) ||
-                TelevisionUiChoices.PictureModes.Any(choice =>
-                    string.Equals(choice.Value, _pictureMode, StringComparison.OrdinalIgnoreCase)))
+            if (
+                string.IsNullOrWhiteSpace(_pictureMode)
+                || TelevisionUiChoices.PictureModes.Any(choice =>
+                    string.Equals(choice.Value, _pictureMode, StringComparison.OrdinalIgnoreCase)
+                )
+            )
             {
                 return TelevisionUiChoices.PictureModes;
             }
@@ -251,8 +258,7 @@ public sealed class TelevisionProfileRow : ObservableEditableRow
     /// <summary>Settings written after the display switches, alongside the picture mode.</summary>
     public ObservableCollection<TelevisionSettingRow> Settings { get; } = [];
 
-    public void AddSignal() =>
-        Signal.Add(new TelevisionSettingRow("uhddeepcolor_hdmi{n}", "on", _onChanged));
+    public void AddSignal() => Signal.Add(new TelevisionSettingRow("uhddeepcolor_hdmi{n}", "on", _onChanged));
 
     public void RemoveSignal(TelevisionSettingRow row)
     {

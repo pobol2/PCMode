@@ -9,15 +9,16 @@ public class PageSection : ContentControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(PageSection),
-            new FrameworkPropertyMetadata(typeof(PageSection)));
+            new FrameworkPropertyMetadata(typeof(PageSection))
+        );
     }
 
-    public static readonly DependencyProperty TitleProperty =
-        DependencyProperty.Register(
-            nameof(Title),
-            typeof(string),
-            typeof(PageSection),
-            new PropertyMetadata(string.Empty));
+    public static readonly DependencyProperty TitleProperty = DependencyProperty.Register(
+        nameof(Title),
+        typeof(string),
+        typeof(PageSection),
+        new PropertyMetadata(string.Empty)
+    );
 
     public string Title
     {

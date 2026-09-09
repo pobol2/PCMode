@@ -92,11 +92,11 @@ public sealed class WindowsThemeProviderTests
     }
 
     [Theory]
-    [InlineData(true, true, true)]      // both light
-    [InlineData(false, false, false)]   // both dark
-    [InlineData(true, false, null)]     // light windows on a dark taskbar
-    [InlineData(false, true, null)]     // and the other way round
-    [InlineData(true, null, null)]      // one of them could not be read
+    [InlineData(true, true, true)] // both light
+    [InlineData(false, false, false)] // both dark
+    [InlineData(true, false, null)] // light windows on a dark taskbar
+    [InlineData(false, true, null)] // and the other way round
+    [InlineData(true, null, null)] // one of them could not be read
     [InlineData(null, null, null)]
     public void Calls_a_half_written_theme_no_theme_at_all(bool? apps, bool? system, bool? expected)
     {
@@ -120,7 +120,8 @@ public sealed class WindowsThemeProviderTests
         using var root = new TemporaryRoot();
 
         root.Write(
-            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}""");
+            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}"""
+        );
 
         var store = new HalfTakingStore();
 
@@ -130,7 +131,8 @@ public sealed class WindowsThemeProviderTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
 
         TransitionOutcome outcome = await engine.ApplyAsync("Movie");
 

@@ -160,10 +160,7 @@ public sealed class XInputReader : IGamepadReader, IDisposable
             return null;
         }
 
-        return new GamepadState(
-            (GamepadButtons)native.Gamepad.Buttons,
-            native.Gamepad.ThumbLX,
-            native.Gamepad.ThumbLY);
+        return new GamepadState((GamepadButtons)native.Gamepad.Buttons, native.Gamepad.ThumbLX, native.Gamepad.ThumbLY);
     }
 
     public void Dispose()

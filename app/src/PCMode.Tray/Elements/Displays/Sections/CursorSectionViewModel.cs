@@ -1,7 +1,7 @@
 using System.Windows.Input;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Displays.Sections;
 
@@ -56,7 +56,8 @@ public sealed record CursorPositionWrites(
     Func<string, string?> Create,
     Func<string, string?> Rename,
     Func<string, string?> Duplicate,
-    Func<string?> Delete);
+    Func<string?> Delete
+);
 
 public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSection
 {
@@ -80,7 +81,8 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
         IConfigurationWorkspace workspace,
         Action onChanged,
         IConfigurationPrompts? prompts = null,
-        CursorPositionWrites? writes = null)
+        CursorPositionWrites? writes = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(onChanged);
@@ -145,7 +147,8 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
             "Create cursor position",
             "Name the new cursor position. It is created at the display's center and linked to this layout; adjust it below, then Save.",
             string.Empty,
-            writes.Create);
+            writes.Create
+        );
     }
 
     private void PromptRename()
@@ -159,7 +162,8 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
             "Rename cursor position",
             $"Rename '{current}'. Every layout that requires it, and any mode that names it directly, is updated to match.",
             current,
-            writes.Rename);
+            writes.Rename
+        );
     }
 
     private void PromptDuplicate()
@@ -173,7 +177,8 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
             "Duplicate cursor position",
             $"Name the copy of '{current}'. This layout is linked to the copy; '{current}' itself is untouched.",
             $"{current} copy",
-            writes.Duplicate);
+            writes.Duplicate
+        );
     }
 
     private void ConfirmDelete()
@@ -183,9 +188,12 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
             return;
         }
 
-        if (_prompts.Confirm(
-                $"Delete the cursor position '{current}'? This removes it outright, not just the link -- " +
-                "it is refused if a mode or another layout still uses it."))
+        if (
+            _prompts.Confirm(
+                $"Delete the cursor position '{current}'? This removes it outright, not just the link -- "
+                    + "it is refused if a mode or another layout still uses it."
+            )
+        )
         {
             writes.Delete();
         }
@@ -256,8 +264,7 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
     public string? ValidationProblem =>
         !HasLinkedPosition
             ? null
-            : ValidateAxis("Horizontal position", XMode, XValue) ??
-              ValidateAxis("Vertical position", YMode, YValue);
+            : ValidateAxis("Horizontal position", XMode, XValue) ?? ValidateAxis("Vertical position", YMode, YValue);
 
     /// <summary>Reads which position (if any) is linked to the named layout ON DISK, and loads its X/Y.</summary>
     /// <remarks>
@@ -303,7 +310,8 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
         (CursorProvider? cursor, _) = _workspace.ReadProvider<CursorProvider>();
 
         CursorPosition? position = cursor?.Positions.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, linkedName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Name, linkedName, StringComparison.OrdinalIgnoreCase)
+        );
 
         ApplyToForm(position);
     }
@@ -326,7 +334,13 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
         int? yFromBottom = yPercent is null ? (int)Math.Round(YValue, MidpointRounding.AwayFromZero) : null;
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Save(
-            _workspace.Root, name, xPercent, xFromRight, yPercent, yFromBottom);
+            _workspace.Root,
+            name,
+            xPercent,
+            xFromRight,
+            yPercent,
+            yFromBottom
+        );
 
         return outcome.Success ? null : outcome.Problem ?? "The cursor position could not be saved.";
     }
@@ -350,7 +364,13 @@ public sealed class CursorSectionViewModel : ObservableObject, IConfigurationSec
         int? yFromBottom = yPercent is null ? (int)Math.Round(YValue, MidpointRounding.AwayFromZero) : null;
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Save(
-            _workspace.Root, newName, xPercent, xFromRight, yPercent, yFromBottom);
+            _workspace.Root,
+            newName,
+            xPercent,
+            xFromRight,
+            yPercent,
+            yFromBottom
+        );
 
         return outcome.Success ? null : outcome.Problem ?? "The cursor position could not be created.";
     }

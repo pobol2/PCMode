@@ -10,7 +10,11 @@ namespace PCMode.Engine;
 /// is on the monitors this targets, so nothing here invents a second unit to
 /// convert to and from.
 /// </remarks>
-public sealed class DdcBrightnessProvider : IConfigurableProvider, IAvailableProvider, IConvergentProvider, IHealthReportingProvider
+public sealed class DdcBrightnessProvider
+    : IConfigurableProvider,
+        IAvailableProvider,
+        IConvergentProvider,
+        IHealthReportingProvider
 {
     private readonly DdcMonitorConnection _connection;
 
@@ -58,26 +62,35 @@ public sealed class DdcBrightnessProvider : IConfigurableProvider, IAvailablePro
         return capabilities.Supports(DdcVcpCode.Brightness)
             ? ResourceAvailability.Available
             : ResourceAvailability.Unavailable(
-                $"monitor '{_connection.Alias}' does not report DDC/CI brightness (VCP 0x10) support.");
+                $"monitor '{_connection.Alias}' does not report DDC/CI brightness (VCP 0x10) support."
+            );
     }
 
     /// <summary>
     /// Verified, briefly -- a DDC/CI write is local and fast, unlike a
     /// networked television.
     /// </summary>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 2,
-        RetryInterval = TimeSpan.FromSeconds(2),
-        PollInterval = TimeSpan.FromMilliseconds(300),
-        Settle = TimeSpan.FromMilliseconds(300),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 2,
+            RetryInterval = TimeSpan.FromSeconds(2),
+            PollInterval = TimeSpan.FromMilliseconds(300),
+            Settle = TimeSpan.FromMilliseconds(300),
+        };
 
     public bool IsValidValue(string value, out string? problem)
     {
-        if (!byte.TryParse((value ?? string.Empty).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out byte level) ||
-            level > 100)
+        if (
+            !byte.TryParse(
+                (value ?? string.Empty).Trim(),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out byte level
+            )
+            || level > 100
+        )
         {
             problem = $"'{value}' is not a DDC/CI brightness. Give a whole number from 0 to 100.";
             return false;

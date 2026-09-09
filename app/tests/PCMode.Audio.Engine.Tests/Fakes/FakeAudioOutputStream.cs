@@ -4,8 +4,7 @@ using PCMode.Audio.Engine.Contracts;
 
 namespace PCMode.Audio.Engine.Tests.Fakes;
 
-internal sealed class FakeAudioOutputStream :
-    IAudioOutputStream
+internal sealed class FakeAudioOutputStream : IAudioOutputStream
 {
     private readonly float[] _samples;
 
@@ -55,198 +54,134 @@ internal sealed class FakeAudioOutputStream :
         int sampleCapacity = 100_000,
         bool failOnStart = false,
         bool autoAdvanceClock = true,
-        int initialQueuedFrames = 0)
+        int initialQueuedFrames = 0
+    )
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            sampleCapacity);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sampleCapacity);
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            initialQueuedFrames);
+        ArgumentOutOfRangeException.ThrowIfNegative(initialQueuedFrames);
 
-        EndpointId =
-            endpointId;
+        EndpointId = endpointId;
 
-        Format =
-            format;
+        Format = format;
 
-        _samples =
-            new float[
-                sampleCapacity];
+        _samples = new float[sampleCapacity];
 
-        _failOnStart =
-            failOnStart;
+        _failOnStart = failOnStart;
 
-        _autoAdvanceClock =
-            autoAdvanceClock;
+        _autoAdvanceClock = autoAdvanceClock;
 
-        _initialQueuedFrames =
-            initialQueuedFrames;
+        _initialQueuedFrames = initialQueuedFrames;
     }
 
-    public FakeAudioOutputStream(
-        AudioFormat format,
-        int sampleCapacity = 100_000)
-        : this(
-            new AudioEndpointId(
-                "fake-output"),
-            format,
-            sampleCapacity)
-    {
-    }
+    public FakeAudioOutputStream(AudioFormat format, int sampleCapacity = 100_000)
+        : this(new AudioEndpointId("fake-output"), format, sampleCapacity) { }
 
     public void Start()
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         StartCount++;
 
         if (_failOnStart)
         {
-            throw new InvalidOperationException(
-                $"Simulated startup failure for '{EndpointId}'.");
+            throw new InvalidOperationException($"Simulated startup failure for '{EndpointId}'.");
         }
 
-        _playedFramePosition =
-            0;
+        _playedFramePosition = 0;
 
-        _submittedFramePosition =
-            _initialQueuedFrames;
+        _submittedFramePosition = _initialQueuedFrames;
 
-        _qpcPosition100Nanoseconds =
-            0;
+        _qpcPosition100Nanoseconds = 0;
 
-        IsStarted =
-            true;
+        IsStarted = true;
     }
 
-    public AudioOutputClockSnapshot
-        GetClockSnapshot()
+    public AudioOutputClockSnapshot GetClockSnapshot()
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!IsStarted)
         {
-            throw new InvalidOperationException(
-                "Fake output is not started.");
+            throw new InvalidOperationException("Fake output is not started.");
         }
 
-        return new AudioOutputClockSnapshot(
-            _playedFramePosition,
-            _submittedFramePosition,
-            _qpcPosition100Nanoseconds);
+        return new AudioOutputClockSnapshot(_playedFramePosition, _submittedFramePosition, _qpcPosition100Nanoseconds);
     }
 
-    public AudioOutputDiagnostics
-        GetDiagnostics()
+    public AudioOutputDiagnostics GetDiagnostics()
     {
         return new AudioOutputDiagnostics(
             RecoveryFadeCount,
             EndpointDryCount,
             LongestSubmitGapMilliseconds,
             LongestWriteMilliseconds,
-            LongestBufferWaitMilliseconds);
+            LongestBufferWaitMilliseconds
+        );
     }
 
-    public void AdvanceClock(
-        double playedFrames)
+    public void AdvanceClock(double playedFrames)
     {
-        if (!double.IsFinite(
-                playedFrames) ||
-            playedFrames < 0.0)
+        if (!double.IsFinite(playedFrames) || playedFrames < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(playedFrames));
+            throw new ArgumentOutOfRangeException(nameof(playedFrames));
         }
 
-        _playedFramePosition +=
-            playedFrames;
+        _playedFramePosition += playedFrames;
 
-        double seconds =
-            playedFrames /
-            Format.SampleRate;
+        double seconds = playedFrames / Format.SampleRate;
 
-        _qpcPosition100Nanoseconds +=
-            checked(
-                (ulong)Math.Round(
-                    seconds *
-                    10_000_000.0));
+        _qpcPosition100Nanoseconds += checked((ulong)Math.Round(seconds * 10_000_000.0));
     }
 
-    public void Write(
-        AudioBlock block)
+    public void Write(AudioBlock block)
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!IsStarted)
         {
-            throw new InvalidOperationException(
-                "Fake output is not started.");
+            throw new InvalidOperationException("Fake output is not started.");
         }
 
-        if (block.Format !=
-            Format)
+        if (block.Format != Format)
         {
-            throw new InvalidOperationException(
-                "Fake output received the wrong format.");
+            throw new InvalidOperationException("Fake output received the wrong format.");
         }
 
         if (FailNextWrite)
         {
-            FailNextWrite =
-                false;
+            FailNextWrite = false;
 
-            throw new InvalidOperationException(
-                $"Simulated write failure for '{EndpointId}'.");
+            throw new InvalidOperationException($"Simulated write failure for '{EndpointId}'.");
         }
 
-        if (_writtenSampleCount +
-            block.Samples.Length >
-            _samples.Length)
+        if (_writtenSampleCount + block.Samples.Length > _samples.Length)
         {
-            throw new InvalidOperationException(
-                "Fake output sample capacity exceeded.");
+            throw new InvalidOperationException("Fake output sample capacity exceeded.");
         }
 
-        block.Samples.CopyTo(
-            _samples.AsSpan(
-                _writtenSampleCount));
+        block.Samples.CopyTo(_samples.AsSpan(_writtenSampleCount));
 
-        _writtenSampleCount +=
-            block.Samples.Length;
+        _writtenSampleCount += block.Samples.Length;
 
-        _submittedFramePosition +=
-            block.FrameCount;
+        _submittedFramePosition += block.FrameCount;
 
         if (_autoAdvanceClock)
         {
-            AdvanceClock(
-                block.FrameCount);
+            AdvanceClock(block.FrameCount);
         }
 
-        LastFramePosition =
-            block.FramePosition;
+        LastFramePosition = block.FramePosition;
     }
 
     public float[] GetWrittenSamples()
     {
-        return _samples
-            .AsSpan(
-                0,
-                _writtenSampleCount)
-            .ToArray();
+        return _samples.AsSpan(0, _writtenSampleCount).ToArray();
     }
 
     public void Stop()
     {
-        ObjectDisposedException.ThrowIf(
-            IsDisposed,
-            this);
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         if (!IsStarted)
         {
@@ -255,17 +190,13 @@ internal sealed class FakeAudioOutputStream :
 
         StopCount++;
 
-        IsStarted =
-            false;
+        IsStarted = false;
 
-        _playedFramePosition =
-            0;
+        _playedFramePosition = 0;
 
-        _submittedFramePosition =
-            0;
+        _submittedFramePosition = 0;
 
-        _qpcPosition100Nanoseconds =
-            0;
+        _qpcPosition100Nanoseconds = 0;
     }
 
     public void Dispose()
@@ -275,34 +206,27 @@ internal sealed class FakeAudioOutputStream :
             return;
         }
 
-        IsStarted =
-            false;
+        IsStarted = false;
 
-        IsDisposed =
-            true;
+        IsDisposed = true;
     }
 }
 
-internal sealed class FakeAudioOutputStreamFactory :
-    IAudioOutputStreamFactory
+internal sealed class FakeAudioOutputStreamFactory : IAudioOutputStreamFactory
 {
     private readonly AudioFormat? _forcedFormat;
 
     private readonly int _sampleCapacity;
 
-    private readonly HashSet<AudioEndpointId>
-        _failOnStartEndpoints;
+    private readonly HashSet<AudioEndpointId> _failOnStartEndpoints;
 
     private readonly bool _autoAdvanceClock;
 
     private readonly int _initialQueuedFrames;
 
-    private readonly List<FakeAudioOutputStream>
-        _streams =
-        [];
+    private readonly List<FakeAudioOutputStream> _streams = [];
 
-    public IReadOnlyList<FakeAudioOutputStream> Streams =>
-        _streams;
+    public IReadOnlyList<FakeAudioOutputStream> Streams => _streams;
 
     public int CreateCount { get; private set; }
 
@@ -317,90 +241,63 @@ internal sealed class FakeAudioOutputStreamFactory :
         int sampleCapacity = 100_000,
         IEnumerable<AudioEndpointId>? failOnStartEndpoints = null,
         bool autoAdvanceClock = true,
-        int initialQueuedFrames = 0)
+        int initialQueuedFrames = 0
+    )
     {
-        _forcedFormat =
-            forcedFormat;
+        _forcedFormat = forcedFormat;
 
-        _sampleCapacity =
-            sampleCapacity;
+        _sampleCapacity = sampleCapacity;
 
-        _failOnStartEndpoints =
-            failOnStartEndpoints is null
-                ? []
-                : new HashSet<AudioEndpointId>(
-                    failOnStartEndpoints);
+        _failOnStartEndpoints = failOnStartEndpoints is null ? [] : new HashSet<AudioEndpointId>(failOnStartEndpoints);
 
-        _autoAdvanceClock =
-            autoAdvanceClock;
+        _autoAdvanceClock = autoAdvanceClock;
 
-        _initialQueuedFrames =
-            initialQueuedFrames;
+        _initialQueuedFrames = initialQueuedFrames;
     }
 
-    public IAudioOutputStream Create(
-        AudioEndpointId endpointId,
-        AudioFormat requestedFormat)
+    public IAudioOutputStream Create(AudioEndpointId endpointId, AudioFormat requestedFormat)
     {
         CreateCount++;
 
-        LastEndpointId =
-            endpointId;
+        LastEndpointId = endpointId;
 
-        LastRequestedFormat =
-            requestedFormat;
+        LastRequestedFormat = requestedFormat;
 
-        var stream =
-            new FakeAudioOutputStream(
-                endpointId,
-                _forcedFormat ??
-                    requestedFormat,
-                _sampleCapacity,
-                _failOnStartEndpoints.Contains(
-                    endpointId),
-                _autoAdvanceClock,
-                _initialQueuedFrames);
+        var stream = new FakeAudioOutputStream(
+            endpointId,
+            _forcedFormat ?? requestedFormat,
+            _sampleCapacity,
+            _failOnStartEndpoints.Contains(endpointId),
+            _autoAdvanceClock,
+            _initialQueuedFrames
+        );
 
-        _streams.Add(
-            stream);
+        _streams.Add(stream);
 
-        LastStream =
-            stream;
+        LastStream = stream;
 
         return stream;
     }
 
-    public void SetFailOnStart(
-        AudioEndpointId endpointId,
-        bool fail)
+    public void SetFailOnStart(AudioEndpointId endpointId, bool fail)
     {
         if (fail)
         {
-            _failOnStartEndpoints.Add(
-                endpointId);
+            _failOnStartEndpoints.Add(endpointId);
         }
         else
         {
-            _failOnStartEndpoints.Remove(
-                endpointId);
+            _failOnStartEndpoints.Remove(endpointId);
         }
     }
 
-    public FakeAudioOutputStream GetStream(
-        AudioEndpointId endpointId)
+    public FakeAudioOutputStream GetStream(AudioEndpointId endpointId)
     {
-        return _streams.Single(
-            stream =>
-                stream.EndpointId ==
-                endpointId);
+        return _streams.Single(stream => stream.EndpointId == endpointId);
     }
 
-    public FakeAudioOutputStream GetLatestStream(
-        AudioEndpointId endpointId)
+    public FakeAudioOutputStream GetLatestStream(AudioEndpointId endpointId)
     {
-        return _streams.Last(
-            stream =>
-                stream.EndpointId ==
-                endpointId);
+        return _streams.Last(stream => stream.EndpointId == endpointId);
     }
 }

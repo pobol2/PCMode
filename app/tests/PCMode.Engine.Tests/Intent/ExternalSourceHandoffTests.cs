@@ -16,8 +16,7 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 public sealed class ExternalSourceHandoffTests
 {
-    private const string Document =
-        """
+    private const string Document = """
         {
           "schemaVersion": 1,
           "providers": { "lgTv": { "host": "192.0.2.31", "macAddress": "00:00:5E:00:53:31",
@@ -59,11 +58,14 @@ public sealed class ExternalSourceHandoffTests
 
         Assert.Equal(["tvInput"], mode.Resources.Select(resource => resource.Key));
 
-        Assert.True(TransitionPlan.TryCreate(
-            mode,
-            world.Engine.Providers.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase),
-            out TransitionPlan? plan,
-            out string? problem));
+        Assert.True(
+            TransitionPlan.TryCreate(
+                mode,
+                world.Engine.Providers.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase),
+                out TransitionPlan? plan,
+                out string? problem
+            )
+        );
 
         Assert.Equal(["tvPower", "tvInput"], plan!.Steps.Select(step => step.Key));
         Assert.Equal("On", plan.Steps[0].Target);
@@ -154,11 +156,7 @@ public sealed class ExternalSourceHandoffTests
 
             Configuration = ModeConfiguration.LoadOrCreate(Root.Path, providers);
 
-            Engine = new ModeEngine(
-                Configuration,
-                new ModeStateStore(Root.StateFile),
-                providers,
-                new FakeTime());
+            Engine = new ModeEngine(Configuration, new ModeStateStore(Root.StateFile), providers, new FakeTime());
         }
 
         public TemporaryRoot Root { get; }

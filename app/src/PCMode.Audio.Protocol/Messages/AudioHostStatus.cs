@@ -9,4 +9,5 @@ public sealed record AudioHostStatus(
     string SourceEndpointId,
     AudioEngineRuntimeState EngineState,
     string? ActiveTargetId,
-    string? ActiveTargetName);
+    string? ActiveTargetName
+);

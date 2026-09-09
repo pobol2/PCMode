@@ -17,15 +17,9 @@ namespace PCMode.Engine.Tests;
 public sealed class CompositionTests
 {
     private static IReadOnlyList<IModeResourceProvider> Providers =>
-    [
-        new FakeProvider("theme"),
-        new FakeProvider("cursor"),
-        new FakeProvider("audio"),
-        new FakeProvider("tvPower"),
-    ];
+        [new FakeProvider("theme"), new FakeProvider("cursor"), new FakeProvider("audio"), new FakeProvider("tvPower")];
 
-    private const string Hierarchy =
-        """
+    private const string Hierarchy = """
         {
           "schemaVersion": 1,
           "spaces": [
@@ -57,10 +51,13 @@ public sealed class CompositionTests
 
     private static ModeConfiguration Read(string json) => ModeConfiguration.Parse(json, Providers);
 
-    private static IReadOnlyDictionary<string, ConfiguredResource> ResourcesOf(ModeConfiguration configuration, string key)
+    private static IReadOnlyDictionary<string, ConfiguredResource> ResourcesOf(
+        ModeConfiguration configuration,
+        string key
+    )
     {
-        ConfiguredMode mode = configuration.Find(key)
-            ?? throw new InvalidOperationException($"'{key}' is not a configured target.");
+        ConfiguredMode mode =
+            configuration.Find(key) ?? throw new InvalidOperationException($"'{key}' is not a configured target.");
 
         return mode.Resources.ToDictionary(resource => resource.Key, StringComparer.OrdinalIgnoreCase);
     }
@@ -74,11 +71,13 @@ public sealed class CompositionTests
 
         Assert.Equal(
             ["desk/work", "desk/gaming", "desk/gaming/steam", "desk/gaming/switch"],
-            configuration.Targets.Keys);
+            configuration.Targets.Keys
+        );
 
         Assert.Equal(
             ["Desk — Work", "Desk — Gaming", "Desk — Gaming — Steam", "Desk — Gaming — Switch"],
-            configuration.Targets.Targets.Select(target => target.DisplayPath));
+            configuration.Targets.Targets.Select(target => target.DisplayPath)
+        );
     }
 
     /// <summary>
@@ -142,7 +141,8 @@ public sealed class CompositionTests
               "activities":[
                 {"id":"away","name":"Away","resources":{"tvPower":"Off"}},
                 {"id":"quiet","name":"Quiet","resources":{"tvPower":null}}]}]}
-            """);
+            """
+        );
 
         Assert.Equal("Off", ResourcesOf(configuration, "tv/away")["tvPower"].Value);
         Assert.False(ResourcesOf(configuration, "tv/quiet").ContainsKey("tvPower"));
@@ -171,11 +171,10 @@ public sealed class CompositionTests
         // position and a resource a lower level introduces appended.
         Assert.Equal(
             ["theme", "cursor", "audio", "tvPower"],
-            first.Find("desk/gaming/steam")!.Resources.Select(resource => resource.Key));
+            first.Find("desk/gaming/steam")!.Resources.Select(resource => resource.Key)
+        );
 
-        Assert.Equal(
-            first.Find("desk/gaming/steam")!.Resources,
-            second.Find("desk/gaming/steam")!.Resources);
+        Assert.Equal(first.Find("desk/gaming/steam")!.Resources, second.Find("desk/gaming/steam")!.Resources);
     }
 
     // ---- storing common state once -----------------------------------------
@@ -189,18 +188,21 @@ public sealed class CompositionTests
         // it -- except the one that explicitly says it does not want it.
         Assert.All(
             (string[])["desk/work", "desk/gaming", "desk/gaming/steam"],
-            key => Assert.Equal("Center", ResourcesOf(configuration, key)["cursor"].Value));
+            key => Assert.Equal("Center", ResourcesOf(configuration, key)["cursor"].Value)
+        );
 
         Assert.False(ResourcesOf(configuration, "desk/gaming/switch").ContainsKey("cursor"));
 
         // And it is written down exactly once.
         Assert.Equal(
             ["theme", "cursor", "audio"],
-            configuration.Spaces.Single().Resources.Select(resource => resource.Key));
+            configuration.Spaces.Single().Resources.Select(resource => resource.Key)
+        );
 
         Assert.DoesNotContain(
             configuration.Spaces.Single().Activities.SelectMany(activity => activity.Resources),
-            resource => resource.Key == "cursor");
+            resource => resource.Key == "cursor"
+        );
     }
 
     // ---- sources that are not programs on this PC ---------------------------
@@ -214,65 +216,67 @@ public sealed class CompositionTests
             .Sources.Single(source => source.Id == "switch");
 
         Assert.Equal(SourceKind.ExternalDevice, external.Kind);
-        Assert.Equal(SourceKind.PcApplication, Read(Hierarchy)
-            .Spaces.Single()
-            .Activities.Single(activity => activity.Id == "gaming")
-            .Sources.Single(source => source.Id == "steam").Kind);
+        Assert.Equal(
+            SourceKind.PcApplication,
+            Read(Hierarchy)
+                .Spaces.Single()
+                .Activities.Single(activity => activity.Id == "gaming")
+                .Sources.Single(source => source.Id == "steam")
+                .Kind
+        );
     }
 
     // ---- identities and relationships --------------------------------------
 
     [Theory]
-    [InlineData(
-        """{"schemaVersion":1,"spaces":[{"name":"Desk","activities":[]}]}""",
-        "has no id")]
-    [InlineData(
-        """{"schemaVersion":1,"spaces":[{"id":"desk","activities":[]}]}""",
-        "has no name")]
-    [InlineData(
-        """{"schemaVersion":1,"spaces":[{"id":"my desk","name":"Desk","activities":[]}]}""",
-        "letters, digits")]
-    [InlineData(
-        """{"schemaVersion":1,"spaces":[{"id":"a/b","name":"Desk","activities":[]}]}""",
-        "letters, digits")]
+    [InlineData("""{"schemaVersion":1,"spaces":[{"name":"Desk","activities":[]}]}""", "has no id")]
+    [InlineData("""{"schemaVersion":1,"spaces":[{"id":"desk","activities":[]}]}""", "has no name")]
+    [InlineData("""{"schemaVersion":1,"spaces":[{"id":"my desk","name":"Desk","activities":[]}]}""", "letters, digits")]
+    [InlineData("""{"schemaVersion":1,"spaces":[{"id":"a/b","name":"Desk","activities":[]}]}""", "letters, digits")]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[
-          {"id":"desk","name":"Desk","activities":[]},
-          {"id":"desk","name":"Other","activities":[]}]}
-        """,
-        "id of more than one space")]
+            {"schemaVersion":1,"spaces":[
+              {"id":"desk","name":"Desk","activities":[]},
+              {"id":"desk","name":"Other","activities":[]}]}
+            """,
+        "id of more than one space"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[
-          {"id":"desk","name":"Desk","activities":[]},
-          {"id":"desk2","name":"Desk","activities":[]}]}
-        """,
-        "name of more than one space")]
+            {"schemaVersion":1,"spaces":[
+              {"id":"desk","name":"Desk","activities":[]},
+              {"id":"desk2","name":"Desk","activities":[]}]}
+            """,
+        "name of more than one space"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
-          {"id":"work","name":"Work"},{"id":"work","name":"Other"}]}]}
-        """,
-        "more than one activity with the id")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
+              {"id":"work","name":"Work"},{"id":"work","name":"Other"}]}]}
+            """,
+        "more than one activity with the id"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
-          {"id":"work","name":"Work","sources":[
-            {"id":"a","name":"Steam"},{"id":"b","name":"Steam"}]}]}]}
-        """,
-        "more than one source called")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
+              {"id":"work","name":"Work","sources":[
+                {"id":"a","name":"Steam"},{"id":"b","name":"Steam"}]}]}]}
+            """,
+        "more than one source called"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
-          {"id":"work","name":"Work","sources":[{"id":"a","name":"Steam","kind":"console"}]}]}]}
-        """,
-        "pcApplication, externalDevice or tvApplication")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
+              {"id":"work","name":"Work","sources":[{"id":"a","name":"Steam","kind":"console"}]}]}]}
+            """,
+        "pcApplication, externalDevice or tvApplication"
+    )]
     public void Invalid_identities_and_relationships_are_refused_before_anything_can_be_activated(
-        string document, string expected)
+        string document,
+        string expected
+    )
     {
-        ModeConfigurationException exception =
-            Assert.Throws<ModeConfigurationException>(() => Read(document));
+        ModeConfigurationException exception = Assert.Throws<ModeConfigurationException>(() => Read(document));
 
         Assert.Contains(expected, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -280,26 +284,28 @@ public sealed class CompositionTests
     [Theory]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
-          {"id":"work","name":"Work","resources":{"nonsense":"Yes"}}]}]}
-        """,
-        "which nothing here knows how to apply")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
+              {"id":"work","name":"Work","resources":{"nonsense":"Yes"}}]}]}
+            """,
+        "which nothing here knows how to apply"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
-          {"id":"work","name":"Work","resources":{"theme":""}}]}]}
-        """,
-        "needs a value")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
+              {"id":"work","name":"Work","resources":{"theme":""}}]}]}
+            """,
+        "needs a value"
+    )]
     [InlineData(
         """
-        {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","resources":{"theme":"Light","THEME":"Dark"},
-          "activities":[]}]}
-        """,
-        "more than once")]
+            {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","resources":{"theme":"Light","THEME":"Dark"},
+              "activities":[]}]}
+            """,
+        "more than once"
+    )]
     public void Composition_conflicts_are_refused_by_name(string document, string expected)
     {
-        ModeConfigurationException exception =
-            Assert.Throws<ModeConfigurationException>(() => Read(document));
+        ModeConfigurationException exception = Assert.Throws<ModeConfigurationException>(() => Read(document));
 
         Assert.Contains(expected, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -312,8 +318,7 @@ public sealed class CompositionTests
     [Fact]
     public void A_space_with_no_activities_is_allowed_and_offers_no_targets()
     {
-        ModeConfiguration configuration =
-            Read("""{"schemaVersion":1,"spaces":[{"id":"tv","name":"TV"}]}""");
+        ModeConfiguration configuration = Read("""{"schemaVersion":1,"spaces":[{"id":"tv","name":"TV"}]}""");
 
         Assert.Empty(configuration.Targets.Targets);
         Assert.Equal("TV", configuration.Spaces.Single().Name);
@@ -324,16 +329,14 @@ public sealed class CompositionTests
     [Theory]
     [InlineData(
         """{"schemaVersion":1,"modes":[{"name":"Desktop","resources":{"theme":"Light"}}]}""",
-        "defines 'modes'")]
+        "defines 'modes'"
+    )]
     [InlineData("""{"schemaVersion":1}""", "defines no spaces")]
     [InlineData("""{"schemaVersion":3,"spaces":[]}""", "version 1")]
-    [InlineData(
-        """{"schemaVersion":3,"modes":[{"name":"Desktop","resources":{"theme":"Light"}}]}""",
-        "version 1")]
+    [InlineData("""{"schemaVersion":3,"modes":[{"name":"Desktop","resources":{"theme":"Light"}}]}""", "version 1")]
     public void A_document_that_mixes_or_misnames_its_shape_is_refused(string document, string expected)
     {
-        ModeConfigurationException exception =
-            Assert.Throws<ModeConfigurationException>(() => Read(document));
+        ModeConfigurationException exception = Assert.Throws<ModeConfigurationException>(() => Read(document));
 
         Assert.Contains(expected, exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -359,7 +362,8 @@ public sealed class CompositionTests
             {"schemaVersion":1,"spaces":[
               {"id":"desk","name":"Desk","activities":[{"id":"gaming","name":"Gaming"}]},
               {"id":"tv","name":"TV","activities":[{"id":"gaming","name":"Gaming"}]}]}
-            """);
+            """
+        );
 
         Assert.False(configuration.Targets.TryResolve("Gaming", out ConfiguredTarget? target, out string? problem));
         Assert.Null(target);

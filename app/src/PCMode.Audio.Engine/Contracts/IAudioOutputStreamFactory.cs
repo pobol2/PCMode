@@ -4,7 +4,5 @@ namespace PCMode.Audio.Engine.Contracts;
 
 public interface IAudioOutputStreamFactory
 {
-    IAudioOutputStream Create(
-        AudioEndpointId endpointId,
-        AudioFormat requestedFormat);
+    IAudioOutputStream Create(AudioEndpointId endpointId, AudioFormat requestedFormat);
 }

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Input;
+using PCMode.Audio.Core.Buffers;
 using PCMode.Tray.Elements;
 
 namespace PCMode.Tray.Elements.Audio;
@@ -74,6 +75,47 @@ public sealed class AudioNoTargetViewModel(string message)
     public string Message { get; } = message;
 }
 
+/// <summary>
+/// The Audio page's top-of-page waveform: a small, live snapshot of what one
+/// route is actually playing right now.
+/// </summary>
+/// <remarks>
+/// Neutral state only -- frequency and channel count mean nothing here, and
+/// neither does the audio engine. <see cref="AudioViewModel"/> is the only
+/// thing that pushes into <see cref="Buckets"/>/<see cref="IsAvailable"/>,
+/// on its own poll separate from the page's ordinary live-status refresh; how
+/// that becomes a picture is entirely <c>UI/Components/Visualizations</c>'s.
+/// </remarks>
+public sealed class AudioWaveformViewModel : ObservableObject
+{
+    /// <summary>Within the 128-256 buckets a visualization needs; not itself part of any contract.</summary>
+    internal const int BucketCount = 128;
+
+    private bool _isAvailable;
+    private IReadOnlyList<WaveformEnvelopeSample> _buckets = Idle();
+
+    /// <summary>
+    /// Whether the Host actually reported waveform telemetry for this route
+    /// just now -- distinct from <see cref="Buckets"/> being flat, which is
+    /// what a route that is running and genuinely silent looks like too.
+    /// False means there is nothing to show, not that nothing is playing.
+    /// </summary>
+    public bool IsAvailable
+    {
+        get => _isAvailable;
+        internal set => SetProperty(ref _isAvailable, value);
+    }
+
+    /// <summary>The current envelope, oldest bucket first. Every bucket sits at (0, 0) while <see cref="IsAvailable"/> is false.</summary>
+    public IReadOnlyList<WaveformEnvelopeSample> Buckets
+    {
+        get => _buckets;
+        internal set => SetProperty(ref _buckets, value);
+    }
+
+    internal static WaveformEnvelopeSample[] Idle() => new WaveformEnvelopeSample[BucketCount];
+}
+
 /// <summary>One audio target, open for editing.</summary>
 public sealed class AudioTargetEditorViewModel : ObservableObject
 {
@@ -85,6 +127,9 @@ public sealed class AudioTargetEditorViewModel : ObservableObject
         Hardware = new AudioOutputsViewModel(audio);
     }
 
+    /// <summary>The top-of-page waveform. A stable instance -- see <see cref="AudioViewModel"/>'s poll.</summary>
+    public AudioWaveformViewModel Waveform { get; } = new();
+
     public string Title => _audio.TargetName.Length == 0 ? "No audio target selected" : _audio.TargetName;
 
     public ObservableCollection<AudioRouteRow> EssentialItems => _audio.Routes;
@@ -92,6 +137,8 @@ public sealed class AudioTargetEditorViewModel : ObservableObject
     public ObservableCollection<AudioProfileCard> ProfileItems => _audio.ProfileCards;
 
     public ObservableCollection<AudioAlignmentCard> AlignmentItems => _audio.AlignmentCards;
+
+    public ObservableCollection<string> ProfileChoices => _audio.ProfileChoices;
 
     public AudioOutputsViewModel Hardware { get; }
 
@@ -104,6 +151,8 @@ public sealed class AudioTargetEditorViewModel : ObservableObject
     public ICommand AddCommand => _audio.AddRouteCommand;
 
     public ICommand RemoveCommand => _audio.RemoveRouteCommand;
+
+    public ICommand SetReferenceCommand => _audio.SetReferenceRouteCommand;
 
     public ICommand RenameCommand => _audio.RenameTargetCommand;
 
@@ -144,8 +193,14 @@ public sealed class AudioProfileCard : ObservableObject, IDisposable
 
         CreateProfileCommand = new RelayCommand(() => _audio.PromptCreateProfile(Route));
         EditProfileCommand = new RelayCommand(() => _audio.ToggleProfileEditor(Route));
-        RenameProfileCommand = new RelayCommand(() => _audio.PromptRenameProfile(Route), () => Route.HasProcessingProfile);
-        DeleteProfileCommand = new RelayCommand(() => _audio.PromptDeleteProfile(Route), () => Route.HasProcessingProfile);
+        RenameProfileCommand = new RelayCommand(
+            () => _audio.PromptRenameProfile(Route),
+            () => Route.HasProcessingProfile
+        );
+        DeleteProfileCommand = new RelayCommand(
+            () => _audio.PromptDeleteProfile(Route),
+            () => Route.HasProcessingProfile
+        );
         AddBandCommand = new RelayCommand(() => _audio.AddProfileBand(Route), () => Route.HasProcessingProfile);
         SaveProfileCommand = new RelayCommand(() => _audio.SaveProfile(Route), () => Route.HasProcessingProfile);
         RemoveBandCommand = new RelayCommand<AudioEqBandRow>(band => _audio.RemoveProfileBand(Route, band));
@@ -268,14 +323,15 @@ public sealed class AudioOutputsViewModel : ObservableObject
 
         RescanCommand = new AsyncRelayCommand(
             () => audio.DeviceDiscovery.Inventory.ScanAsync(),
-            () => audio.DeviceDiscovery.Inventory.CanScan);
+            () => audio.DeviceDiscovery.Inventory.CanScan
+        );
 
         SwitchCommand = new RelayCommand<DiscoveredAudioOutputRow>(
             row => _audio.PromptSwitchOutput(row),
-            row => row.CanSwitch);
+            row => row.CanSwitch
+        );
 
-        AliasCommand = new RelayCommand<DiscoveredAudioOutputRow>(
-            row => _audio.PromptAliasOutput(row));
+        AliasCommand = new RelayCommand<DiscoveredAudioOutputRow>(row => _audio.PromptAliasOutput(row));
 
         audio.DeviceDiscovery.Inventory.PropertyChanged += OnInventoryPropertyChanged;
     }
@@ -296,8 +352,11 @@ public sealed class AudioOutputsViewModel : ObservableObject
 
     private void OnInventoryPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(HardwareInventoryList<DiscoveredAudioOutputRow>.Problem)
-            or nameof(HardwareInventoryList<DiscoveredAudioOutputRow>.HasProblem))
+        if (
+            e.PropertyName
+            is nameof(HardwareInventoryList<DiscoveredAudioOutputRow>.Problem)
+                or nameof(HardwareInventoryList<DiscoveredAudioOutputRow>.HasProblem)
+        )
         {
             OnPropertyChanged(nameof(Problem));
             OnPropertyChanged(nameof(HasProblem));

@@ -32,7 +32,8 @@ internal static class TargetHierarchyReader
     /// <summary>Reads the whole 'spaces' array, or refuses the document.</summary>
     public static IReadOnlyList<ConfiguredSpace> Read(
         JsonElement spaces,
-        Dictionary<string, IModeResourceProvider> known)
+        Dictionary<string, IModeResourceProvider> known
+    )
     {
         if (spaces.ValueKind != JsonValueKind.Array)
         {
@@ -66,11 +67,14 @@ internal static class TargetHierarchyReader
                 throw new ModeConfigurationException($"'{name}' is the name of more than one space.");
             }
 
-            read.Add(new ConfiguredSpace(
-                id,
-                name,
-                ResourceAssignments.Read($"Space '{name}'", Property(element, "resources"), known),
-                ReadActivities(element, name, known)));
+            read.Add(
+                new ConfiguredSpace(
+                    id,
+                    name,
+                    ResourceAssignments.Read($"Space '{name}'", Property(element, "resources"), known),
+                    ReadActivities(element, name, known)
+                )
+            );
         }
 
         return read;
@@ -79,7 +83,8 @@ internal static class TargetHierarchyReader
     private static IReadOnlyList<ConfiguredActivity> ReadActivities(
         JsonElement space,
         string spaceName,
-        Dictionary<string, IModeResourceProvider> known)
+        Dictionary<string, IModeResourceProvider> known
+    )
     {
         JsonElement? declared = Property(space, "activities");
 
@@ -104,7 +109,8 @@ internal static class TargetHierarchyReader
             if (entry.ValueKind != JsonValueKind.Object)
             {
                 throw new ModeConfigurationException(
-                    $"Space '{spaceName}': each entry of 'activities' must be an object.");
+                    $"Space '{spaceName}': each entry of 'activities' must be an object."
+                );
             }
 
             string id = ReadId(entry, $"An activity of space '{spaceName}'");
@@ -113,25 +119,30 @@ internal static class TargetHierarchyReader
             if (!ids.Add(id))
             {
                 throw new ModeConfigurationException(
-                    $"Space '{spaceName}' has more than one activity with the id '{id}'.");
+                    $"Space '{spaceName}' has more than one activity with the id '{id}'."
+                );
             }
 
             if (!names.Add(name))
             {
                 throw new ModeConfigurationException(
-                    $"Space '{spaceName}' has more than one activity called '{name}'.");
+                    $"Space '{spaceName}' has more than one activity called '{name}'."
+                );
             }
 
             string where = $"Activity '{spaceName} — {name}'";
 
-            read.Add(new ConfiguredActivity(
-                id,
-                name,
-                ResourceAssignments.Read(where, Property(entry, "resources"), known),
-                ReadSources(entry, where, known))
-            {
-                Enabled = ReadEnabled(entry, where),
-            });
+            read.Add(
+                new ConfiguredActivity(
+                    id,
+                    name,
+                    ResourceAssignments.Read(where, Property(entry, "resources"), known),
+                    ReadSources(entry, where, known)
+                )
+                {
+                    Enabled = ReadEnabled(entry, where),
+                }
+            );
         }
 
         return read;
@@ -140,7 +151,8 @@ internal static class TargetHierarchyReader
     private static IReadOnlyList<ConfiguredSource> ReadSources(
         JsonElement activity,
         string where,
-        Dictionary<string, IModeResourceProvider> known)
+        Dictionary<string, IModeResourceProvider> known
+    )
     {
         JsonElement? declared = Property(activity, "sources");
 
@@ -182,14 +194,17 @@ internal static class TargetHierarchyReader
 
             string sourceWhere = $"Source '{name}' of {where}";
 
-            read.Add(new ConfiguredSource(
-                id,
-                name,
-                ReadKind(entry, sourceWhere),
-                ResourceAssignments.Read(sourceWhere, Property(entry, "resources"), known))
-            {
-                Enabled = ReadEnabled(entry, sourceWhere),
-            });
+            read.Add(
+                new ConfiguredSource(
+                    id,
+                    name,
+                    ReadKind(entry, sourceWhere),
+                    ResourceAssignments.Read(sourceWhere, Property(entry, "resources"), known)
+                )
+                {
+                    Enabled = ReadEnabled(entry, sourceWhere),
+                }
+            );
         }
 
         return read;
@@ -215,7 +230,8 @@ internal static class TargetHierarchyReader
             "externaldevice" => SourceKind.ExternalDevice,
             "tvapplication" => SourceKind.TvApplication,
             string value => throw new ModeConfigurationException(
-                $"{where} is of kind '{value}'. Use pcApplication, externalDevice or tvApplication."),
+                $"{where} is of kind '{value}'. Use pcApplication, externalDevice or tvApplication."
+            ),
         };
     }
 
@@ -249,17 +265,22 @@ internal static class TargetHierarchyReader
         if (id.Length > MaximumIdLength)
         {
             throw new ModeConfigurationException(
-                $"{what} has an id of {id.Length} characters; {MaximumIdLength} is the most an id may be.");
+                $"{what} has an id of {id.Length} characters; {MaximumIdLength} is the most an id may be."
+            );
         }
 
         foreach (char character in id)
         {
-            if (!char.IsAsciiLetterOrDigit(character) && !ExtraIdCharacters.Contains(character, StringComparison.Ordinal))
+            if (
+                !char.IsAsciiLetterOrDigit(character)
+                && !ExtraIdCharacters.Contains(character, StringComparison.Ordinal)
+            )
             {
                 throw new ModeConfigurationException(
-                    $"{what} has the id '{id}'. An id may contain letters, digits, and {ExtraIdCharacters} " +
-                    "-- it is what favorites, startup and the recorded current target point at, so it cannot " +
-                    "contain spaces or separators.");
+                    $"{what} has the id '{id}'. An id may contain letters, digits, and {ExtraIdCharacters} "
+                        + "-- it is what favorites, startup and the recorded current target point at, so it cannot "
+                        + "contain spaces or separators."
+                );
             }
         }
 

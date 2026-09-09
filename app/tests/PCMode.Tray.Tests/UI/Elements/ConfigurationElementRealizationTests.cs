@@ -6,6 +6,7 @@ using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements.Displays;
 using PCMode.Tray.Elements.Rgb;
 using PCMode.Tray.Elements.Spaces;
+using PCMode.Tray.UI.Components.Migration;
 using PCMode.Tray.UI.Framework;
 using PCMode.Tray.UI.Tree;
 
@@ -25,8 +26,7 @@ public sealed class ConfigurationElementRealizationTests
         Wpf.Run(() =>
         {
             var applications = new ApplicationsViewModel(new FakeWorkspace());
-            applications.SelectorItems.Add(
-                new ConfigurationEntityListItem<string>("browser", "Browser", "Configured"));
+            applications.SelectorItems.Add(new ConfigurationEntityListItem<string>("browser", "Browser", "Configured"));
 
             ConfigurationPageViewModelBase[] elements =
             [
@@ -40,12 +40,15 @@ public sealed class ConfigurationElementRealizationTests
             foreach (ConfigurationPageViewModelBase element in elements)
             {
                 var host = new ContentControl { Content = element };
-                host.Resources.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri(
-                        "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/ConfigurationPageBindings.xaml",
-                        UriKind.Relative),
-                });
+                host.Resources.MergedDictionaries.Add(
+                    new ResourceDictionary
+                    {
+                        Source = new Uri(
+                            "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ConfigurationPage/ConfigurationPageBindings.xaml",
+                            UriKind.Relative
+                        ),
+                    }
+                );
 
                 Wpf.Realize(host);
 
@@ -55,6 +58,7 @@ public sealed class ConfigurationElementRealizationTests
                 Assert.Single(Wpf.Descendants<ConfigurationEditorBlock>(page));
                 Assert.NotEmpty(Wpf.Descendants<EditorSectionBlock>(page));
                 Assert.NotEmpty(Wpf.Descendants<FinalUiComponent>(page));
+                Assert.Empty(Wpf.Descendants<MigrationContent>(page));
             }
         });
     }
@@ -73,8 +77,11 @@ public sealed class ConfigurationElementRealizationTests
 
         Assert.All(
             presentationTypes,
-            type => Assert.DoesNotContain(
-                type.GetProperties(),
-                property => typeof(FunctionalBlock).IsAssignableFrom(property.PropertyType)));
+            type =>
+                Assert.DoesNotContain(
+                    type.GetProperties(),
+                    property => typeof(FunctionalBlock).IsAssignableFrom(property.PropertyType)
+                )
+        );
     }
 }

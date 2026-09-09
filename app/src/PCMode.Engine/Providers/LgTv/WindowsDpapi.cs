@@ -23,11 +23,9 @@ internal static class WindowsDpapi
 {
     private const uint CryptProtectUiForbidden = 0x1;
 
-    public static byte[] Protect(byte[] value, byte[] entropy) =>
-        Transform(value, entropy, protect: true);
+    public static byte[] Protect(byte[] value, byte[] entropy) => Transform(value, entropy, protect: true);
 
-    public static byte[] Unprotect(byte[] value, byte[] entropy) =>
-        Transform(value, entropy, protect: false);
+    public static byte[] Unprotect(byte[] value, byte[] entropy) => Transform(value, entropy, protect: false);
 
     private static byte[] Transform(byte[] value, byte[] entropy, bool protect)
     {
@@ -46,7 +44,8 @@ internal static class WindowsDpapi
                     nint.Zero,
                     nint.Zero,
                     CryptProtectUiForbidden,
-                    out output)
+                    out output
+                )
                 : CryptUnprotectData(
                     ref input,
                     out description,
@@ -54,7 +53,8 @@ internal static class WindowsDpapi
                     nint.Zero,
                     nint.Zero,
                     CryptProtectUiForbidden,
-                    out output);
+                    out output
+                );
 
             if (!succeeded)
             {
@@ -129,7 +129,8 @@ internal static class WindowsDpapi
         nint reserved,
         nint prompt,
         uint flags,
-        out DataBlob dataOut);
+        out DataBlob dataOut
+    );
 
     [DllImport("crypt32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -140,7 +141,8 @@ internal static class WindowsDpapi
         nint reserved,
         nint prompt,
         uint flags,
-        out DataBlob dataOut);
+        out DataBlob dataOut
+    );
 
     [DllImport("kernel32.dll")]
     private static extern nint LocalFree(nint memory);

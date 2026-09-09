@@ -32,7 +32,8 @@ public sealed class ApplicationResourcesTests
 
         return
         [
-            .. Regex.Matches(File.ReadAllText(path), @"<ResourceDictionary\s+Source=""([^""]+)""")
+            .. Regex
+                .Matches(File.ReadAllText(path), @"<ResourceDictionary\s+Source=""([^""]+)""")
                 .Select(match => NormalizePackUri(match.Groups[1].Value)),
         ];
     }

@@ -58,7 +58,9 @@ public sealed class RegionAttribute(string name, params Type[] blocks) : Attribu
 
     public string Describe() =>
         Blocks.Count == 0
-            ? Terminal ? "terminal content only" : "nothing"
+            ? Terminal
+                ? "terminal content only"
+                : "nothing"
             : string.Join(", ", Blocks.Select(block => block.Name))
                 + (Terminal ? ", or terminal content" : string.Empty);
 }

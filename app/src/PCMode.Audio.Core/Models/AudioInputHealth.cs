@@ -4,7 +4,7 @@ public enum AudioInputKind
 {
     Unknown,
     VirtualEndpointDriver,
-    DevelopmentLoopback
+    DevelopmentLoopback,
 }
 
 public enum AudioInputHealthState
@@ -15,7 +15,7 @@ public enum AudioInputHealthState
     Running,
     Reconnecting,
     Unavailable,
-    Failed
+    Failed,
 }
 
 public sealed record AudioInputHealth
@@ -32,18 +32,17 @@ public sealed record AudioInputHealth
         AudioInputKind kind,
         AudioInputHealthState state,
         AudioFormat? format = null,
-        AudioFailure? lastFailure = null)
+        AudioFailure? lastFailure = null
+    )
     {
         if (!Enum.IsDefined(kind))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(kind));
+            throw new ArgumentOutOfRangeException(nameof(kind));
         }
 
         if (!Enum.IsDefined(state))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(state));
+            throw new ArgumentOutOfRangeException(nameof(state));
         }
 
         Kind = kind;

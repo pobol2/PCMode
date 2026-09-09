@@ -1,5 +1,5 @@
-﻿using PCMode.Tray.Tests.UI.Construction.Fixtures;
 using PCMode.Tray.Tests;
+using PCMode.Tray.Tests.UI.Construction.Fixtures;
 
 namespace PCMode.Tray.Tests.UI.Construction;
 

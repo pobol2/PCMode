@@ -2,8 +2,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Input;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Displays.Sections;
 
@@ -92,7 +92,8 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
         IConfigurationWorkspace workspace,
         IConfigurationPrompts? prompts = null,
         Action? onBindingChanged = null,
-        Func<bool>? guardUnsavedChanges = null)
+        Func<bool>? guardUnsavedChanges = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         _workspace = workspace;
@@ -103,8 +104,14 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
         CreateBindingCommand = new RelayCommand(PromptCreateBinding, () => CanBind);
         RenameBindingCommand = new RelayCommand(PromptRenameBinding, () => HasBinding && !IsBusy);
         RemoveBindingCommand = new RelayCommand(ConfirmRemoveBinding, () => HasBinding && !IsBusy);
-        ApplyBrightnessCommand = new AsyncRelayCommand(async () => await ApplyBrightnessAsync().ConfigureAwait(true), () => CanUseLiveControls);
-        ApplyInputCommand = new AsyncRelayCommand(async () => await ApplyInputAsync().ConfigureAwait(true), () => CanUseLiveControls);
+        ApplyBrightnessCommand = new AsyncRelayCommand(
+            async () => await ApplyBrightnessAsync().ConfigureAwait(true),
+            () => CanUseLiveControls
+        );
+        ApplyInputCommand = new AsyncRelayCommand(
+            async () => await ApplyInputAsync().ConfigureAwait(true),
+            () => CanUseLiveControls
+        );
 
         PropertyChanged += (_, e) =>
         {
@@ -139,7 +146,8 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
             "Add DDC/CI control",
             "Name this monitor for DDC/CI. Modes use this name to set its brightness and input.",
             SuggestedAlias,
-            name => Write(() => CreateBinding(name)));
+            name => Write(() => CreateBinding(name))
+        );
     }
 
     private void PromptRenameBinding()
@@ -153,7 +161,8 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
             "Rename DDC/CI monitor",
             $"Rename '{current}'. PCMode refuses the change if it would leave the configuration invalid.",
             current,
-            name => Write(() => RenameBinding(name)));
+            name => Write(() => RenameBinding(name))
+        );
     }
 
     private void ConfirmRemoveBinding()
@@ -228,8 +237,7 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
         }
     }
 
-    public bool HasCapabilityBadge =>
-        CapabilityBadgeText is not null;
+    public bool HasCapabilityBadge => CapabilityBadgeText is not null;
 
     public string? StatusMessage
     {
@@ -333,8 +341,10 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
     /// </remarks>
     public void ReResolve(LayoutMonitorRow? monitor)
     {
-        if (string.Equals(monitor?.DevicePath, _devicePath, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(ResolveAlias(monitor?.DevicePath), _alias, StringComparison.OrdinalIgnoreCase))
+        if (
+            string.Equals(monitor?.DevicePath, _devicePath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(ResolveAlias(monitor?.DevicePath), _alias, StringComparison.OrdinalIgnoreCase)
+        )
         {
             return;
         }
@@ -359,8 +369,7 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
             return "Give this monitor a DDC/CI name.";
         }
 
-        if (ConfiguredAliases().Any(existing =>
-            string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (ConfiguredAliases().Any(existing => string.Equals(existing, trimmed, StringComparison.OrdinalIgnoreCase)))
         {
             return $"'{trimmed}' is already a configured DDC/CI monitor.";
         }
@@ -460,17 +469,16 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
         try
         {
             bool capable = await Task.Run(() =>
-                new WindowsDdcMonitors()
-                    .KnownDevicePaths(CapabilityProbeTimeout)
-                    .Any(path => string.Equals(path, devicePath, StringComparison.OrdinalIgnoreCase)))
+                    new WindowsDdcMonitors()
+                        .KnownDevicePaths(CapabilityProbeTimeout)
+                        .Any(path => string.Equals(path, devicePath, StringComparison.OrdinalIgnoreCase))
+                )
                 .ConfigureAwait(true);
 
             CapabilityStatus = capable
                 ? "This monitor answers DDC/CI."
                 : "This monitor did not answer DDC/CI. It may need DDC/CI enabled in its own menu.";
-            CapabilityBadgeText = capable
-                ? "Supported"
-                : "Not supported";
+            CapabilityBadgeText = capable ? "Supported" : "Not supported";
         }
         catch (Exception exception)
         {
@@ -503,34 +511,48 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
             return;
         }
 
-        (bool brightnessOk, string brightnessText, double? brightnessValue,
-         bool inputOk, string inputText, string? inputValue) = await Task.Run(() =>
-        {
-            ResourceAvailability brightnessAvailability = brightness.AvailabilityOf("0");
-            bool brightnessSupported = brightnessAvailability.State == AvailabilityState.Available;
-            string? current = brightnessSupported ? brightness.Read() : null;
+        (
+            bool brightnessOk,
+            string brightnessText,
+            double? brightnessValue,
+            bool inputOk,
+            string inputText,
+            string? inputValue
+        ) = await Task.Run(() =>
+            {
+                ResourceAvailability brightnessAvailability = brightness.AvailabilityOf("0");
+                bool brightnessSupported = brightnessAvailability.State == AvailabilityState.Available;
+                string? current = brightnessSupported ? brightness.Read() : null;
 
-            string brightnessMessage = brightnessSupported
-                ? current is not null
-                    ? $"Currently {current}."
-                    : "Supported, but the current value could not be read."
-                : brightnessAvailability.Explain();
+                string brightnessMessage = brightnessSupported
+                    ? current is not null
+                        ? $"Currently {current}."
+                        : "Supported, but the current value could not be read."
+                    : brightnessAvailability.Explain();
 
-            ResourceAvailability inputAvailability = input.AvailabilityOf("HDMI1");
-            bool inputSupported = inputAvailability.State == AvailabilityState.Available;
-            string? currentInput = inputSupported ? input.Read() : null;
+                ResourceAvailability inputAvailability = input.AvailabilityOf("HDMI1");
+                bool inputSupported = inputAvailability.State == AvailabilityState.Available;
+                string? currentInput = inputSupported ? input.Read() : null;
 
-            string inputMessage = inputSupported
-                ? currentInput is not null
-                    ? $"Currently {currentInput}."
-                    : "Supported, but the current value could not be read."
-                : inputAvailability.Explain();
+                string inputMessage = inputSupported
+                    ? currentInput is not null
+                        ? $"Currently {currentInput}."
+                        : "Supported, but the current value could not be read."
+                    : inputAvailability.Explain();
 
-            return (
-                brightnessSupported, brightnessMessage, current is not null && double.TryParse(
-                    current, NumberStyles.None, CultureInfo.InvariantCulture, out double parsed) ? parsed : (double?)null,
-                inputSupported, inputMessage, currentInput);
-        }).ConfigureAwait(true);
+                return (
+                    brightnessSupported,
+                    brightnessMessage,
+                    current is not null
+                    && double.TryParse(current, NumberStyles.None, CultureInfo.InvariantCulture, out double parsed)
+                        ? parsed
+                        : (double?)null,
+                    inputSupported,
+                    inputMessage,
+                    currentInput
+                );
+            })
+            .ConfigureAwait(true);
 
         if (!string.Equals(_alias, alias, StringComparison.OrdinalIgnoreCase))
         {
@@ -572,8 +594,9 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
             return "This monitor is not active in the current configuration.";
         }
 
-        string value = ((int)Math.Round(PendingBrightness, MidpointRounding.AwayFromZero))
-            .ToString(CultureInfo.InvariantCulture);
+        string value = ((int)Math.Round(PendingBrightness, MidpointRounding.AwayFromZero)).ToString(
+            CultureInfo.InvariantCulture
+        );
 
         IsBusy = true;
 
@@ -718,10 +741,12 @@ public sealed class MonitorDdcSectionViewModel : ObservableObject, IConfiguratio
         }
 
         DdcBrightnessProvider? brightness = brightnessProviders.FirstOrDefault(provider =>
-            string.Equals(provider.Alias, alias, StringComparison.OrdinalIgnoreCase));
+            string.Equals(provider.Alias, alias, StringComparison.OrdinalIgnoreCase)
+        );
 
         DdcInputProvider? input = inputProviders.FirstOrDefault(provider =>
-            string.Equals(provider.Alias, alias, StringComparison.OrdinalIgnoreCase));
+            string.Equals(provider.Alias, alias, StringComparison.OrdinalIgnoreCase)
+        );
 
         return (brightness, input);
     }

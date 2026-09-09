@@ -34,7 +34,7 @@ Diagnostics
 - **Home** activates favorites and browses Spaces.
 - **Spaces** edits the Space -> Activity -> Source hierarchy, inheritance, required/best-effort resources, picker placement, and direct shortcuts.
 - **Displays** owns display layouts, cursor placement, monitor registration, DDC/CI brightness/input, and LG television association/configuration.
-- **Audio output** owns direct Windows output aliases plus native multi-route audio targets and processing profiles.
+- **Audio output** owns direct Windows output aliases plus native multi-route audio targets, processing profiles, and a live waveform of the active target's reference route.
 - **Case lighting** owns OpenRGB scenes.
 - **Applications** owns executable/URI launch, readiness, reactivation, observation, and stop behavior.
 - **Settings** owns appearance, picker monitor, controller, startup, autostart, and Guided setup.

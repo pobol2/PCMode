@@ -8,7 +8,8 @@ public enum AudioHostCommandKind
     GetStatus,
     GetHealth,
     Shutdown,
-    RecalibrateRoute
+    RecalibrateRoute,
+    GetWaveform,
 }
 
 public sealed record AudioHostCommand(
@@ -16,20 +17,16 @@ public sealed record AudioHostCommand(
     Guid RequestId,
     AudioHostCommandKind Kind,
     ApplyAudioTargetRequest? ApplyTarget,
-    RecalibrateRouteRequest? Recalibrate = null)
+    RecalibrateRouteRequest? Recalibrate = null
+)
 {
     public static AudioHostCommand Create(
         AudioHostCommandKind kind,
         ApplyAudioTargetRequest? applyTarget = null,
-        int protocolVersion =
-            HostProtocolVersion.Current,
-        RecalibrateRouteRequest? recalibrate = null)
+        int protocolVersion = HostProtocolVersion.Current,
+        RecalibrateRouteRequest? recalibrate = null
+    )
     {
-        return new AudioHostCommand(
-            protocolVersion,
-            Guid.NewGuid(),
-            kind,
-            applyTarget,
-            recalibrate);
+        return new AudioHostCommand(protocolVersion, Guid.NewGuid(), kind, applyTarget, recalibrate);
     }
 }

@@ -1,7 +1,7 @@
 using PCMode.Engine;
+using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements.Spaces;
 using PCMode.Tray.Tests;
-using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Tests.Features.Spaces;
 
@@ -46,17 +46,20 @@ public sealed class SpacesViewModelTests
         var viewModel = new SpacesViewModel(Workspaces.At(root.Path));
         viewModel.Refresh();
 
-        HierarchyNodeViewModel activity = Assert.Single(
-            viewModel.Nodes, node => node.Level == NodeLevel.Activity);
+        HierarchyNodeViewModel activity = Assert.Single(viewModel.Nodes, node => node.Level == NodeLevel.Activity);
 
         viewModel.SelectKey(activity.Address);
 
         EditableResourceGroup applications = Assert.Single(
-            viewModel.ConfiguredSettings, group => group.Name == "Applications");
+            viewModel.ConfiguredSettings,
+            group => group.Name == "Applications"
+        );
         Assert.Equal(["Steam"], applications.Items.Select(item => item.DisplayName));
 
         EditableResourceGroup audio = Assert.Single(
-            viewModel.ConfiguredSettings, group => group.Name == "Audio output");
+            viewModel.ConfiguredSettings,
+            group => group.Name == "Audio output"
+        );
         Assert.Equal(["Audio output"], audio.Items.Select(item => item.DisplayName));
 
         // Resources this activity has not configured (display, case lighting,
@@ -110,23 +113,21 @@ public sealed class SpacesViewModelTests
         var viewModel = new SpacesViewModel(Workspaces.At(root.Path));
         viewModel.Refresh();
 
-        HierarchyNodeViewModel source = Assert.Single(
-            viewModel.Nodes, node => node.Level == NodeLevel.Source);
+        HierarchyNodeViewModel source = Assert.Single(viewModel.Nodes, node => node.Level == NodeLevel.Source);
 
         viewModel.SelectKey(source.Address);
 
-        EditableResourceGroup displays = Assert.Single(
-            viewModel.ConfiguredSettings, group => group.Name == "Displays");
+        EditableResourceGroup displays = Assert.Single(viewModel.ConfiguredSettings, group => group.Name == "Displays");
 
-        EditableResourceViewModel input = Assert.Single(
-            displays.Items, item => item.Key == "tvInput");
+        EditableResourceViewModel input = Assert.Single(displays.Items, item => item.Key == "tvInput");
 
         Assert.Equal(["Console", "PC"], input.Choices);
         Assert.Equal("Console", input.Selected);
 
         EditableResourceViewModel power = Assert.Single(
             viewModel.AddableSettings.Single(group => group.Name == "Displays").Items,
-            item => item.Key == "tvPower");
+            item => item.Key == "tvPower"
+        );
 
         Assert.Equal([TvPowerProvider.On, TvPowerProvider.Off], power.Choices);
     }
@@ -175,16 +176,16 @@ public sealed class SpacesViewModelTests
         var viewModel = new SpacesViewModel(Workspaces.At(root.Path));
         viewModel.Refresh();
 
-        HierarchyNodeViewModel activity = Assert.Single(
-            viewModel.Nodes, node => node.Level == NodeLevel.Activity);
+        HierarchyNodeViewModel activity = Assert.Single(viewModel.Nodes, node => node.Level == NodeLevel.Activity);
 
         viewModel.SelectKey(activity.Address);
 
-        EditableResourceGroup displays = Assert.Single(
-            viewModel.ConfiguredSettings, group => group.Name == "Displays");
+        EditableResourceGroup displays = Assert.Single(viewModel.ConfiguredSettings, group => group.Name == "Displays");
 
         EditableResourceViewModel display = Assert.Single(
-            displays.Items, item => item.Key == DisplayProvider.ResourceKey);
+            displays.Items,
+            item => item.Key == DisplayProvider.ResourceKey
+        );
 
         Assert.Equal(["Desktop", "TVOnly"], display.Choices);
         Assert.Equal("Desktop", display.Selected);
@@ -211,17 +212,13 @@ public sealed class SpacesViewModelTests
         using var root = new TemporaryConfigurationRoot();
         var provider = new RecordingProvider();
         ModeConfiguration configuration = ModeConfiguration.Parse(document, [provider]);
-        var engine = new ModeEngine(
-            configuration,
-            new ModeStateStore(PCModePaths.StateFile(root.Path)),
-            [provider]);
+        var engine = new ModeEngine(configuration, new ModeStateStore(PCModePaths.StateFile(root.Path)), [provider]);
         using var runtime = new EngineRuntime(engine, root.Path);
         var workspace = new FakeWorkspace((configuration, [provider]));
         var viewModel = new SpacesViewModel(workspace, runtime);
 
         viewModel.Refresh();
-        HierarchyNodeViewModel activity = Assert.Single(
-            viewModel.Nodes, node => node.Level == NodeLevel.Activity);
+        HierarchyNodeViewModel activity = Assert.Single(viewModel.Nodes, node => node.Level == NodeLevel.Activity);
         viewModel.SelectKey(activity.Address);
 
         Assert.True(viewModel.CanActivateSelected);
@@ -266,10 +263,7 @@ public sealed class SpacesViewModelTests
 
         var provider = new RecordingProvider();
         ModeConfiguration configuration = ModeConfiguration.Parse(document, [provider]);
-        var engine = new ModeEngine(
-            configuration,
-            new ModeStateStore(PCModePaths.StateFile(root.Path)),
-            [provider]);
+        var engine = new ModeEngine(configuration, new ModeStateStore(PCModePaths.StateFile(root.Path)), [provider]);
         using var runtime = new EngineRuntime(engine, root.Path);
         var viewModel = new SpacesViewModel(new FakeWorkspace((configuration, [provider])), runtime);
 
@@ -277,8 +271,7 @@ public sealed class SpacesViewModelTests
 
         foreach (NodeLevel level in Enum.GetValues<NodeLevel>())
         {
-            HierarchyNodeViewModel node = Assert.Single(
-                viewModel.Nodes, candidate => candidate.Level == level);
+            HierarchyNodeViewModel node = Assert.Single(viewModel.Nodes, candidate => candidate.Level == level);
             viewModel.SelectKey(node.Address);
 
             Assert.True(viewModel.CanActivateSelected);

@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using PCMode.Tray.Elements.Settings;
 
 namespace PCMode.Tray.Platform.Themes;
 
@@ -33,9 +32,19 @@ public sealed class ApplicationThemeService : IDisposable
     /// <summary>Target's 13-key palette (<c>UI/Components/Theme/Theme.xaml</c>), not legacy's 34-key set.</summary>
     public static IReadOnlyList<string> SemanticResourceKeys { get; } =
     [
-        "AccentBrush", "AccentTextBrush", "ErrorBrush", "WarningBrush", "DisabledTextBrush",
-        "WindowBackgroundBrush", "SurfaceBrush", "SurfaceHoverBrush", "ForegroundBrush",
-        "MutedForegroundBrush", "DividerBrush", "BorderBrush", "SuccessBrush",
+        "AccentBrush",
+        "AccentTextBrush",
+        "ErrorBrush",
+        "WarningBrush",
+        "DisabledTextBrush",
+        "WindowBackgroundBrush",
+        "SurfaceBrush",
+        "SurfaceHoverBrush",
+        "ForegroundBrush",
+        "MutedForegroundBrush",
+        "DividerBrush",
+        "BorderBrush",
+        "SuccessBrush",
     ];
 
     public ApplicationThemeService(ResourceDictionary resources, ISystemThemePreference system)
@@ -68,9 +77,7 @@ public sealed class ApplicationThemeService : IDisposable
         Selected = selected;
         Effective = Resolve(selected, _system.Read());
 
-        IReadOnlyDictionary<string, object> palette = Effective == EffectiveTheme.Dark
-            ? _darkPalette
-            : _lightPalette;
+        IReadOnlyDictionary<string, object> palette = Effective == EffectiveTheme.Dark ? _darkPalette : _lightPalette;
 
         foreach (string key in SemanticResourceKeys)
         {
@@ -102,12 +109,13 @@ public sealed class ApplicationThemeService : IDisposable
         }
     }
 
-    public static EffectiveTheme Resolve(ApplicationTheme selected, EffectiveTheme system) => selected switch
-    {
-        ApplicationTheme.Light => EffectiveTheme.Light,
-        ApplicationTheme.Dark => EffectiveTheme.Dark,
-        _ => system,
-    };
+    public static EffectiveTheme Resolve(ApplicationTheme selected, EffectiveTheme system) =>
+        selected switch
+        {
+            ApplicationTheme.Light => EffectiveTheme.Light,
+            ApplicationTheme.Dark => EffectiveTheme.Dark,
+            _ => system,
+        };
 
     public void Dispose()
     {
@@ -152,7 +160,8 @@ public sealed class ApplicationThemeService : IDisposable
         foreach (string key in SemanticResourceKeys)
         {
             string sourceKey = $"{prefix}{key}";
-            palette[key] = resources[sourceKey]
+            palette[key] =
+                resources[sourceKey]
                 ?? throw new InvalidOperationException($"The theme resource '{sourceKey}' is missing.");
         }
 

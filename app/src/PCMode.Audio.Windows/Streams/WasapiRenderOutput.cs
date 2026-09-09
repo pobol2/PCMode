@@ -9,8 +9,7 @@ using PCMode.Audio.Windows.Interop;
 
 namespace PCMode.Audio.Windows.Streams;
 
-public sealed class WasapiRenderOutput :
-    IAudioOutputStream
+public sealed class WasapiRenderOutput : IAudioOutputStream
 {
     /// <summary>
     /// A little over five milliseconds at 48 kHz. Long enough that the
@@ -18,8 +17,7 @@ public sealed class WasapiRenderOutput :
     /// it disappears inside one <see cref="Write"/> call's block for any
     /// ordinary block size this Host uses.
     /// </summary>
-    private const int RecoveryRampFrameCount =
-        256;
+    private const int RecoveryRampFrameCount = 256;
 
     /// <summary>
     /// Floor for the wall-clock backstop, which is only a backstop:
@@ -34,10 +32,7 @@ public sealed class WasapiRenderOutput :
     /// back for no reason and making steady-state audio measurably quieter
     /// and glitchier than with no fade logic at all.
     /// </summary>
-    private static readonly TimeSpan
-        MinimumRecoveryWait =
-            TimeSpan.FromMilliseconds(
-                50);
+    private static readonly TimeSpan MinimumRecoveryWait = TimeSpan.FromMilliseconds(50);
 
     private readonly IMMDevice _device;
 
@@ -111,245 +106,168 @@ public sealed class WasapiRenderOutput :
 
     public AudioEndpointId EndpointId { get; }
 
-    public WasapiRenderOutput(
-        AudioEndpointId endpointId,
-        AudioFormat requestedFormat)
+    public WasapiRenderOutput(AudioEndpointId endpointId, AudioFormat requestedFormat)
     {
         if (endpointId == default)
         {
-            throw new ArgumentException(
-                "An output endpoint is required.",
-                nameof(endpointId));
+            throw new ArgumentException("An output endpoint is required.", nameof(endpointId));
         }
 
-        EndpointId =
-            endpointId;
+        EndpointId = endpointId;
 
-        IMMDevice? device =
-            null;
+        IMMDevice? device = null;
 
-        IAudioClient? audioClient =
-            null;
+        IAudioClient? audioClient = null;
 
-        IAudioRenderClient? renderClient =
-            null;
+        IAudioRenderClient? renderClient = null;
 
-        IAudioClock? audioClock =
-            null;
+        IAudioClock? audioClock = null;
 
-        AutoResetEvent? bufferEvent =
-            null;
+        AutoResetEvent? bufferEvent = null;
 
-        ulong clockFrequency =
-            0;
+        ulong clockFrequency = 0;
 
-        IntPtr mixFormatPointer =
-            IntPtr.Zero;
+        IntPtr mixFormatPointer = IntPtr.Zero;
 
-        IntPtr streamFormatPointer =
-            IntPtr.Zero;
+        IntPtr streamFormatPointer = IntPtr.Zero;
 
         try
         {
-            IMMDeviceEnumerator enumerator =
-                CoreAudioInterop.CreateEnumerator();
+            IMMDeviceEnumerator enumerator = CoreAudioInterop.CreateEnumerator();
 
             try
             {
                 WasapiError.ThrowIfFailed(
-                    enumerator.GetDevice(
-                        endpointId.Value,
-                        out device),
-                    "IMMDeviceEnumerator.GetDevice");
+                    enumerator.GetDevice(endpointId.Value, out device),
+                    "IMMDeviceEnumerator.GetDevice"
+                );
             }
             finally
             {
-                CoreAudioInterop.Release(
-                    enumerator);
+                CoreAudioInterop.Release(enumerator);
             }
 
-            Guid audioClientId =
-                typeof(IAudioClient).GUID;
+            Guid audioClientId = typeof(IAudioClient).GUID;
 
             WasapiError.ThrowIfFailed(
-                device!.Activate(
-                    ref audioClientId,
-                    ClsCtx.All,
-                    IntPtr.Zero,
-                    out object? audioClientObject),
-                "IMMDevice.Activate(IAudioClient)");
+                device!.Activate(ref audioClientId, ClsCtx.All, IntPtr.Zero, out object? audioClientObject),
+                "IMMDevice.Activate(IAudioClient)"
+            );
 
-            audioClient =
-                (IAudioClient)audioClientObject!;
+            audioClient = (IAudioClient)audioClientObject!;
 
-            WasapiError.ThrowIfFailed(
-                audioClient.GetMixFormat(
-                    out mixFormatPointer),
-                "IAudioClient.GetMixFormat");
+            WasapiError.ThrowIfFailed(audioClient.GetMixFormat(out mixFormatPointer), "IAudioClient.GetMixFormat");
 
-            WaveFormatInfo endpointMix =
-                WaveFormatAdapter.Read(
-                    mixFormatPointer);
+            WaveFormatInfo endpointMix = WaveFormatAdapter.Read(mixFormatPointer);
 
-            EndpointMixFormat =
-                new AudioFormat(
-                    endpointMix.SampleRate,
-                    endpointMix.ChannelCount);
+            EndpointMixFormat = new AudioFormat(endpointMix.SampleRate, endpointMix.ChannelCount);
 
-            streamFormatPointer =
-                WaveFormatAdapter.AllocateFloat32(
-                    requestedFormat);
+            streamFormatPointer = WaveFormatAdapter.AllocateFloat32(requestedFormat);
 
-            _streamFormat =
-                WaveFormatAdapter.Read(
-                    streamFormatPointer);
+            _streamFormat = WaveFormatAdapter.Read(streamFormatPointer);
 
-            Format =
-                requestedFormat;
+            Format = requestedFormat;
 
-            bufferEvent =
-                new AutoResetEvent(
-                    false);
+            bufferEvent = new AutoResetEvent(false);
 
             WasapiError.ThrowIfFailed(
                 audioClient.Initialize(
                     AudioClientShareMode.Shared,
-                    AudioClientStreamFlags.EventCallback |
-                    AudioClientStreamFlags.AutoConvertPcm |
-                    AudioClientStreamFlags.SrcDefaultQuality,
+                    AudioClientStreamFlags.EventCallback
+                        | AudioClientStreamFlags.AutoConvertPcm
+                        | AudioClientStreamFlags.SrcDefaultQuality,
                     0,
                     0,
                     streamFormatPointer,
-                    IntPtr.Zero),
-                "IAudioClient.Initialize(render)");
+                    IntPtr.Zero
+                ),
+                "IAudioClient.Initialize(render)"
+            );
 
             WasapiError.ThrowIfFailed(
-                audioClient.SetEventHandle(
-                    bufferEvent
-                        .SafeWaitHandle
-                        .DangerousGetHandle()),
-                "IAudioClient.SetEventHandle");
+                audioClient.SetEventHandle(bufferEvent.SafeWaitHandle.DangerousGetHandle()),
+                "IAudioClient.SetEventHandle"
+            );
+
+            WasapiError.ThrowIfFailed(audioClient.GetBufferSize(out _bufferFrames), "IAudioClient.GetBufferSize");
+
+            Guid renderClientId = typeof(IAudioRenderClient).GUID;
 
             WasapiError.ThrowIfFailed(
-                audioClient.GetBufferSize(
-                    out _bufferFrames),
-                "IAudioClient.GetBufferSize");
+                audioClient.GetService(ref renderClientId, out object renderObject),
+                "IAudioClient.GetService(IAudioRenderClient)"
+            );
 
-            Guid renderClientId =
-                typeof(IAudioRenderClient).GUID;
+            renderClient = (IAudioRenderClient)renderObject;
 
-            WasapiError.ThrowIfFailed(
-                audioClient.GetService(
-                    ref renderClientId,
-                    out object renderObject),
-                "IAudioClient.GetService(IAudioRenderClient)");
-
-            renderClient =
-                (IAudioRenderClient)renderObject;
-
-            Guid audioClockId =
-                typeof(IAudioClock).GUID;
+            Guid audioClockId = typeof(IAudioClock).GUID;
 
             WasapiError.ThrowIfFailed(
-                audioClient.GetService(
-                    ref audioClockId,
-                    out object clockObject),
-                "IAudioClient.GetService(IAudioClock)");
+                audioClient.GetService(ref audioClockId, out object clockObject),
+                "IAudioClient.GetService(IAudioClock)"
+            );
 
-            audioClock =
-                (IAudioClock)clockObject;
+            audioClock = (IAudioClock)clockObject;
 
-            WasapiError.ThrowIfFailed(
-                audioClock.GetFrequency(
-                    out clockFrequency),
-                "IAudioClock.GetFrequency");
+            WasapiError.ThrowIfFailed(audioClock.GetFrequency(out clockFrequency), "IAudioClock.GetFrequency");
 
             if (clockFrequency == 0)
             {
-                throw new InvalidOperationException(
-                    "WASAPI returned a zero audio-clock frequency.");
+                throw new InvalidOperationException("WASAPI returned a zero audio-clock frequency.");
             }
 
-            _device =
-                device;
+            _device = device;
 
-            _audioClient =
-                audioClient;
+            _audioClient = audioClient;
 
-            _renderClient =
-                renderClient;
+            _renderClient = renderClient;
 
-            _audioClock =
-                audioClock;
+            _audioClock = audioClock;
 
-            _bufferEvent =
-                bufferEvent;
+            _bufferEvent = bufferEvent;
 
-            _clockFrequency =
-                clockFrequency;
+            _clockFrequency = clockFrequency;
 
-            _endpointBufferDuration =
-                TimeSpan.FromSeconds(
-                    _bufferFrames /
-                    (double)Format.SampleRate);
+            _endpointBufferDuration = TimeSpan.FromSeconds(_bufferFrames / (double)Format.SampleRate);
 
-            TimeSpan scaledSubmitGap =
-                _endpointBufferDuration *
-                4;
+            TimeSpan scaledSubmitGap = _endpointBufferDuration * 4;
 
-            _maximumContinuousSubmitGap =
-                scaledSubmitGap >
-                MinimumRecoveryWait
-                    ? scaledSubmitGap
-                    : MinimumRecoveryWait;
+            _maximumContinuousSubmitGap = scaledSubmitGap > MinimumRecoveryWait ? scaledSubmitGap : MinimumRecoveryWait;
 
-            device =
-                null;
+            device = null;
 
-            audioClient =
-                null;
+            audioClient = null;
 
-            renderClient =
-                null;
+            renderClient = null;
 
-            audioClock =
-                null;
+            audioClock = null;
 
-            bufferEvent =
-                null;
+            bufferEvent = null;
         }
         catch
         {
             bufferEvent?.Dispose();
 
-            CoreAudioInterop.Release(
-                audioClock);
+            CoreAudioInterop.Release(audioClock);
 
-            CoreAudioInterop.Release(
-                renderClient);
+            CoreAudioInterop.Release(renderClient);
 
-            CoreAudioInterop.Release(
-                audioClient);
+            CoreAudioInterop.Release(audioClient);
 
-            CoreAudioInterop.Release(
-                device);
+            CoreAudioInterop.Release(device);
 
             throw;
         }
         finally
         {
-            if (mixFormatPointer !=
-                IntPtr.Zero)
+            if (mixFormatPointer != IntPtr.Zero)
             {
-                Marshal.FreeCoTaskMem(
-                    mixFormatPointer);
+                Marshal.FreeCoTaskMem(mixFormatPointer);
             }
 
-            if (streamFormatPointer !=
-                IntPtr.Zero)
+            if (streamFormatPointer != IntPtr.Zero)
             {
-                Marshal.FreeCoTaskMem(
-                    streamFormatPointer);
+                Marshal.FreeCoTaskMem(streamFormatPointer);
             }
         }
     }
@@ -364,108 +282,79 @@ public sealed class WasapiRenderOutput :
         }
 
         WasapiError.ThrowIfFailed(
-            _renderClient.GetBuffer(
-                _bufferFrames,
-                out _),
-            "IAudioRenderClient.GetBuffer(initial)");
+            _renderClient.GetBuffer(_bufferFrames, out _),
+            "IAudioRenderClient.GetBuffer(initial)"
+        );
 
         WasapiError.ThrowIfFailed(
-            _renderClient.ReleaseBuffer(
-                _bufferFrames,
-                AudioClientBufferFlags.Silent),
-            "IAudioRenderClient.ReleaseBuffer(initial)");
+            _renderClient.ReleaseBuffer(_bufferFrames, AudioClientBufferFlags.Silent),
+            "IAudioRenderClient.ReleaseBuffer(initial)"
+        );
 
         // Start follows a fresh Initialize or Stop/Reset. The endpoint clock
         // returns to that stream-local origin too, so carrying the old
         // submission position forward would look like a large false queue to
         // the synchronizer and force an aggressive resync.
-        _submittedFramePosition =
-            _bufferFrames;
+        _submittedFramePosition = _bufferFrames;
 
-        _fadeInFramesRemaining =
-            0;
+        _fadeInFramesRemaining = 0;
 
-        _lastActivityTimestamp =
-            Stopwatch.GetTimestamp();
+        _lastActivityTimestamp = Stopwatch.GetTimestamp();
 
-        WasapiError.ThrowIfFailed(
-            _audioClient.Start(),
-            "IAudioClient.Start(render)");
+        WasapiError.ThrowIfFailed(_audioClient.Start(), "IAudioClient.Start(render)");
 
-        _started =
-            true;
+        _started = true;
     }
 
-    public AudioOutputClockSnapshot
-        GetClockSnapshot()
+    public AudioOutputClockSnapshot GetClockSnapshot()
     {
         ThrowIfDisposed();
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "Render output is not started.");
+            throw new InvalidOperationException("Render output is not started.");
         }
 
         WasapiError.ThrowIfFailed(
-            _audioClock.GetPosition(
-                out ulong devicePosition,
-                out ulong qpcPosition),
-            "IAudioClock.GetPosition");
+            _audioClock.GetPosition(out ulong devicePosition, out ulong qpcPosition),
+            "IAudioClock.GetPosition"
+        );
 
-        double elapsedSeconds =
-            (double)devicePosition /
-            _clockFrequency;
+        double elapsedSeconds = (double)devicePosition / _clockFrequency;
 
-        double playedFramePosition =
-            elapsedSeconds *
-            Format.SampleRate;
+        double playedFramePosition = elapsedSeconds * Format.SampleRate;
 
-        return new AudioOutputClockSnapshot(
-            playedFramePosition,
-            _submittedFramePosition,
-            qpcPosition);
+        return new AudioOutputClockSnapshot(playedFramePosition, _submittedFramePosition, qpcPosition);
     }
 
-    public AudioOutputDiagnostics
-        GetDiagnostics()
+    public AudioOutputDiagnostics GetDiagnostics()
     {
         return new AudioOutputDiagnostics(
-            Interlocked.Read(
-                ref _recoveryFadeCount),
-            Interlocked.Read(
-                ref _endpointDryCount),
-            Volatile.Read(
-                ref _longestSubmitGapMilliseconds),
-            Volatile.Read(
-                ref _longestWriteMilliseconds),
-            Volatile.Read(
-                ref _longestBufferWaitMilliseconds));
+            Interlocked.Read(ref _recoveryFadeCount),
+            Interlocked.Read(ref _endpointDryCount),
+            Volatile.Read(ref _longestSubmitGapMilliseconds),
+            Volatile.Read(ref _longestWriteMilliseconds),
+            Volatile.Read(ref _longestBufferWaitMilliseconds)
+        );
     }
 
-    public void Write(
-        AudioBlock block)
+    public void Write(AudioBlock block)
     {
         ThrowIfDisposed();
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "Render output is not started.");
+            throw new InvalidOperationException("Render output is not started.");
         }
 
-        if (block.Format !=
-            Format)
+        if (block.Format != Format)
         {
-            throw new NotSupportedException(
-                "Render block format does not match the configured client stream format.");
+            throw new NotSupportedException("Render block format does not match the configured client stream format.");
         }
 
-        int remainingFrames =
-            block.FrameCount;
+        int remainingFrames = block.FrameCount;
 
-        int sourceFrameOffset =
-            0;
+        int sourceFrameOffset = 0;
 
         // Timed end to end, and reported next to the gap since audio last
         // reached the device, because the two together say which side of
@@ -473,15 +362,14 @@ public sealed class WasapiRenderOutput :
         // here while the endpoint starved, whereas a quick write after a
         // long gap means the route was never called at all for that stretch
         // and the audio was already missing before it arrived.
-        long writeStartTimestamp =
-            Stopwatch.GetTimestamp();
+        long writeStartTimestamp = Stopwatch.GetTimestamp();
 
         while (remainingFrames > 0)
         {
             WasapiError.ThrowIfFailed(
-                _audioClient.GetCurrentPadding(
-                    out uint paddingFrames),
-                "IAudioClient.GetCurrentPadding");
+                _audioClient.GetCurrentPadding(out uint paddingFrames),
+                "IAudioClient.GetCurrentPadding"
+            );
 
             // Zero padding means every frame ever handed to this endpoint has
             // already been consumed: the device ran dry, and the engine has
@@ -507,67 +395,43 @@ public sealed class WasapiRenderOutput :
                 ArmRecoveryFade();
             }
 
-            uint availableFrames =
-                _bufferFrames -
-                paddingFrames;
+            uint availableFrames = _bufferFrames - paddingFrames;
 
             if (availableFrames == 0)
             {
-                long waitStartTimestamp =
-                    Stopwatch.GetTimestamp();
+                long waitStartTimestamp = Stopwatch.GetTimestamp();
 
-                bool signalled =
-                    _bufferEvent.WaitOne(
-                        1000);
+                bool signalled = _bufferEvent.WaitOne(1000);
 
-                _longestBufferWaitMilliseconds =
-                    Math.Max(
-                        _longestBufferWaitMilliseconds,
-                        Stopwatch.GetElapsedTime(
-                                waitStartTimestamp)
-                            .TotalMilliseconds);
+                _longestBufferWaitMilliseconds = Math.Max(
+                    _longestBufferWaitMilliseconds,
+                    Stopwatch.GetElapsedTime(waitStartTimestamp).TotalMilliseconds
+                );
 
                 if (!signalled)
                 {
-                    throw new TimeoutException(
-                        "Timed out waiting for the WASAPI render endpoint.");
+                    throw new TimeoutException("Timed out waiting for the WASAPI render endpoint.");
                 }
 
                 continue;
             }
 
-            int framesToWrite =
-                Math.Min(
-                    remainingFrames,
-                    checked(
-                        (int)availableFrames));
+            int framesToWrite = Math.Min(remainingFrames, checked((int)availableFrames));
 
             WasapiError.ThrowIfFailed(
-                _renderClient.GetBuffer(
-                    checked(
-                        (uint)framesToWrite),
-                    out IntPtr destination),
-                "IAudioRenderClient.GetBuffer");
+                _renderClient.GetBuffer(checked((uint)framesToWrite), out IntPtr destination),
+                "IAudioRenderClient.GetBuffer"
+            );
 
-            bool acquired =
-                true;
+            bool acquired = true;
 
             try
             {
-                int sampleOffset =
-                    checked(
-                        sourceFrameOffset *
-                        Format.ChannelCount);
+                int sampleOffset = checked(sourceFrameOffset * Format.ChannelCount);
 
-                int sampleCount =
-                    checked(
-                        framesToWrite *
-                        Format.ChannelCount);
+                int sampleCount = checked(framesToWrite * Format.ChannelCount);
 
-                Span<float> samples =
-                    block.Samples.Slice(
-                        sampleOffset,
-                        sampleCount);
+                Span<float> samples = block.Samples.Slice(sampleOffset, sampleCount);
 
                 // Backstop to the padding check above, for a gap that opened
                 // and closed again between two reads of the padding -- long
@@ -577,72 +441,47 @@ public sealed class WasapiRenderOutput :
                 // than to a fixed number of milliseconds, and set several
                 // times longer than that buffer can possibly last, so that
                 // ordinary pacing never reaches it.
-                TimeSpan submitGap =
-                    Stopwatch.GetElapsedTime(
-                        _lastActivityTimestamp);
+                TimeSpan submitGap = Stopwatch.GetElapsedTime(_lastActivityTimestamp);
 
-                _longestSubmitGapMilliseconds =
-                    Math.Max(
-                        _longestSubmitGapMilliseconds,
-                        submitGap.TotalMilliseconds);
+                _longestSubmitGapMilliseconds = Math.Max(_longestSubmitGapMilliseconds, submitGap.TotalMilliseconds);
 
-                if (submitGap >
-                    _maximumContinuousSubmitGap)
+                if (submitGap > _maximumContinuousSubmitGap)
                 {
                     ArmRecoveryFade();
                 }
 
-                ApplyRecoveryFade(
-                    samples,
-                    framesToWrite);
+                ApplyRecoveryFade(samples, framesToWrite);
 
-                WaveFormatAdapter.FloatToNative(
-                    samples,
-                    destination,
-                    framesToWrite,
-                    _streamFormat);
+                WaveFormatAdapter.FloatToNative(samples, destination, framesToWrite, _streamFormat);
 
                 WasapiError.ThrowIfFailed(
-                    _renderClient.ReleaseBuffer(
-                        checked(
-                            (uint)framesToWrite),
-                        AudioClientBufferFlags.None),
-                    "IAudioRenderClient.ReleaseBuffer");
+                    _renderClient.ReleaseBuffer(checked((uint)framesToWrite), AudioClientBufferFlags.None),
+                    "IAudioRenderClient.ReleaseBuffer"
+                );
 
-                acquired =
-                    false;
+                acquired = false;
 
-                _lastActivityTimestamp =
-                    Stopwatch.GetTimestamp();
+                _lastActivityTimestamp = Stopwatch.GetTimestamp();
 
-                _submittedFramePosition =
-                    checked(
-                        _submittedFramePosition +
-                        framesToWrite);
+                _submittedFramePosition = checked(_submittedFramePosition + framesToWrite);
             }
             finally
             {
                 if (acquired)
                 {
-                    _renderClient.ReleaseBuffer(
-                        0,
-                        AudioClientBufferFlags.None);
+                    _renderClient.ReleaseBuffer(0, AudioClientBufferFlags.None);
                 }
             }
 
-            sourceFrameOffset +=
-                framesToWrite;
+            sourceFrameOffset += framesToWrite;
 
-            remainingFrames -=
-                framesToWrite;
+            remainingFrames -= framesToWrite;
         }
 
-        _longestWriteMilliseconds =
-            Math.Max(
-                _longestWriteMilliseconds,
-                Stopwatch.GetElapsedTime(
-                        writeStartTimestamp)
-                    .TotalMilliseconds);
+        _longestWriteMilliseconds = Math.Max(
+            _longestWriteMilliseconds,
+            Stopwatch.GetElapsedTime(writeStartTimestamp).TotalMilliseconds
+        );
     }
 
     /// <summary>
@@ -659,32 +498,23 @@ public sealed class WasapiRenderOutput :
             return;
         }
 
-        _fadeInFramesRemaining =
-            RecoveryRampFrameCount;
+        _fadeInFramesRemaining = RecoveryRampFrameCount;
 
         _recoveryFadeCount++;
     }
 
-    private void ApplyRecoveryFade(
-        Span<float> samples,
-        int frameCount)
+    private void ApplyRecoveryFade(Span<float> samples, int frameCount)
     {
         if (_fadeInFramesRemaining == 0)
         {
             return;
         }
 
-        int channels =
-            Format.ChannelCount;
+        int channels = Format.ChannelCount;
 
-        for (int frame = 0;
-             frame < frameCount &&
-             _fadeInFramesRemaining > 0;
-             frame++)
+        for (int frame = 0; frame < frameCount && _fadeInFramesRemaining > 0; frame++)
         {
-            int sampleStart =
-                frame *
-                channels;
+            int sampleStart = frame * channels;
 
             // Silent frames pass through without spending ramp on them.
             // Scaling silence achieves nothing, and a route recovering from
@@ -693,20 +523,13 @@ public sealed class WasapiRenderOutput :
             // it -- so letting that consume the ramp would leave the audio
             // that follows starting at full level again, which is the
             // failure this whole path exists to prevent.
-            bool frameIsSilent =
-                true;
+            bool frameIsSilent = true;
 
-            for (int channel = 0;
-                 channel < channels;
-                 channel++)
+            for (int channel = 0; channel < channels; channel++)
             {
-                if (samples[
-                        sampleStart +
-                        channel] !=
-                    0.0f)
+                if (samples[sampleStart + channel] != 0.0f)
                 {
-                    frameIsSilent =
-                        false;
+                    frameIsSilent = false;
 
                     break;
                 }
@@ -717,19 +540,11 @@ public sealed class WasapiRenderOutput :
                 continue;
             }
 
-            float level =
-                1.0f -
-                (_fadeInFramesRemaining /
-                 (float)RecoveryRampFrameCount);
+            float level = 1.0f - (_fadeInFramesRemaining / (float)RecoveryRampFrameCount);
 
-            for (int channel = 0;
-                 channel < channels;
-                 channel++)
+            for (int channel = 0; channel < channels; channel++)
             {
-                samples[
-                    sampleStart +
-                    channel] *=
-                        level;
+                samples[sampleStart + channel] *= level;
             }
 
             _fadeInFramesRemaining--;
@@ -745,25 +560,18 @@ public sealed class WasapiRenderOutput :
             return;
         }
 
-        WasapiError.ThrowIfFailed(
-            _audioClient.Stop(),
-            "IAudioClient.Stop(render)");
+        WasapiError.ThrowIfFailed(_audioClient.Stop(), "IAudioClient.Stop(render)");
 
-        _started =
-            false;
+        _started = false;
 
         // IAudioClient.Stop leaves queued samples and clock state intact.
         // Clear both before this stream can be started again so stale audio is
         // never replayed after an endpoint/topology interruption.
-        WasapiError.ThrowIfFailed(
-            _audioClient.Reset(),
-            "IAudioClient.Reset(render)");
+        WasapiError.ThrowIfFailed(_audioClient.Reset(), "IAudioClient.Reset(render)");
 
-        _submittedFramePosition =
-            0;
+        _submittedFramePosition = 0;
 
-        _fadeInFramesRemaining =
-            0;
+        _fadeInFramesRemaining = 0;
     }
 
     public void Dispose()
@@ -773,8 +581,7 @@ public sealed class WasapiRenderOutput :
             return;
         }
 
-        Exception? stopFailure =
-            null;
+        Exception? stopFailure = null;
 
         try
         {
@@ -786,46 +593,35 @@ public sealed class WasapiRenderOutput :
                 }
                 catch (Exception ex)
                 {
-                    stopFailure =
-                        ex;
+                    stopFailure = ex;
                 }
             }
         }
         finally
         {
-            _started =
-                false;
+            _started = false;
 
             _bufferEvent.Dispose();
 
-            CoreAudioInterop.Release(
-                _audioClock);
+            CoreAudioInterop.Release(_audioClock);
 
-            CoreAudioInterop.Release(
-                _renderClient);
+            CoreAudioInterop.Release(_renderClient);
 
-            CoreAudioInterop.Release(
-                _audioClient);
+            CoreAudioInterop.Release(_audioClient);
 
-            CoreAudioInterop.Release(
-                _device);
+            CoreAudioInterop.Release(_device);
 
-            _disposed =
-                true;
+            _disposed = true;
         }
 
         if (stopFailure is not null)
         {
-            throw new InvalidOperationException(
-                "WASAPI render output failed to stop during disposal.",
-                stopFailure);
+            throw new InvalidOperationException("WASAPI render output failed to stop during disposal.", stopFailure);
         }
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

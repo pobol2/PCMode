@@ -66,35 +66,45 @@ public static class AudioVirtualEndpoint
             string wanted = configuredName.Trim();
 
             List<AudioEndpoint> named =
-                [.. active.Where(endpoint => string.Equals(endpoint.Name, wanted, StringComparison.OrdinalIgnoreCase))];
+            [
+                .. active.Where(endpoint => string.Equals(endpoint.Name, wanted, StringComparison.OrdinalIgnoreCase)),
+            ];
 
             return named.Count switch
             {
                 1 => named[0].Id,
                 0 => throw new InvalidOperationException(
-                    $"No active playback device is named '{wanted}', which '{SettingsPath}' says is the " +
-                    "PCMode virtual audio endpoint. " + Present(active)),
+                    $"No active playback device is named '{wanted}', which '{SettingsPath}' says is the "
+                        + "PCMode virtual audio endpoint. "
+                        + Present(active)
+                ),
                 _ => throw new InvalidOperationException(
-                    $"{named.Count} active playback devices are named '{wanted}', so there is no way to " +
-                    "tell which one is the PCMode virtual audio endpoint."),
+                    $"{named.Count} active playback devices are named '{wanted}', so there is no way to "
+                        + "tell which one is the PCMode virtual audio endpoint."
+                ),
             };
         }
 
         List<AudioEndpoint> matches =
-            [.. active.Where(endpoint =>
-                endpoint.Name is not null &&
-                endpoint.Name.Contains(NameMarker, StringComparison.OrdinalIgnoreCase))];
+        [
+            .. active.Where(endpoint =>
+                endpoint.Name is not null && endpoint.Name.Contains(NameMarker, StringComparison.OrdinalIgnoreCase)
+            ),
+        ];
 
         return matches.Count switch
         {
             1 => matches[0].Id,
             0 => throw new InvalidOperationException(
-                "The PCMode virtual audio endpoint is not present, so audio targets cannot play. " +
-                "Install the PCMode audio subsystem, or use a single output instead. " + Present(active)),
+                "The PCMode virtual audio endpoint is not present, so audio targets cannot play. "
+                    + "Install the PCMode audio subsystem, or use a single output instead. "
+                    + Present(active)
+            ),
             _ => throw new InvalidOperationException(
-                $"{matches.Count} active playback devices could be the PCMode virtual audio endpoint " +
-                $"({string.Join(", ", matches.Select(endpoint => $"'{endpoint.Name}'"))}). " +
-                $"Write the exact one under '{SettingsPath}'."),
+                $"{matches.Count} active playback devices could be the PCMode virtual audio endpoint "
+                    + $"({string.Join(", ", matches.Select(endpoint => $"'{endpoint.Name}'"))}). "
+                    + $"Write the exact one under '{SettingsPath}'."
+            ),
         };
     }
 
@@ -107,10 +117,12 @@ public static class AudioVirtualEndpoint
     /// <see cref="Resolve"/>, which refuses to guess.
     /// </remarks>
     public static bool IsVirtualEndpointName(string? name, string? configuredName = null) =>
-        !string.IsNullOrWhiteSpace(name) &&
-        (string.IsNullOrWhiteSpace(configuredName)
-            ? name.Contains(NameMarker, StringComparison.OrdinalIgnoreCase)
-            : string.Equals(name.Trim(), configuredName.Trim(), StringComparison.OrdinalIgnoreCase));
+        !string.IsNullOrWhiteSpace(name)
+        && (
+            string.IsNullOrWhiteSpace(configuredName)
+                ? name.Contains(NameMarker, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(name.Trim(), configuredName.Trim(), StringComparison.OrdinalIgnoreCase)
+        );
 
     private static string Present(IReadOnlyList<AudioEndpoint> active) =>
         active.Count == 0

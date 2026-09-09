@@ -44,9 +44,7 @@ public sealed class RequiredModesTests
         // requirement. A shipped example that does not load is worse than none.
         Machine machine = Load();
 
-        Assert.Equal(
-            ["desk/desktop", "desk/gaming", "desk/movie", "desk/youtube"],
-            machine.Configuration.TargetKeys());
+        Assert.Equal(["desk/desktop", "desk/gaming", "desk/movie", "desk/youtube"], machine.Configuration.TargetKeys());
     }
 
     // ---- what each mode is --------------------------------------------------
@@ -296,13 +294,28 @@ public sealed class RequiredModesTests
         public Machine(string document, bool installApplications, bool lighting)
         {
             var screens = new FakeDisplayDevices()
-                .Add(new FakeMonitor { Path = Desk1, Name = "DELL U2720Q", Active = true })
-                .Add(new FakeMonitor { Path = Desk2, Name = "DELL U2720Q", Active = true })
+                .Add(
+                    new FakeMonitor
+                    {
+                        Path = Desk1,
+                        Name = "DELL U2720Q",
+                        Active = true,
+                    }
+                )
+                .Add(
+                    new FakeMonitor
+                    {
+                        Path = Desk2,
+                        Name = "DELL U2720Q",
+                        Active = true,
+                    }
+                )
                 .Add(new FakeMonitor { Path = Tv, Name = "LG TV SSCR2" });
 
             var sound = new FakeAudioEndpoints(
                 "Realtek HD Audio 2nd output (Realtek(R) Audio)",
-                "4 - LG TV SSCR2 (AMD High Definition Audio Device)");
+                "4 - LG TV SSCR2 (AMD High Definition Audio Device)"
+            );
 
             var lights = new FakeOpenRgbClient();
 
@@ -319,11 +332,11 @@ public sealed class RequiredModesTests
                     .Handles("steam")
                     .Installed(
                         Environment.ExpandEnvironmentVariables(
-                            @"%ProgramFiles(x86)%\Steam\steamapps\common\Lossless Scaling\LosslessScaling.exe"),
-                        Environment.ExpandEnvironmentVariables(
-                            @"%LOCALAPPDATA%\Programs\Stremio\stremio-shell-ng.exe"),
-                        Environment.ExpandEnvironmentVariables(
-                            @"%LOCALAPPDATA%\Programs\youtube-tv\YouTube TV.exe"));
+                            @"%ProgramFiles(x86)%\Steam\steamapps\common\Lossless Scaling\LosslessScaling.exe"
+                        ),
+                        Environment.ExpandEnvironmentVariables(@"%LOCALAPPDATA%\Programs\Stremio\stremio-shell-ng.exe"),
+                        Environment.ExpandEnvironmentVariables(@"%LOCALAPPDATA%\Programs\youtube-tv\YouTube TV.exe")
+                    );
             }
 
             var television = new LgTvConnection(new FakeTelevision(), new FakeCredentials());
@@ -357,7 +370,8 @@ public sealed class RequiredModesTests
         public ModeConfiguration Configuration { get; }
 
         public ApplicationDefinition Application(string name) =>
-            Providers.OfType<ApplicationProvider>()
+            Providers
+                .OfType<ApplicationProvider>()
                 .Single(provider => string.Equals(provider.Key, name, StringComparison.OrdinalIgnoreCase))
                 .Definition;
 

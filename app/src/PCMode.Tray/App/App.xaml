@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:appModel="clr-namespace:PCMode.Tray"
              xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree"
-            ShutdownMode="OnMainWindowClose">
-
+             ShutdownMode="OnMainWindowClose">
     <Application.Resources>
         <ResourceDictionary>
             <!--
@@ -16,10 +15,11 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Theme.xaml" />
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Framework/Framework.xaml" />
-                
+
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/PageLayoutResources.xaml" />
 
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Components.xaml" />
+                <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Content/EditorContentPrimitives.xaml" />
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Migration/MigrationComponents.xaml" />
 
                 <!--
@@ -49,8 +49,6 @@
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Light.xaml" />
                 <ResourceDictionary Source="/PCMode.Tray;component/UI/Components/Theme/Dark.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
         </ResourceDictionary>
     </Application.Resources>
-
 </Application>

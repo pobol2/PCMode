@@ -52,7 +52,7 @@ The production input is the driver. Host may instead use WASAPI loopback only wh
 
 | Project | Responsibility |
 |---|---|
-| `PCMode.Audio.Core` | Audio identities and formats, target/route/health models, audio blocks, gain, biquads, parametric EQ, and processing chains. |
+| `PCMode.Audio.Core` | Audio identities and formats, target/route/health models, audio blocks, gain, biquads, parametric EQ, processing chains, and the waveform envelope model. |
 | `PCMode.Audio.Engine` | Live input-to-routes graph, per-route processing and delay, buffering, resampling, clock estimation, drift correction, synchronization, health, and route recovery primitives. |
 | `PCMode.Audio.Windows` | Core Audio endpoint catalog, WASAPI loopback/render streams, shared-mode format conversion, audio-clock snapshots, and MMCSS registration. |
 | `PCMode.Audio.DriverClient` | Device-interface discovery, driver protocol validation, IOCTL connection/status/read operations, PCM conversion, staging, and reconnect. |
@@ -105,6 +105,7 @@ The pipe protocol is version 1. Each connection starts with compatibility negoti
 - stop the graph;
 - get status;
 - get health;
+- get the current waveform envelope for every route;
 - shut down Host.
 
 The runtime queue is bounded at 128 pending commands. Client calls normally open a connection for one request/response exchange. The pipe is local, but the current server does not configure an explicit ACL or application-level client authentication; that limitation is part of the security model rather than an implied trust guarantee.
@@ -151,6 +152,10 @@ A route-level stall and an output-level stall are detected independently and ans
 Independently, `WasapiRenderOutput` tracks its own contact with the physical device. `IAudioClient.GetCurrentPadding` returning zero means every frame ever handed to the endpoint has already been consumed — the device was fed silence in place of real audio, with no threshold needed because WASAPI is reporting the discontinuity directly rather than this code inferring one from elapsed time. A wall-clock backstop, scaled to a multiple of the endpoint's own buffer duration, catches the case where a gap opens and closes between two padding reads. Either trigger arms a short (~5 ms) linear fade-in on the next audio actually submitted, so resumed playback does not jump to full amplitude at an arbitrary phase; the fade skips silent frames rather than spending its ramp on them, and re-arming an in-progress fade is a no-op so one interruption cannot restart the ramp partway through.
 
 Both layers report their counters through health: route-level `StallRecoveryCount`/`LongestProcessGapMilliseconds`, and output-level `OutputRecoveryFadeCount`/`OutputEndpointDryCount`/`LongestOutputSubmitGapMilliseconds`/`LongestOutputWriteMilliseconds`/`LongestOutputBufferWaitMilliseconds`. The two accounts do not have to agree, and which one moves for a given interruption says where it happened: a route-level gap with no endpoint dry-out means the device kept playing throughout; an endpoint dry-out with no route-level gap means the interruption never grew large enough to show up between `Process` calls. Splitting the output-level write time from the buffer-wait time inside it further separates a device that stopped consuming and later resumed (wait ≈ write) from an interop call blocking outright (write ≫ wait).
+
+### Waveform telemetry
+
+Independent of Health, each route also keeps a rolling min/max envelope of its own processed audio (post-EQ/gain, pre-resample) in a small ring of buckets. `GetWaveform` returns this per route, empty when the route is not running. The Tray Audio page polls it roughly 30 times a second on its own timer, separate from the 3-second Health poll, to draw a live "what this route is actually playing" waveform for the target's reference route. The envelope carries no format or scaling information; the Tray owns turning it into a plotted band.
 
 ## DSP and live calibration
 

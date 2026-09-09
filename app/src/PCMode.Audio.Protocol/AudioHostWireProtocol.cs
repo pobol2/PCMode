@@ -7,157 +7,102 @@ namespace PCMode.Audio.Protocol;
 
 public static class AudioHostWireProtocol
 {
-    private const int MaximumMessageBytes =
-        1024 * 1024;
+    private const int MaximumMessageBytes = 1024 * 1024;
 
-    private static readonly JsonSerializerOptions
-        JsonOptions =
-            CreateJsonOptions();
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     public static Task WriteCommandAsync(
         Stream stream,
         AudioHostCommand command,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        return WriteAsync(
-            stream,
-            command,
-            cancellationToken);
+        return WriteAsync(stream, command, cancellationToken);
     }
 
-    public static Task<AudioHostCommand?>
-        ReadCommandAsync(
-            Stream stream,
-            CancellationToken cancellationToken = default)
+    public static Task<AudioHostCommand?> ReadCommandAsync(Stream stream, CancellationToken cancellationToken = default)
     {
-        return ReadAsync<AudioHostCommand>(
-            stream,
-            cancellationToken);
+        return ReadAsync<AudioHostCommand>(stream, cancellationToken);
     }
 
     public static Task WriteResponseAsync(
         Stream stream,
         AudioHostResponse response,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
-        return WriteAsync(
-            stream,
-            response,
-            cancellationToken);
+        return WriteAsync(stream, response, cancellationToken);
     }
 
-    public static Task<AudioHostResponse?>
-        ReadResponseAsync(
-            Stream stream,
-            CancellationToken cancellationToken = default)
-    {
-        return ReadAsync<AudioHostResponse>(
-            stream,
-            cancellationToken);
-    }
-
-    private static async Task WriteAsync<T>(
+    public static Task<AudioHostResponse?> ReadResponseAsync(
         Stream stream,
-        T value,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            stream);
+        return ReadAsync<AudioHostResponse>(stream, cancellationToken);
+    }
 
-        byte[] payload =
-            JsonSerializer.SerializeToUtf8Bytes(
-                value,
-                JsonOptions);
+    private static async Task WriteAsync<T>(Stream stream, T value, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
 
-        if (payload.Length >
-            MaximumMessageBytes)
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions);
+
+        if (payload.Length > MaximumMessageBytes)
         {
-            throw new InvalidDataException(
-                "IPC message exceeds the maximum allowed size.");
+            throw new InvalidDataException("IPC message exceeds the maximum allowed size.");
         }
 
-        byte[] header =
-            new byte[sizeof(int)];
+        byte[] header = new byte[sizeof(int)];
 
-        BinaryPrimitives.WriteInt32LittleEndian(
-            header,
-            payload.Length);
+        BinaryPrimitives.WriteInt32LittleEndian(header, payload.Length);
 
-        await stream.WriteAsync(
-            header,
-            cancellationToken);
+        await stream.WriteAsync(header, cancellationToken);
 
-        await stream.WriteAsync(
-            payload,
-            cancellationToken);
+        await stream.WriteAsync(payload, cancellationToken);
 
-        await stream.FlushAsync(
-            cancellationToken);
+        await stream.FlushAsync(cancellationToken);
     }
 
-    private static async Task<T?> ReadAsync<T>(
-        Stream stream,
-        CancellationToken cancellationToken)
+    private static async Task<T?> ReadAsync<T>(Stream stream, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(
-            stream);
+        ArgumentNullException.ThrowIfNull(stream);
 
-        byte[] header =
-            new byte[sizeof(int)];
+        byte[] header = new byte[sizeof(int)];
 
-        int headerBytes =
-            await ReadExactOrEofAsync(
-                stream,
-                header,
-                cancellationToken);
+        int headerBytes = await ReadExactOrEofAsync(stream, header, cancellationToken);
 
         if (headerBytes == 0)
         {
             return default;
         }
 
-        int length =
-            BinaryPrimitives.ReadInt32LittleEndian(
-                header);
+        int length = BinaryPrimitives.ReadInt32LittleEndian(header);
 
-        if (length <= 0 ||
-            length > MaximumMessageBytes)
+        if (length <= 0 || length > MaximumMessageBytes)
         {
-            throw new InvalidDataException(
-                $"Invalid IPC message size: {length}.");
+            throw new InvalidDataException($"Invalid IPC message size: {length}.");
         }
 
-        byte[] payload =
-            new byte[length];
+        byte[] payload = new byte[length];
 
-        await ReadExactAsync(
-            stream,
-            payload,
-            cancellationToken);
+        await ReadExactAsync(stream, payload, cancellationToken);
 
-        return JsonSerializer.Deserialize<T>(
-            payload,
-            JsonOptions)
-            ?? throw new InvalidDataException(
-                "IPC message could not be deserialized.");
+        return JsonSerializer.Deserialize<T>(payload, JsonOptions)
+            ?? throw new InvalidDataException("IPC message could not be deserialized.");
     }
 
-    private static async Task<int>
-        ReadExactOrEofAsync(
-            Stream stream,
-            Memory<byte> buffer,
-            CancellationToken cancellationToken)
+    private static async Task<int> ReadExactOrEofAsync(
+        Stream stream,
+        Memory<byte> buffer,
+        CancellationToken cancellationToken
+    )
     {
-        int total =
-            0;
+        int total = 0;
 
-        while (total <
-               buffer.Length)
+        while (total < buffer.Length)
         {
-            int count =
-                await stream.ReadAsync(
-                    buffer[total..],
-                    cancellationToken);
+            int count = await stream.ReadAsync(buffer[total..], cancellationToken);
 
             if (count == 0)
             {
@@ -166,60 +111,42 @@ public static class AudioHostWireProtocol
                     return 0;
                 }
 
-                throw new EndOfStreamException(
-                    "IPC stream ended inside a message header.");
+                throw new EndOfStreamException("IPC stream ended inside a message header.");
             }
 
-            total +=
-                count;
+            total += count;
         }
 
         return total;
     }
 
-    private static async Task ReadExactAsync(
-        Stream stream,
-        Memory<byte> buffer,
-        CancellationToken cancellationToken)
+    private static async Task ReadExactAsync(Stream stream, Memory<byte> buffer, CancellationToken cancellationToken)
     {
-        int total =
-            0;
+        int total = 0;
 
-        while (total <
-               buffer.Length)
+        while (total < buffer.Length)
         {
-            int count =
-                await stream.ReadAsync(
-                    buffer[total..],
-                    cancellationToken);
+            int count = await stream.ReadAsync(buffer[total..], cancellationToken);
 
             if (count == 0)
             {
-                throw new EndOfStreamException(
-                    "IPC stream ended inside a message.");
+                throw new EndOfStreamException("IPC stream ended inside a message.");
             }
 
-            total +=
-                count;
+            total += count;
         }
     }
 
-    private static JsonSerializerOptions
-        CreateJsonOptions()
+    private static JsonSerializerOptions CreateJsonOptions()
     {
-        var options =
-            new JsonSerializerOptions
-            {
-                PropertyNamingPolicy =
-                    JsonNamingPolicy.CamelCase,
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 
-                PropertyNameCaseInsensitive =
-                    true
-            };
+            PropertyNameCaseInsensitive = true,
+        };
 
-        options.Converters.Add(
-            new JsonStringEnumConverter(
-                JsonNamingPolicy.CamelCase));
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
         return options;
     }

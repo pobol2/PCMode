@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using PCMode.Tray.Elements;
 using PCMode.Tray.Elements.Navigation;
 using PCMode.Tray.Elements.Settings;
-using PCMode.Tray.Elements;
 using PCMode.Tray.Tests;
 
 namespace PCMode.Tray.Tests.Shell;

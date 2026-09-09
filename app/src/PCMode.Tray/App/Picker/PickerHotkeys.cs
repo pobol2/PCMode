@@ -1,5 +1,5 @@
-using PCMode.Tray.Platform.Input;
 using PCMode.Tray.Elements.Settings;
+using PCMode.Tray.Platform.Input;
 
 namespace PCMode.Tray.Picker;
 
@@ -19,8 +19,7 @@ namespace PCMode.Tray.Picker;
 /// </remarks>
 public static class PickerHotkeys
 {
-    private const HotkeyModifiers CtrlAlt =
-        HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.NoRepeat;
+    private const HotkeyModifiers CtrlAlt = HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.NoRepeat;
 
     public static IReadOnlyList<HotkeyBinding> BindingsFor(IReadOnlyList<DirectShortcut> shortcuts)
     {
@@ -32,7 +31,8 @@ public static class PickerHotkeys
                 GlobalHotkeys.PickerHotkeyId,
                 CtrlAlt,
                 GlobalHotkeys.VirtualKeySpace,
-                "Ctrl+Alt+Space (mode picker)"),
+                "Ctrl+Alt+Space (mode picker)"
+            ),
         ];
 
         int id = GlobalHotkeys.PickerHotkeyId;
@@ -43,12 +43,15 @@ public static class PickerHotkeys
 
             // A-Z virtual key codes are the uppercase ASCII values, which is
             // why only letters are supported here.
-            bindings.Add(new HotkeyBinding(
-                id,
-                CtrlAlt,
-                char.ToUpperInvariant(shortcut.Key),
-                $"Ctrl+Alt+{char.ToUpperInvariant(shortcut.Key)} ({shortcut.Label})",
-                shortcut.Target));
+            bindings.Add(
+                new HotkeyBinding(
+                    id,
+                    CtrlAlt,
+                    char.ToUpperInvariant(shortcut.Key),
+                    $"Ctrl+Alt+{char.ToUpperInvariant(shortcut.Key)} ({shortcut.Label})",
+                    shortcut.Target
+                )
+            );
         }
 
         return bindings;

@@ -22,7 +22,8 @@ public sealed record AudioRuntimeStatus(
     bool Reachable,
     string? Problem,
     AudioHostStatus? Host,
-    AudioEngineHealth? Health)
+    AudioEngineHealth? Health
+)
 {
     /// <summary>Nothing answered, and this is why.</summary>
     public static AudioRuntimeStatus Unreachable(string problem) => new(false, problem, null, null);
@@ -40,8 +41,8 @@ public sealed record AudioRuntimeStatus(
     /// look like a mode somebody selected.
     /// </remarks>
     public bool IsRunning(string targetId) =>
-        Host is { EngineState: AudioEngineRuntimeState.Running } host &&
-        string.Equals(host.ActiveTargetId, targetId, StringComparison.Ordinal);
+        Host is { EngineState: AudioEngineRuntimeState.Running } host
+        && string.Equals(host.ActiveTargetId, targetId, StringComparison.Ordinal);
 }
 
 /// <summary>
@@ -99,7 +100,8 @@ public interface IAudioRuntime : IDisposable
         bool muted,
         TimeSpan delay,
         AudioProcessingProfile processing,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     /// <summary>
     /// Stops whatever the runtime is playing, and does nothing when there is no
@@ -124,6 +126,20 @@ public interface IAudioRuntime : IDisposable
     AudioRuntimeStatus Refresh();
 
     /// <summary>
+    /// Each currently running route's waveform envelope, straight from the
+    /// Host and without touching <see cref="Refresh"/>'s cached status.
+    /// </summary>
+    /// <remarks>
+    /// Meant to be polled many times a second by a waveform redraw loop, so
+    /// it is its own small request rather than a field on <see cref="Status"/>:
+    /// nothing about how often a settings page wants to redraw should decide
+    /// how often the much larger Health payload is refetched. Never starts a
+    /// Host, and an empty list -- rather than an exception -- is what "cannot
+    /// be reached right now" looks like.
+    /// </remarks>
+    Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// A runtime that is not there, and says so immediately.
     /// </summary>
     /// <remarks>
@@ -144,19 +160,24 @@ public interface IAudioRuntime : IDisposable
 /// <summary>The runtime that is not there. See <see cref="IAudioRuntime.None"/>.</summary>
 internal sealed class DisconnectedAudioRuntime : IAudioRuntime
 {
-    private static readonly AudioRuntimeStatus Absent =
-        AudioRuntimeStatus.Unreachable("This engine has no connection to the PCMode audio Host.");
+    private static readonly AudioRuntimeStatus Absent = AudioRuntimeStatus.Unreachable(
+        "This engine has no connection to the PCMode audio Host."
+    );
 
     public AudioRuntimeStatus Status => Absent;
 
     public AudioRuntimeStatus Refresh() => Absent;
+
+    public Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<AudioRouteWaveform>>([]);
 
     public void Apply(AudioTarget target, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(target);
 
         throw new InvalidOperationException(
-            $"'{target.Name}' cannot play: this engine has no connection to the PCMode audio Host.");
+            $"'{target.Name}' cannot play: this engine has no connection to the PCMode audio Host."
+        );
     }
 
     public void Recalibrate(
@@ -165,13 +186,14 @@ internal sealed class DisconnectedAudioRuntime : IAudioRuntime
         bool muted,
         TimeSpan delay,
         AudioProcessingProfile processing,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            processing);
+        ArgumentNullException.ThrowIfNull(processing);
 
         throw new InvalidOperationException(
-            "This engine has no connection to the PCMode audio Host, so nothing can be calibrated.");
+            "This engine has no connection to the PCMode audio Host, so nothing can be calibrated."
+        );
     }
 
     public void Stop()
@@ -181,7 +203,5 @@ internal sealed class DisconnectedAudioRuntime : IAudioRuntime
         // still has to happen.
     }
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 }

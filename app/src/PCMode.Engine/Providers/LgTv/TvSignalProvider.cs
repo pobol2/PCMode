@@ -28,7 +28,11 @@ namespace PCMode.Engine;
 /// <see cref="ConvergencePolicy.PostDispatchDelay"/> is an admission rather than
 /// a measurement.
 /// </remarks>
-public sealed class TvSignalProvider : IConfigurableProvider, IDependentProvider, IConvergentProvider, IAvailableProvider
+public sealed class TvSignalProvider
+    : IConfigurableProvider,
+        IDependentProvider,
+        IConvergentProvider,
+        IAvailableProvider
 {
     /// <summary>The configuration key.</summary>
     public const string ResourceKey = "tvSignal";
@@ -78,8 +82,7 @@ public sealed class TvSignalProvider : IConfigurableProvider, IDependentProvider
         LgTvProfile? profile = _connection.Settings.ProfileFor(target);
 
         return profile is { HasSignal: true, InputName: string input }
-            ? [new ResourceRequirement(powerKey, TvPowerProvider.On),
-               new ResourceRequirement(inputKey, input)]
+            ? [new ResourceRequirement(powerKey, TvPowerProvider.On), new ResourceRequirement(inputKey, input)]
             : [new ResourceRequirement(powerKey, TvPowerProvider.On)];
     }
 
@@ -96,12 +99,13 @@ public sealed class TvSignalProvider : IConfigurableProvider, IDependentProvider
     /// it is how long a television takes to drop and re-establish the link. The
     /// display step is what that time is being bought for.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = false,
-        MaxAttempts = 1,
-        PostDispatchDelay = TimeSpan.FromSeconds(4),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = false,
+            MaxAttempts = 1,
+            PostDispatchDelay = TimeSpan.FromSeconds(4),
+        };
 
     /// <summary>
     /// Whether there is a television to configure. See
@@ -145,8 +149,8 @@ public sealed class TvSignalProvider : IConfigurableProvider, IDependentProvider
         if (settings.Profiles.Count == 0)
         {
             problem =
-                $"'{value.Trim()}' cannot be applied because no television profiles are defined. " +
-                $"Add one under '{LgTvSettings.SettingsPath}.profiles'.";
+                $"'{value.Trim()}' cannot be applied because no television profiles are defined. "
+                + $"Add one under '{LgTvSettings.SettingsPath}.profiles'.";
 
             return false;
         }
@@ -154,8 +158,8 @@ public sealed class TvSignalProvider : IConfigurableProvider, IDependentProvider
         if (settings.ProfileFor(value) is null)
         {
             problem =
-                $"'{value.Trim()}' is not a television profile. " +
-                $"'{LgTvSettings.SettingsPath}.profiles' defines: {string.Join(", ", settings.ProfileNames)}.";
+                $"'{value.Trim()}' is not a television profile. "
+                + $"'{LgTvSettings.SettingsPath}.profiles' defines: {string.Join(", ", settings.ProfileNames)}.";
 
             return false;
         }

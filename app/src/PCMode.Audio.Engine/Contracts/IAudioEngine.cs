@@ -3,8 +3,7 @@ using PCMode.Audio.Engine.Runtime;
 
 namespace PCMode.Audio.Engine.Contracts;
 
-public interface IAudioEngine :
-    IDisposable
+public interface IAudioEngine : IDisposable
 {
     AudioEngineState State { get; }
 
@@ -14,8 +13,9 @@ public interface IAudioEngine :
 
     AudioEngineHealth GetHealth();
 
-    void Apply(
-        AudioTarget target);
+    IReadOnlyList<AudioRouteWaveform> GetWaveform();
+
+    void Apply(AudioTarget target);
 
     void Recalibrate(
         AudioEndpointId endpointId,
@@ -23,7 +23,8 @@ public interface IAudioEngine :
         bool muted,
         float gainDb,
         TimeSpan delay,
-        ParametricEqProfile? parametricEq);
+        ParametricEqProfile? parametricEq
+    );
 
     int ProcessNextBlock();
 

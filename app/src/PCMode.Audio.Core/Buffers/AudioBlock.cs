@@ -12,23 +12,16 @@ public readonly ref struct AudioBlock
 
     public int FrameCount => Samples.Length / Format.ChannelCount;
 
-    public AudioBlock(
-        Span<float> samples,
-        AudioFormat format,
-        long framePosition = 0)
+    public AudioBlock(Span<float> samples, AudioFormat format, long framePosition = 0)
     {
         if (!format.IsValid)
         {
-            throw new ArgumentException(
-                "Audio format must be valid.",
-                nameof(format));
+            throw new ArgumentException("Audio format must be valid.", nameof(format));
         }
 
         if (samples.Length % format.ChannelCount != 0)
         {
-            throw new ArgumentException(
-                "Sample count must be divisible by the channel count.",
-                nameof(samples));
+            throw new ArgumentException("Sample count must be divisible by the channel count.", nameof(samples));
         }
 
         if (framePosition < 0)
@@ -36,7 +29,8 @@ public readonly ref struct AudioBlock
             throw new ArgumentOutOfRangeException(
                 nameof(framePosition),
                 framePosition,
-                "Frame position cannot be negative.");
+                "Frame position cannot be negative."
+            );
         }
 
         Samples = samples;

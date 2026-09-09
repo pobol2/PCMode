@@ -89,8 +89,9 @@ internal sealed class FakeDdcMonitors : IDdcMonitors
             return null;
         }
 
-        return _values.TryGetValue(devicePath, out Dictionary<DdcVcpCode, uint>? values) &&
-            values.TryGetValue(code, out uint value)
+        return
+            _values.TryGetValue(devicePath, out Dictionary<DdcVcpCode, uint>? values)
+            && values.TryGetValue(code, out uint value)
             ? new DdcVcpValue(value, 100)
             : null;
     }
@@ -102,8 +103,9 @@ internal sealed class FakeDdcMonitors : IDdcMonitors
         if (TimeOutWrites)
         {
             throw new InvalidOperationException(
-                $"The monitor did not respond to VCP 0x{(byte)code:X2} within {within.TotalSeconds:0.#}s. " +
-                "It may be asleep, disconnected, or not DDC/CI compliant.");
+                $"The monitor did not respond to VCP 0x{(byte)code:X2} within {within.TotalSeconds:0.#}s. "
+                    + "It may be asleep, disconnected, or not DDC/CI compliant."
+            );
         }
 
         if (!_present.Contains(devicePath))

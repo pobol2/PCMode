@@ -8,84 +8,56 @@ internal sealed class DriverSharedBuffer
 
     private int _count;
 
-    public int CapacitySamples =>
-        _samples.Length;
+    public int CapacitySamples => _samples.Length;
 
-    public int Count =>
-        _count;
+    public int Count => _count;
 
-    public DriverSharedBuffer(
-        int capacitySamples)
+    public DriverSharedBuffer(int capacitySamples)
     {
-        ArgumentOutOfRangeException
-            .ThrowIfNegativeOrZero(
-                capacitySamples);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(capacitySamples);
 
-        _samples =
-            new float[
-                capacitySamples];
+        _samples = new float[capacitySamples];
     }
 
     public void Clear()
     {
-        _readOffset =
-            0;
+        _readOffset = 0;
 
-        _count =
-            0;
+        _count = 0;
     }
 
-    public void Replace(
-        ReadOnlySpan<float> samples)
+    public void Replace(ReadOnlySpan<float> samples)
     {
-        if (samples.Length >
-            _samples.Length)
+        if (samples.Length > _samples.Length)
         {
-            throw new InvalidOperationException(
-                "Driver packet exceeds the bounded staging buffer.");
+            throw new InvalidOperationException("Driver packet exceeds the bounded staging buffer.");
         }
 
-        samples.CopyTo(
-            _samples);
+        samples.CopyTo(_samples);
 
-        _readOffset =
-            0;
+        _readOffset = 0;
 
-        _count =
-            samples.Length;
+        _count = samples.Length;
     }
 
-    public int Read(
-        Span<float> destination)
+    public int Read(Span<float> destination)
     {
-        if (_count == 0 ||
-            destination.IsEmpty)
+        if (_count == 0 || destination.IsEmpty)
         {
             return 0;
         }
 
-        int count =
-            Math.Min(
-                destination.Length,
-                _count);
+        int count = Math.Min(destination.Length, _count);
 
-        _samples
-            .AsSpan(
-                _readOffset,
-                count)
-            .CopyTo(
-                destination);
+        _samples.AsSpan(_readOffset, count).CopyTo(destination);
 
-        _readOffset +=
-            count;
+        _readOffset += count;
 
-        _count -=
-            count;
+        _count -= count;
 
         if (_count == 0)
         {
-            _readOffset =
-                0;
+            _readOffset = 0;
         }
 
         return count;

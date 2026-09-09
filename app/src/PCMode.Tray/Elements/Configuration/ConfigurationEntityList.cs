@@ -49,7 +49,8 @@ public sealed class ConfigurationEntityList<TKey, TEntity>
     public ConfigurationEntityList(
         Func<TEntity, TKey> keyOf,
         Func<TEntity, string> titleOf,
-        Func<TEntity, string?>? summaryOf = null)
+        Func<TEntity, string?>? summaryOf = null
+    )
     {
         ArgumentNullException.ThrowIfNull(keyOf);
         ArgumentNullException.ThrowIfNull(titleOf);
@@ -68,9 +69,7 @@ public sealed class ConfigurationEntityList<TKey, TEntity>
     public bool HasSelection => SelectedKey is not null;
 
     public TEntity? Selected =>
-        SelectedKey is null
-            ? default
-            : Items.FirstOrDefault(entity => Equals(_keyOf(entity), SelectedKey));
+        SelectedKey is null ? default : Items.FirstOrDefault(entity => Equals(_keyOf(entity), SelectedKey));
 
     /// <summary>
     /// Rebuilds <see cref="Items"/> and <see cref="SelectorItems"/> from fresh
@@ -88,15 +87,15 @@ public sealed class ConfigurationEntityList<TKey, TEntity>
         foreach (TEntity entity in entities)
         {
             Items.Add(entity);
-            SelectorItems.Add(new ConfigurationEntityListItem<TKey>(
-                _keyOf(entity),
-                _titleOf(entity),
-                _summaryOf?.Invoke(entity)));
+            SelectorItems.Add(
+                new ConfigurationEntityListItem<TKey>(_keyOf(entity), _titleOf(entity), _summaryOf?.Invoke(entity))
+            );
         }
 
-        SelectedKey = keep is not null && Items.Any(entity => Equals(_keyOf(entity), keep))
-            ? keep
-            : Items.Count > 0 ? _keyOf(Items[0]) : default;
+        SelectedKey =
+            keep is not null && Items.Any(entity => Equals(_keyOf(entity), keep)) ? keep
+            : Items.Count > 0 ? _keyOf(Items[0])
+            : default;
     }
 
     public void Select(TKey key) => SelectedKey = key;

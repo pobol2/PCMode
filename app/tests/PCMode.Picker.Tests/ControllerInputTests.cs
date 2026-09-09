@@ -21,8 +21,10 @@ public sealed class ControllerInputTests
     {
         var translator = new ControllerInputTranslator();
 
-        IReadOnlyList<ControllerCommand> commands =
-            translator.Translate(Pressing(GamepadButtons.Start), pickerOpen: false);
+        IReadOnlyList<ControllerCommand> commands = translator.Translate(
+            Pressing(GamepadButtons.Start),
+            pickerOpen: false
+        );
 
         Assert.Equal([ControllerCommand.Open], commands);
     }
@@ -83,9 +85,7 @@ public sealed class ControllerInputTests
     {
         var translator = new ControllerInputTranslator();
 
-        Assert.Equal(
-            [ControllerCommand.Activate],
-            translator.Translate(Pressing(GamepadButtons.A), pickerOpen: true));
+        Assert.Equal([ControllerCommand.Activate], translator.Translate(Pressing(GamepadButtons.A), pickerOpen: true));
     }
 
     [Theory]
@@ -97,9 +97,7 @@ public sealed class ControllerInputTests
     {
         var translator = new ControllerInputTranslator();
 
-        Assert.Equal(
-            [ControllerCommand.Select(expected)],
-            translator.Translate(Pressing(button), pickerOpen: true));
+        Assert.Equal([ControllerCommand.Select(expected)], translator.Translate(Pressing(button), pickerOpen: true));
     }
 
     [Fact]
@@ -114,9 +112,7 @@ public sealed class ControllerInputTests
 
         Assert.Empty(translator.Translate(state: null, pickerOpen: true));
 
-        Assert.Equal(
-            [ControllerCommand.Activate],
-            translator.Translate(Pressing(GamepadButtons.A), pickerOpen: true));
+        Assert.Equal([ControllerCommand.Activate], translator.Translate(Pressing(GamepadButtons.A), pickerOpen: true));
     }
 
     // ---- the stick is different on purpose ---------------------------------
@@ -183,7 +179,8 @@ public sealed class ControllerInputTests
 
         Assert.Equal(
             [ControllerCommand.Select(PickerDirection.Up)],
-            translator.Translate(new GamepadState(GamepadButtons.None, 0, 30000), pickerOpen: true));
+            translator.Translate(new GamepadState(GamepadButtons.None, 0, 30000), pickerOpen: true)
+        );
     }
 
     [Fact]
@@ -192,12 +189,15 @@ public sealed class ControllerInputTests
         // They are separate controls and a poll can genuinely carry both.
         var translator = new ControllerInputTranslator();
 
-        IReadOnlyList<ControllerCommand> commands =
-            translator.Translate(new GamepadState(GamepadButtons.DPadUp, 30000, 0), pickerOpen: true);
+        IReadOnlyList<ControllerCommand> commands = translator.Translate(
+            new GamepadState(GamepadButtons.DPadUp, 30000, 0),
+            pickerOpen: true
+        );
 
         Assert.Equal(
             [ControllerCommand.Select(PickerDirection.Up), ControllerCommand.Select(PickerDirection.Right)],
-            commands);
+            commands
+        );
     }
 
     [Fact]
@@ -211,8 +211,13 @@ public sealed class ControllerInputTests
 
         translator.Translate(stickRight, pickerOpen: true);
 
-        IReadOnlyList<ControllerCommand> commands =
-            translator.Translate(stickRight with { Buttons = GamepadButtons.DPadDown }, pickerOpen: true);
+        IReadOnlyList<ControllerCommand> commands = translator.Translate(
+            stickRight with
+            {
+                Buttons = GamepadButtons.DPadDown,
+            },
+            pickerOpen: true
+        );
 
         Assert.Equal([ControllerCommand.Select(PickerDirection.Down)], commands);
     }

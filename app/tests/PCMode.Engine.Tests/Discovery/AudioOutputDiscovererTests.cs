@@ -50,7 +50,8 @@ public sealed class AudioOutputDiscovererTests
         var endpoints = new FakeAudioEndpoints("Speakers (Realtek)");
 
         HardwareItem item = Assert.Single(
-            new AudioOutputDiscoverer(Provider(endpoints, """{ "Headphones": "Speakers (Realtek)" }""")).Discover());
+            new AudioOutputDiscoverer(Provider(endpoints, """{ "Headphones": "Speakers (Realtek)" }""")).Discover()
+        );
 
         Assert.Equal("Headphones", item.Alias);
         Assert.True(item.IsConfigured);
@@ -74,7 +75,10 @@ public sealed class AudioOutputDiscovererTests
     [Fact]
     public void Core_Audio_being_unreachable_is_left_to_the_caller_to_report()
     {
-        var endpoints = new FakeAudioEndpoints { Fails = new InvalidOperationException("Windows Core Audio could not be reached.") };
+        var endpoints = new FakeAudioEndpoints
+        {
+            Fails = new InvalidOperationException("Windows Core Audio could not be reached."),
+        };
 
         Assert.Throws<InvalidOperationException>(() => new AudioOutputDiscoverer(Provider(endpoints)).Discover());
     }

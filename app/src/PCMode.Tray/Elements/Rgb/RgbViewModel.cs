@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Rgb;
 
@@ -56,7 +56,8 @@ public sealed class CaseRgbSceneDeviceRowViewModel : ObservableEditableRow
         string mode,
         string color,
         IReadOnlyList<string>? ledColors,
-        Action onChanged)
+        Action onChanged
+    )
         : base(onChanged)
     {
         Index = index;
@@ -73,18 +74,23 @@ public sealed class CaseRgbSceneDeviceRowViewModel : ObservableEditableRow
         // A controller that cannot be queried right now (SDK offline, machine
         // without the device connected) still needs one row per saved LED so a
         // scene that already has per-LED colours does not lose them here.
-        IReadOnlyList<OpenRgbLedInfo> leds = availableLeds.Count > 0
-            ? availableLeds
+        IReadOnlyList<OpenRgbLedInfo> leds =
+            availableLeds.Count > 0 ? availableLeds
             : ledColors is { Count: > 0 }
                 ? [.. Enumerable.Range(0, ledColors.Count).Select(i => new OpenRgbLedInfo(i, $"LED {i + 1}"))]
-                : [];
+            : [];
 
         Leds = new ObservableCollection<CaseRgbLedRowViewModel>(
-            leds.Select((led, position) => new CaseRgbLedRowViewModel(
-                led.Index,
-                led.Name,
-                ledColors is { Count: > 0 } && position < ledColors.Count ? ledColors[position] : color,
-                OnLedChanged)));
+            leds.Select(
+                (led, position) =>
+                    new CaseRgbLedRowViewModel(
+                        led.Index,
+                        led.Name,
+                        ledColors is { Count: > 0 } && position < ledColors.Count ? ledColors[position] : color,
+                        OnLedChanged
+                    )
+            )
+        );
     }
 
     public int Index { get; }
@@ -171,8 +177,8 @@ public sealed class CaseRgbSceneDeviceRowViewModel : ObservableEditableRow
     }
 
     public bool IsReady =>
-        _resolutionState == CaseRgbDeviceState.Ready &&
-        _availableModes.Any(candidate => string.Equals(candidate, Mode.Trim(), StringComparison.OrdinalIgnoreCase));
+        _resolutionState == CaseRgbDeviceState.Ready
+        && _availableModes.Any(candidate => string.Equals(candidate, Mode.Trim(), StringComparison.OrdinalIgnoreCase));
 
     public string StateText
     {
@@ -240,7 +246,8 @@ public sealed class CaseRgbSceneEditorViewModel : ObservableEditableRow
     public CaseRgbSceneEditorViewModel(
         string name,
         IEnumerable<CaseRgbSceneDeviceRowViewModel> devices,
-        Action onChanged)
+        Action onChanged
+    )
         : base(onChanged)
     {
         _name = name;
@@ -275,42 +282,66 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
     private CaseRgbSceneEditorViewModel? _selectedScene;
     private readonly ObservableCollection<CaseRgbSceneDeviceRowViewModel> _emptySceneDevices = [];
 
-    public RgbViewModel(
-        IConfigurationWorkspace workspace,
-        IConfigurationPrompts? prompts = null)
+    public RgbViewModel(IConfigurationWorkspace workspace, IConfigurationPrompts? prompts = null)
         : base(workspace, prompts)
     {
         _session = new ConfigurationEditingSession<string, CaseRgbScene>(
             keyOf: scene => scene.Name,
             titleOf: scene => scene.Name,
-            summaryOf: scene => string.Equals(scene.Name, _activeSceneName, StringComparison.OrdinalIgnoreCase)
-                ? "Current"
-                : null);
+            summaryOf: scene =>
+                string.Equals(scene.Name, _activeSceneName, StringComparison.OrdinalIgnoreCase) ? "Current" : null
+        );
 
         ControllerInventory = new HardwareInventoryList<DiscoveredRgbControllerRow>(ScanControllersAsync);
+        RescanControllersCommand = new AsyncRelayCommand(
+            ControllerInventory.ScanAsync,
+            () => ControllerInventory.CanScan
+        );
+        ControllerInventory.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(HardwareInventoryList<DiscoveredRgbControllerRow>.CanScan))
+            {
+                (RescanControllersCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        };
 
         TreePresentation = new ConfigurationPagePresentation(
             "Case lighting",
-            new ConfigurationSelectorPresentation("Lighting scenes", SelectorItems, Commands.Create, Commands.ShowCreate, SelectItemCommand),
+            new ConfigurationSelectorPresentation(
+                "Lighting scenes",
+                SelectorItems,
+                Commands.Create,
+                Commands.ShowCreate,
+                SelectItemCommand
+            ),
             ConfigurationEditorPresentation.Create(
-                essential:
-                [
-                    new("Scene", new TerminalElementContent("Lighting scene and controller colors", this)),
-                ],
+                essential: [new("Scene", new TerminalElementContent("Lighting scene and controller colors", this))],
                 advanced:
                 [
-                    new("OpenRGB", new TerminalElementContent("OpenRGB connection settings", this), IsCollapsible: true),
+                    new(
+                        "OpenRGB",
+                        new TerminalElementContent("OpenRGB connection settings", this),
+                        IsCollapsible: true
+                    ),
                 ],
                 hardware:
                 [
-                    new("Current hardware", new TerminalElementContent("Discovered RGB controllers", ControllerInventory), IsCollapsible: true),
-                ]));
+                    new(
+                        "Current hardware",
+                        new TerminalElementContent("Discovered RGB controllers", ControllerInventory),
+                        IsCollapsible: true
+                    ),
+                ]
+            )
+        );
     }
 
     public ObservableCollection<ConfigurationEntityListItem<string>> SelectorItems => _session.SelectorItems;
 
     /// <summary>The Current hardware section: the OpenRGB controllers behind these scenes.</summary>
     public HardwareInventoryList<DiscoveredRgbControllerRow> ControllerInventory { get; }
+
+    public System.Windows.Input.ICommand RescanControllersCommand { get; }
 
     /// <summary>What the shell's standard Rescan button calls.</summary>
     public Func<Task> RescanControllers => ControllerInventory.ScanAsync;
@@ -374,24 +405,25 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
     public override bool CanSave => HasSelectedScene && HasUnsavedChanges && !IsBusy && ValidationProblem is null;
 
     public bool CanActivate =>
-        SelectedScene is { } selected &&
-        selected.Devices.All(device => device.IsReady) &&
-        !HasUnsavedChanges &&
-        !IsBusy &&
-        ValidationProblem is null;
+        SelectedScene is { } selected
+        && selected.Devices.All(device => device.IsReady)
+        && !HasUnsavedChanges
+        && !IsBusy
+        && ValidationProblem is null;
 
-    public override EntityActions Actions => new()
-    {
-        EntityNoun = "lighting scene",
-        CurrentDisplayName = SelectedScene?.Name,
-        Create = CreateScene,
-        Rename = HasSelectedScene ? RenameSelected : null,
-        Duplicate = HasSelectedScene ? DuplicateSelected : null,
-        Delete = HasSelectedScene ? () => DeleteSelected() : null,
-        Activate = HasSelectedScene ? ActivateSelectedForShellAsync : null,
-        ActivateLabel = "Activate",
-        CanActivateNow = CanActivate,
-    };
+    public override EntityActions Actions =>
+        new()
+        {
+            EntityNoun = "lighting scene",
+            CurrentDisplayName = SelectedScene?.Name,
+            Create = CreateScene,
+            Rename = HasSelectedScene ? RenameSelected : null,
+            Duplicate = HasSelectedScene ? DuplicateSelected : null,
+            Delete = HasSelectedScene ? () => DeleteSelected() : null,
+            Activate = HasSelectedScene ? ActivateSelectedForShellAsync : null,
+            ActivateLabel = "Activate",
+            CanActivateNow = CanActivate,
+        };
 
     /// <summary>Why what is on screen could not be saved, or null when it could.</summary>
     public override string? ValidationProblem
@@ -431,8 +463,12 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
                     return $"Scene '{name}' is listed more than once.";
                 }
 
-                if (!scene.Devices.Select(device => device.Index).ToHashSet()
-                    .SetEquals(_configuredDevices.Select(device => device.Index)))
+                if (
+                    !scene
+                        .Devices.Select(device => device.Index)
+                        .ToHashSet()
+                        .SetEquals(_configuredDevices.Select(device => device.Index))
+                )
                 {
                     return $"Scene '{name}' must define every configured RGB controller.";
                 }
@@ -449,8 +485,10 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
                         return $"Scene '{name}' needs a six-digit RGB colour for controller {device.Index}.";
                     }
 
-                    if (device.LedColors is { } ledColors &&
-                        (ledColors.Count == 0 || ledColors.Any(color => !IsRgb(color.Trim()))))
+                    if (
+                        device.LedColors is { } ledColors
+                        && (ledColors.Count == 0 || ledColors.Any(color => !IsRgb(color.Trim())))
+                    )
                     {
                         return $"Scene '{name}' has an invalid per-LED colour for controller {device.Index}.";
                     }
@@ -460,9 +498,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
 
                 if (signatures.TryGetValue(signature, out string? duplicate))
                 {
-                    return
-                        $"Scenes '{duplicate}' and '{name}' describe the same controller state. " +
-                        "Change a mode or colour so readback can tell them apart.";
+                    return $"Scenes '{duplicate}' and '{name}' describe the same controller state. "
+                        + "Change a mode or colour so readback can tell them apart.";
                 }
 
                 signatures.Add(signature, name);
@@ -504,7 +541,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
             _activeSceneName = current is not null && !IsRgb(current) ? current : null;
             _session.Load(
                 provider.Scenes.Values.OrderBy(scene => scene.Name, StringComparer.OrdinalIgnoreCase),
-                keep: previousSelection);
+                keep: previousSelection
+            );
             SelectedKey = _session.SelectedKey;
         });
 
@@ -522,11 +560,12 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         int ready = _controllers.Values.Count(controller => controller.State == CaseRgbDeviceState.Ready);
         SetCurrentLighting(current);
 
-        StatusMessage = current is not null && !IsRgb(current)
-            ? $"Active scene: '{current}'. {SelectorItems.Count} scene(s). {ready} of {_configuredDevices.Count} OpenRGB controller(s) ready."
+        StatusMessage =
+            current is not null && !IsRgb(current)
+                ? $"Active scene: '{current}'. {SelectorItems.Count} scene(s). {ready} of {_configuredDevices.Count} OpenRGB controller(s) ready."
             : current is not null && IsRgb(current)
                 ? $"Current lighting: #{current} (direct RGB). {SelectorItems.Count} scene(s). {ready} of {_configuredDevices.Count} OpenRGB controller(s) ready."
-                : $"Current lighting state could not be verified. {SelectorItems.Count} scene(s). {ready} of {_configuredDevices.Count} OpenRGB controller(s) ready.";
+            : $"Current lighting state could not be verified. {SelectorItems.Count} scene(s). {ready} of {_configuredDevices.Count} OpenRGB controller(s) ready.";
 
         RaiseValidation();
     }
@@ -548,7 +587,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         SelectedKey = _session.SelectedKey;
         SelectedScene = BuildScene(
             trimmed,
-            _configuredDevices.Select(device => new CaseRgbSceneDevice(device.Index, device.Mode, "000000")));
+            _configuredDevices.Select(device => new CaseRgbSceneDevice(device.Index, device.Mode, "000000"))
+        );
 
         MarkDirty();
         NotifyEditingState();
@@ -638,11 +678,12 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         string name = selected.Name;
         CaseRgbEdit edit = BuildDocumentEdit(
             provider,
-            provider.Scenes.Values
-                .Where(scene => !string.Equals(scene.Name, name, StringComparison.OrdinalIgnoreCase))
+            provider
+                .Scenes.Values.Where(scene => !string.Equals(scene.Name, name, StringComparison.OrdinalIgnoreCase))
                 .Select(ToEdit)
                 .ToArray(),
-            renames: null);
+            renames: null
+        );
 
         IsBusy = true;
 
@@ -681,9 +722,9 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         }
 
         IReadOnlyDictionary<string, string>? renames =
-            !_session.IsDraft &&
-            _session.Selected is { } origin &&
-            !string.Equals(origin.Name, SelectedScene.Name, StringComparison.Ordinal)
+            !_session.IsDraft
+            && _session.Selected is { } origin
+            && !string.Equals(origin.Name, SelectedScene.Name, StringComparison.Ordinal)
                 ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     [origin.Name] = SelectedScene.Name.Trim(),
@@ -758,31 +799,34 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         string name = scene.Name;
 
         await RunActivationAsync(
-            Category,
-            $"Activating '{name}'...",
-            async token =>
-            {
-                (CaseRgbProvider? provider, string? problem) = ReadProvider<CaseRgbProvider>();
-
-                if (provider is null)
+                Category,
+                $"Activating '{name}'...",
+                async token =>
                 {
-                    return new ActivationOutcome(false, problem ?? "The configuration could not be read.");
-                }
+                    (CaseRgbProvider? provider, string? problem) = ReadProvider<CaseRgbProvider>();
 
-                await Task.Run(() => provider.Apply(name, token), token).ConfigureAwait(true);
+                    if (provider is null)
+                    {
+                        return new ActivationOutcome(false, problem ?? "The configuration could not be read.");
+                    }
 
-                string? current = SafeRead(provider);
-                SetCurrentLighting(current);
+                    await Task.Run(() => provider.Apply(name, token), token).ConfigureAwait(true);
 
-                return string.Equals(current, name, StringComparison.OrdinalIgnoreCase)
-                    ? new ActivationOutcome(true, $"'{name}' activated and verified.")
-                    : new ActivationOutcome(
-                        false,
-                        current is null
-                            ? $"'{name}' was applied, but OpenRGB could not verify the complete scene state."
-                            : $"'{name}' was applied, but OpenRGB currently reads back '{current}'.");
-            },
-            cancellationToken).ConfigureAwait(true);
+                    string? current = SafeRead(provider);
+                    SetCurrentLighting(current);
+
+                    return string.Equals(current, name, StringComparison.OrdinalIgnoreCase)
+                        ? new ActivationOutcome(true, $"'{name}' activated and verified.")
+                        : new ActivationOutcome(
+                            false,
+                            current is null
+                                ? $"'{name}' was applied, but OpenRGB could not verify the complete scene state."
+                                : $"'{name}' was applied, but OpenRGB currently reads back '{current}'."
+                        );
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(true);
 
         return ErrorMessage;
     }
@@ -800,9 +844,7 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         };
     }
 
-    private CaseRgbSceneEditorViewModel BuildScene(
-        string name,
-        IEnumerable<CaseRgbSceneDevice> devices)
+    private CaseRgbSceneEditorViewModel BuildScene(string name, IEnumerable<CaseRgbSceneDevice> devices)
     {
         var rows = new List<CaseRgbSceneDeviceRowViewModel>();
 
@@ -810,20 +852,24 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         {
             ControllerSnapshot snapshot = _controllers.GetValueOrDefault(
                 device.Index,
-                ControllerSnapshot.Unknown(device.Index));
+                ControllerSnapshot.Unknown(device.Index)
+            );
 
-            rows.Add(new CaseRgbSceneDeviceRowViewModel(
-                device.Index,
-                snapshot.Name,
-                snapshot.State,
-                snapshot.Detail,
-                snapshot.Modes,
-                snapshot.Leds,
-                snapshot.PerLedModes,
-                device.Mode,
-                device.Color,
-                device.LedColors,
-                OnSceneChanged));
+            rows.Add(
+                new CaseRgbSceneDeviceRowViewModel(
+                    device.Index,
+                    snapshot.Name,
+                    snapshot.State,
+                    snapshot.Detail,
+                    snapshot.Modes,
+                    snapshot.Leds,
+                    snapshot.PerLedModes,
+                    device.Mode,
+                    device.Color,
+                    device.LedColors,
+                    OnSceneChanged
+                )
+            );
         }
 
         return new CaseRgbSceneEditorViewModel(name, rows, OnSceneChanged);
@@ -858,7 +904,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
             {
                 ControllerSnapshot snapshot = _controllers.GetValueOrDefault(
                     device.Index,
-                    ControllerSnapshot.Unknown(device.Index));
+                    ControllerSnapshot.Unknown(device.Index)
+                );
 
                 return new DiscoveredRgbControllerRow(snapshot.Name, snapshot.State, snapshot.Detail);
             }),
@@ -879,13 +926,19 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
             {
                 _controllers[resolution.Configured.Index] = resolution.Controller is { } controller
                     ? new ControllerSnapshot(
-                        controller.Name, CaseRgbDeviceState.Ready, resolution.Detail, controller.Modes,
-                        controller.Leds, controller.PerLedModes)
+                        controller.Name,
+                        CaseRgbDeviceState.Ready,
+                        resolution.Detail,
+                        controller.Modes,
+                        controller.Leds,
+                        controller.PerLedModes
+                    )
                     : new ControllerSnapshot(
                         $"OpenRGB controller {resolution.Configured.Index}",
                         resolution.State,
                         resolution.Detail,
-                        [resolution.Configured.Mode]);
+                        [resolution.Configured.Mode]
+                    );
             }
         }
         catch (Exception exception)
@@ -896,7 +949,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
                     $"OpenRGB controller {device.Index}",
                     CaseRgbDeviceState.Missing,
                     $"OpenRGB SDK server unavailable. {exception.Message}",
-                    [device.Mode]);
+                    [device.Mode]
+                );
             }
         }
     }
@@ -905,9 +959,7 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
     {
         RunWithoutDirtyTracking(() =>
         {
-            SelectedScene = _session.Selected is { } scene
-                ? BuildScene(scene.Name, scene.Devices)
-                : null;
+            SelectedScene = _session.Selected is { } scene ? BuildScene(scene.Name, scene.Devices) : null;
         });
 
         ClearDirtyState();
@@ -935,9 +987,7 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
 
         foreach (CaseRgbScene scene in _session.Items)
         {
-            if (!_session.IsDraft &&
-                ReferenceEquals(scene, _session.Selected) &&
-                SelectedScene is { } selected)
+            if (!_session.IsDraft && ReferenceEquals(scene, _session.Selected) && SelectedScene is { } selected)
             {
                 scenes.Add(ToEdit(selected));
             }
@@ -957,18 +1007,19 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
 
     private CaseRgbEdit BuildDocumentEdit(
         IReadOnlyList<CaseRgbSceneEdit> scenes,
-        IReadOnlyDictionary<string, string>? renames) =>
+        IReadOnlyDictionary<string, string>? renames
+    ) =>
         new(
             true,
             _legacyExecutable,
             [
-                .. _configuredDevices.Select(device =>
-                    new CaseRgbDeviceEdit(device.Index, device.Mode)
-                    {
-                        Identity = device.Identity,
-                    }),
+                .. _configuredDevices.Select(device => new CaseRgbDeviceEdit(device.Index, device.Mode)
+                {
+                    Identity = device.Identity,
+                }),
             ],
-            WithinMs)
+            WithinMs
+        )
         {
             Scenes = scenes,
             SceneRenames = renames,
@@ -977,18 +1028,19 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
     private static CaseRgbEdit BuildDocumentEdit(
         CaseRgbProvider provider,
         IReadOnlyList<CaseRgbSceneEdit> scenes,
-        IReadOnlyDictionary<string, string>? renames) =>
+        IReadOnlyDictionary<string, string>? renames
+    ) =>
         new(
             provider.Enabled,
             provider.Executable ?? string.Empty,
             [
-                .. provider.ConfiguredDevices.Select(device =>
-                    new CaseRgbDeviceEdit(device.Index, device.Mode)
-                    {
-                        Identity = device.Identity,
-                    }),
+                .. provider.ConfiguredDevices.Select(device => new CaseRgbDeviceEdit(device.Index, device.Mode)
+                {
+                    Identity = device.Identity,
+                }),
             ],
-            provider.WithinMs)
+            provider.WithinMs
+        )
         {
             Scenes = scenes,
             SceneRenames = renames,
@@ -998,37 +1050,38 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         new(
             scene.Name,
             [
-                .. scene.Devices.Select(device =>
-                    new CaseRgbSceneDeviceEdit(device.Index, device.Mode, device.Color)
-                    {
-                        LedColors = device.LedColors,
-                    }),
-            ]);
+                .. scene.Devices.Select(device => new CaseRgbSceneDeviceEdit(device.Index, device.Mode, device.Color)
+                {
+                    LedColors = device.LedColors,
+                }),
+            ]
+        );
 
     private static CaseRgbSceneEdit ToEdit(CaseRgbSceneEditorViewModel scene) =>
         new(
             scene.Name.Trim(),
             [
-                .. scene.Devices.Select(device =>
-                    new CaseRgbSceneDeviceEdit(
-                        device.Index,
-                        device.Mode.Trim(),
-                        device.Color.Trim().ToUpperInvariant())
-                    {
-                        LedColors = device.LedColors,
-                    }),
-            ]);
+                .. scene.Devices.Select(device => new CaseRgbSceneDeviceEdit(
+                    device.Index,
+                    device.Mode.Trim(),
+                    device.Color.Trim().ToUpperInvariant()
+                )
+                {
+                    LedColors = device.LedColors,
+                }),
+            ]
+        );
 
     private static CaseRgbScene ToScene(CaseRgbSceneEditorViewModel scene, string name) =>
         new(
             name,
             [
-                .. scene.Devices.Select(device =>
-                    new CaseRgbSceneDevice(device.Index, device.Mode, device.Color)
-                    {
-                        LedColors = device.LedColors,
-                    }),
-            ]);
+                .. scene.Devices.Select(device => new CaseRgbSceneDevice(device.Index, device.Mode, device.Color)
+                {
+                    LedColors = device.LedColors,
+                }),
+            ]
+        );
 
     private string? SceneNameProblem(string? name, string? allowedExisting = null)
     {
@@ -1044,9 +1097,12 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
             return "A scene name cannot be six hexadecimal digits because that is already a direct RGB target.";
         }
 
-        if (SelectorItems.Any(item =>
-                !string.Equals(item.Title, allowedExisting, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(item.Title, trimmed, StringComparison.OrdinalIgnoreCase)))
+        if (
+            SelectorItems.Any(item =>
+                !string.Equals(item.Title, allowedExisting, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(item.Title, trimmed, StringComparison.OrdinalIgnoreCase)
+            )
+        )
         {
             return $"A lighting scene named '{trimmed}' already exists.";
         }
@@ -1070,10 +1126,7 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
 
     private void RaiseValidation()
     {
-        NotifyValidationChanged(
-            nameof(ValidationProblem),
-            nameof(CanSave),
-            nameof(CanActivate));
+        NotifyValidationChanged(nameof(ValidationProblem), nameof(CanSave), nameof(CanActivate));
     }
 
     protected override void OnDirtyStateChanged()
@@ -1091,16 +1144,19 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
     private static string SceneSignature(CaseRgbSceneEdit scene) =>
         string.Join(
             "|",
-            scene.Devices
-                .OrderBy(device => device.Index)
+            scene
+                .Devices.OrderBy(device => device.Index)
                 .Select(device =>
-                    $"{device.Index}:{device.Mode.Trim().ToUpperInvariant()}:{device.Color.Trim().ToUpperInvariant()}:" +
-                    (device.LedColors is { Count: > 0 } ledColors
-                        ? string.Join(",", ledColors.Select(color => color.Trim().ToUpperInvariant()))
-                        : "-")));
+                    $"{device.Index}:{device.Mode.Trim().ToUpperInvariant()}:{device.Color.Trim().ToUpperInvariant()}:"
+                    + (
+                        device.LedColors is { Count: > 0 } ledColors
+                            ? string.Join(",", ledColors.Select(color => color.Trim().ToUpperInvariant()))
+                            : "-"
+                    )
+                )
+        );
 
-    private static bool IsRgb(string value) =>
-        value.Length == 6 && value.All(char.IsAsciiHexDigit);
+    private static bool IsRgb(string value) => value.Length == 6 && value.All(char.IsAsciiHexDigit);
 
     private sealed record ControllerSnapshot(
         string Name,
@@ -1108,7 +1164,8 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
         string Detail,
         IReadOnlyList<string> Modes,
         IReadOnlyList<OpenRgbLedInfo>? Leds = null,
-        IReadOnlySet<string>? PerLedModes = null)
+        IReadOnlySet<string>? PerLedModes = null
+    )
     {
         public IReadOnlyList<OpenRgbLedInfo> Leds { get; } = Leds ?? [];
 
@@ -1120,6 +1177,7 @@ public sealed class RgbViewModel : ConfigurationPageViewModelBase
                 $"OpenRGB controller {index}",
                 CaseRgbDeviceState.Missing,
                 "This controller could not be resolved through the OpenRGB SDK server.",
-                []);
+                []
+            );
     }
 }

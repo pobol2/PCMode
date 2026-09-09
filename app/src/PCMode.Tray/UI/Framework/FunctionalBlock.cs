@@ -63,8 +63,9 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
             if (region.Blocks.Count == 0 && !region.Terminal)
             {
                 throw new TemplateContractException(
-                    $"Region '{region.Name}' on {GetType().Name} admits no child block and no terminal " +
-                    "content, so nothing could ever appear in it.");
+                    $"Region '{region.Name}' on {GetType().Name} admits no child block and no terminal "
+                        + "content, so nothing could ever appear in it."
+                );
             }
 
             object? part = GetTemplateChild(region.Name);
@@ -72,9 +73,10 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
             if (part is null)
             {
                 throw new TemplateContractException(
-                    $"The layout applied to {GetType().Name} is missing the required region " +
-                    $"'{region.Name}'. Every layout for this block must supply it as a " +
-                    $"{(region.Arity == RegionArity.Single ? nameof(Region) : nameof(RepeatedRegion))}.");
+                    $"The layout applied to {GetType().Name} is missing the required region "
+                        + $"'{region.Name}'. Every layout for this block must supply it as a "
+                        + $"{(region.Arity == RegionArity.Single ? nameof(Region) : nameof(RepeatedRegion))}."
+                );
             }
 
             switch (region.Arity, part)
@@ -91,9 +93,10 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
 
                 default:
                     throw new TemplateContractException(
-                        $"The layout applied to {GetType().Name} supplies region '{region.Name}' as a " +
-                        $"{part.GetType().Name}, but this block declares it as a " +
-                        $"{(region.Arity == RegionArity.Single ? nameof(Region) : nameof(RepeatedRegion))}.");
+                        $"The layout applied to {GetType().Name} supplies region '{region.Name}' as a "
+                            + $"{part.GetType().Name}, but this block declares it as a "
+                            + $"{(region.Arity == RegionArity.Single ? nameof(Region) : nameof(RepeatedRegion))}."
+                    );
             }
         }
 
@@ -120,8 +123,9 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
                 if (!bound.Contains(current))
                 {
                     throw new TemplateContractException(
-                        $"The layout applied to {GetType().Name} contains a Region that the block does " +
-                        "not declare. Every Region must correspond to a [Region] on its block.");
+                        $"The layout applied to {GetType().Name} contains a Region that the block does "
+                            + "not declare. Every Region must correspond to a [Region] on its block."
+                    );
                 }
 
                 // Whatever a bound region holds is that region's business.
@@ -131,9 +135,10 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
             if (current is FunctionalBlock block)
             {
                 throw new TemplateContractException(
-                    $"A Layout creates Functional Block '{block.GetType().Name}' directly. " +
-                    "A Layout may create only its declared Regions; child blocks must be " +
-                    "reached through a Region.");
+                    $"A Layout creates Functional Block '{block.GetType().Name}' directly. "
+                        + "A Layout may create only its declared Regions; child blocks must be "
+                        + "reached through a Region."
+                );
             }
 
             int count = VisualTreeHelper.GetChildrenCount(current);
@@ -149,6 +154,8 @@ public abstract class FunctionalBlock : System.Windows.Controls.Control
     private static readonly ConcurrentDictionary<Type, RegionAttribute[]> Declared = new();
 
     internal static RegionAttribute[] RegionsOf(Type blockType) =>
-        Declared.GetOrAdd(blockType, static type =>
-            [.. type.GetCustomAttributes(typeof(RegionAttribute), inherit: true).Cast<RegionAttribute>()]);
+        Declared.GetOrAdd(
+            blockType,
+            static type => [.. type.GetCustomAttributes(typeof(RegionAttribute), inherit: true).Cast<RegionAttribute>()]
+        );
 }

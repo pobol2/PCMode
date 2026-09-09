@@ -16,15 +16,16 @@ public class RemovableRow : ContentControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(RemovableRow),
-            new FrameworkPropertyMetadata(typeof(RemovableRow)));
+            new FrameworkPropertyMetadata(typeof(RemovableRow))
+        );
     }
 
-    public static readonly RoutedEvent RemoveClickEvent =
-        EventManager.RegisterRoutedEvent(
-            nameof(RemoveClick),
-            RoutingStrategy.Bubble,
-            typeof(RoutedEventHandler),
-            typeof(RemovableRow));
+    public static readonly RoutedEvent RemoveClickEvent = EventManager.RegisterRoutedEvent(
+        nameof(RemoveClick),
+        RoutingStrategy.Bubble,
+        typeof(RoutedEventHandler),
+        typeof(RemovableRow)
+    );
 
     public event RoutedEventHandler RemoveClick
     {

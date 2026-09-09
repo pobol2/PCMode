@@ -1,7 +1,7 @@
 using System.Windows.Input;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Displays.Sections;
 
@@ -23,8 +23,7 @@ public sealed class DiscoveredDisplayRow(HardwareItem item) : IHardwareInventory
     /// Whether the underlying Windows device name is worth a line of its own --
     /// only once <see cref="FriendlyName"/> has diverged from it by being aliased.
     /// </summary>
-    public bool ShowUnderlyingDevice =>
-        !string.Equals(FriendlyName, item.Name, StringComparison.Ordinal);
+    public bool ShowUnderlyingDevice => !string.Equals(FriendlyName, item.Name, StringComparison.Ordinal);
 
     public string ActionLabel => IsRegistered ? "Rename" : "Add to PCMode";
 
@@ -97,7 +96,8 @@ public sealed class DisplayRegistrationSectionViewModel : IConfigurationSection
         IConfigurationWorkspace workspace,
         Action onRegistered,
         IConfigurationPrompts? prompts = null,
-        Func<bool>? guardUnsavedChanges = null)
+        Func<bool>? guardUnsavedChanges = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(onRegistered);
@@ -136,7 +136,8 @@ public sealed class DisplayRegistrationSectionViewModel : IConfigurationSection
             row.IsRegistered ? "Rename monitor" : "Add monitor to PCMode",
             $"Give '{row.Name}' a PCMode name. Layouts, DDC/CI and televisions all address it by this name.",
             row.Alias ?? row.Name,
-            alias => SetAliasAsync(row, alias));
+            alias => SetAliasAsync(row, alias)
+        );
     }
 
     public HardwareInventoryList<DiscoveredDisplayRow> Inventory { get; }
@@ -147,9 +148,7 @@ public sealed class DisplayRegistrationSectionViewModel : IConfigurationSection
     /// entity key is accepted and ignored so the page can treat every
     /// section the same way.
     /// </summary>
-    public void Load(object? entityKey)
-    {
-    }
+    public void Load(object? entityKey) { }
 
     public string? Save() => null;
 
@@ -194,8 +193,9 @@ public sealed class DisplayRegistrationSectionViewModel : IConfigurationSection
 
         try
         {
-            HardwareAliasOutcome outcome = await Task
-                .Run(() => HardwareConfigurationStore.SetDisplayAlias(_workspace.Root, devicePath, trimmed))
+            HardwareAliasOutcome outcome = await Task.Run(() =>
+                    HardwareConfigurationStore.SetDisplayAlias(_workspace.Root, devicePath, trimmed)
+                )
                 .ConfigureAwait(true);
 
             if (!outcome.Success)

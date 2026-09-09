@@ -1,8 +1,8 @@
 using System.Windows.Controls;
-using PCMode.Tray.UI.Framework;
-using PCMode.Tray.Tests.UI.Construction.Fixtures;
-using Region = PCMode.Tray.UI.Framework.Region;
 using PCMode.Tray.Tests;
+using PCMode.Tray.Tests.UI.Construction.Fixtures;
+using PCMode.Tray.UI.Framework;
+using Region = PCMode.Tray.UI.Framework.Region;
 
 namespace PCMode.Tray.Tests.UI.Construction;
 
@@ -22,8 +22,7 @@ public sealed class RecursiveCompositionTests
             var host = new ContentControl { Content = Probe.Page() };
             Wpf.Realize(host);
 
-            FixtureRootBlock block =
-                Assert.Single(Wpf.Descendants<FixtureRootBlock>(host));
+            FixtureRootBlock block = Assert.Single(Wpf.Descendants<FixtureRootBlock>(host));
             Assert.Equal("Displays", block.Header);
         });
     }
@@ -52,10 +51,8 @@ public sealed class RecursiveCompositionTests
             var host = new ContentControl { Content = Probe.Page() };
             Wpf.Realize(host);
 
-            FixtureRootBlock block =
-                Wpf.Descendants<FixtureRootBlock>(host).Single();
-            var items = (RepeatedRegion)
-                block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
+            FixtureRootBlock block = Wpf.Descendants<FixtureRootBlock>(host).Single();
+            var items = (RepeatedRegion)block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
 
             Assert.Equal(2, items.Items.Count);
             Assert.All(items.Items.Cast<object>(), item => Assert.IsType<FixtureItemViewModel>(item));
@@ -75,9 +72,7 @@ public sealed class RecursiveCompositionTests
             // Header, primary and secondary are terminal strings; items are
             // terminal TextBlocks. No block appears below any of them,
             // which is what stops the recursion.
-            Assert.Equal(
-                ["Displays", "Dell U2720Q", "LG C2", "Resolution", "Scaling"],
-                rendered);
+            Assert.Equal(["Displays", "Dell U2720Q", "LG C2", "Resolution", "Scaling"], rendered);
         });
     }
 
@@ -89,13 +84,11 @@ public sealed class RecursiveCompositionTests
             var host = new ContentControl { Content = Probe.Page() };
             Wpf.Realize(host);
 
-            FixtureRootBlock block =
-                Wpf.Descendants<FixtureRootBlock>(host).Single();
+            FixtureRootBlock block = Wpf.Descendants<FixtureRootBlock>(host).Single();
 
             var header = (Region)block.Template.FindName(FixtureRootBlock.HeaderRegion, block);
             var detail = (Region)block.Template.FindName(FixtureRootBlock.DetailRegion, block);
-            var items = (RepeatedRegion)
-                block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
+            var items = (RepeatedRegion)block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
 
             Assert.Equal("Displays", header.Content);
             Assert.IsType<FixtureDetailViewModel>(detail.Content);

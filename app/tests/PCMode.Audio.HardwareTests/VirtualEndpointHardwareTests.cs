@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using PCMode.Audio.Client;
+using PCMode.Audio.Core.Buffers;
 using PCMode.Audio.Core.Models;
 using PCMode.Audio.DriverClient.Control;
 using PCMode.Audio.DriverClient.Diagnostics;
 using PCMode.Audio.Engine.Contracts;
-using PCMode.Audio.Core.Buffers;
 using PCMode.Audio.Protocol.Messages;
 using PCMode.Audio.Windows.Endpoints;
 using PCMode.Audio.Windows.Streams;
@@ -15,60 +15,35 @@ namespace PCMode.Audio.HardwareTests;
 public sealed class VirtualEndpointHardwareTests
 {
     [HardwareFact]
-    public async Task
-        Windows_playback_reaches_host_and_physical_output()
+    public async Task Windows_playback_reaches_host_and_physical_output()
     {
-        string hostPath =
-            RequireEnvironmentVariable(
-                "PCMODE_AUDIO_HOST_PATH");
+        string hostPath = RequireEnvironmentVariable("PCMODE_AUDIO_HOST_PATH");
 
-        string outputId =
-            RequireEnvironmentVariable(
-                "PCMODE_AUDIO_OUTPUT_ID");
+        string outputId = RequireEnvironmentVariable("PCMODE_AUDIO_OUTPUT_ID");
 
-        string pipeName =
-            $"PCMode.Audio.Hardware.{Guid.NewGuid():N}";
+        string pipeName = $"PCMode.Audio.Hardware.{Guid.NewGuid():N}";
 
-        var client =
-            new AudioHostClient(
-                pipeName,
-                connectTimeoutMilliseconds:
-                    10000);
+        var client = new AudioHostClient(pipeName, connectTimeoutMilliseconds: 10000);
 
-        var launcher =
-            new AudioHostLauncher(
-                hostPath,
-                pipeName);
+        var launcher = new AudioHostLauncher(hostPath, pipeName);
 
-        using Process process =
-            await launcher
-                .LaunchAndWaitUntilReadyAsync(
-                    client,
-                    TimeSpan.FromSeconds(
-                        10));
+        using Process process = await launcher.LaunchAndWaitUntilReadyAsync(client, TimeSpan.FromSeconds(10));
 
         try
         {
-            using var control =
-                new VirtualEndpointControlClient();
+            using var control = new VirtualEndpointControlClient();
 
-            DriverStatus before =
-                control.GetStatus();
+            DriverStatus before = control.GetStatus();
 
-            Assert.True(
-                before.Available);
+            Assert.True(before.Available);
 
-            var target =
-                new AudioTarget(
-                    "virtual-endpoint-hardware",
-                    "Virtual Endpoint Hardware",
-                    new AudioRoute(
-                        new AudioEndpointId(
-                            outputId)));
+            var target = new AudioTarget(
+                "virtual-endpoint-hardware",
+                "Virtual Endpoint Hardware",
+                new AudioRoute(new AudioEndpointId(outputId))
+            );
 
-            await client
-                .ApplyTargetAsync(
-                    target);
+            await client.ApplyTargetAsync(target);
 
             //
             // Play a known tone into the virtual endpoint and measure what
@@ -80,9 +55,7 @@ public sealed class VirtualEndpointHardwareTests
             // watches only that number passes against a completely silent
             // system.
             //
-            using var tone =
-                new ToneSource(
-                    ToneAmplitude);
+            using var tone = new ToneSource(ToneAmplitude);
 
             tone.Start();
 
@@ -97,65 +70,46 @@ public sealed class VirtualEndpointHardwareTests
             // IAudioClient.GetMixFormat reports here, the same format an
             // ordinary application opened.
             //
-            Assert.Equal(
-                48000,
-                tone.Format.SampleRate);
+            Assert.Equal(48000, tone.Format.SampleRate);
 
             // Let the engine reach steady state before measuring.
-            await Task.Delay(
-                TimeSpan.FromSeconds(
-                    2));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
-            ToneMeasurement measured =
-                MeasureLoopback(
-                    new AudioEndpointId(
-                        outputId),
-                    TimeSpan.FromSeconds(
-                        5));
+            ToneMeasurement measured = MeasureLoopback(new AudioEndpointId(outputId), TimeSpan.FromSeconds(5));
 
             tone.Stop();
 
-            AudioHostStatus hostStatus =
-                await client
-                    .GetStatusAsync();
+            AudioHostStatus hostStatus = await client.GetStatusAsync();
 
-            AudioEngineHealth health =
-                await client
-                    .GetHealthAsync();
+            AudioEngineHealth health = await client.GetHealthAsync();
 
-            DriverStatus after =
-                control.GetStatus();
+            DriverStatus after = control.GetStatus();
 
-            Assert.Equal(
-                AudioEngineRuntimeState.Running,
-                hostStatus.EngineState);
+            Assert.Equal(AudioEngineRuntimeState.Running, hostStatus.EngineState);
+
+            Assert.True(after.Available);
+
+            Assert.True(after.PcmConsumerConnected);
 
             Assert.True(
-                after.Available);
+                after.PacketsRendered > before.PacketsRendered,
+                "No Windows PCM reached the PCMode Audio driver during the test."
+            );
 
-            Assert.True(
-                after.PcmConsumerConnected);
-
-            Assert.True(
-                after.PacketsRendered >
-                before.PacketsRendered,
-                "No Windows PCM reached the PCMode Audio driver during the test.");
-
-            Assert.True(
-                measured.TotalFrames > 0,
-                "Loopback capture of the physical output returned no frames at all.");
+            Assert.True(measured.TotalFrames > 0, "Loopback capture of the physical output returned no frames at all.");
 
             Assert.True(
                 measured.Peak > SilenceFloor,
-                $"The physical output stayed silent (peak {measured.Peak:F5}). Audio never " +
-                "made it through the virtual endpoint, the driver transport, the Host, or " +
-                "the output stream.");
+                $"The physical output stayed silent (peak {measured.Peak:F5}). Audio never "
+                    + "made it through the virtual endpoint, the driver transport, the Host, or "
+                    + "the output stream."
+            );
 
             Assert.True(
-                measured.NonSilentFrames >
-                    measured.TotalFrames * 0.9,
-                $"Only {measured.NonSilentFrames} of {measured.TotalFrames} frames carried " +
-                "audio, so playback reached the physical output but was heavily gapped.");
+                measured.NonSilentFrames > measured.TotalFrames * 0.9,
+                $"Only {measured.NonSilentFrames} of {measured.TotalFrames} frames carried "
+                    + "audio, so playback reached the physical output but was heavily gapped."
+            );
 
             //
             // Gain-independent shape check: RMS/peak is 1/sqrt(2) for a sine
@@ -163,149 +117,104 @@ public sealed class VirtualEndpointHardwareTests
             // tone actually arriving from noise, DC, or a clipped mess that
             // would still clear the non-silence bar above.
             //
-            double crest =
-                measured.Rms /
-                measured.Peak;
+            double crest = measured.Rms / measured.Peak;
 
             Assert.True(
-                crest > 0.60 &&
-                crest < 0.78,
-                $"The physical output carried signal, but not the tone that was played: " +
-                $"RMS/peak was {crest:F3}, expected about {1.0 / Math.Sqrt(2.0):F3} for a sine.");
+                crest > 0.60 && crest < 0.78,
+                $"The physical output carried signal, but not the tone that was played: "
+                    + $"RMS/peak was {crest:F3}, expected about {1.0 / Math.Sqrt(2.0):F3} for a sine."
+            );
 
-            AudioRouteHealth route =
-                Assert.Single(
-                    health.Routes);
+            AudioRouteHealth route = Assert.Single(health.Routes);
 
             Assert.DoesNotContain(
                 route.State,
-                new[]
-                {
-                    AudioRouteHealthState
-                        .Unavailable,
-
-                    AudioRouteHealthState
-                        .Failed
-                });
+                new[] { AudioRouteHealthState.Unavailable, AudioRouteHealthState.Failed }
+            );
         }
         finally
         {
             try
             {
-                await client
-                    .ShutdownAsync();
+                await client.ShutdownAsync();
             }
-            catch
-            {
-            }
+            catch { }
 
-            process.WaitForExit(
-                5000);
+            process.WaitForExit(5000);
 
-            KillIfStillRunning(
-                process);
+            KillIfStillRunning(process);
         }
     }
 
     [HardwareFact]
-    public async Task
-        Display_topology_change_does_not_spike_unaffected_output()
+    public async Task Display_topology_change_does_not_spike_unaffected_output()
     {
-        string hostPath =
-            RequireEnvironmentVariable(
-                "PCMODE_AUDIO_HOST_PATH");
+        string hostPath = RequireEnvironmentVariable("PCMODE_AUDIO_HOST_PATH");
 
-        string outputId =
-            ResolveTopologyTestOutputId();
+        string outputId = ResolveTopologyTestOutputId();
 
-        string pipeName =
-            $"PCMode.Audio.DisplayTopology.{Guid.NewGuid():N}";
+        string pipeName = $"PCMode.Audio.DisplayTopology.{Guid.NewGuid():N}";
 
-        var client =
-            new AudioHostClient(
-                pipeName,
-                connectTimeoutMilliseconds:
-                    10000);
+        var client = new AudioHostClient(pipeName, connectTimeoutMilliseconds: 10000);
 
-        using Process process =
-            await new AudioHostLauncher(
-                    hostPath,
-                    pipeName)
-                .LaunchAndWaitUntilReadyAsync(
-                    client,
-                    TimeSpan.FromSeconds(10));
+        using Process process = await new AudioHostLauncher(hostPath, pipeName).LaunchAndWaitUntilReadyAsync(
+            client,
+            TimeSpan.FromSeconds(10)
+        );
 
         try
         {
-            using var control =
-                new VirtualEndpointControlClient();
+            using var control = new VirtualEndpointControlClient();
 
             await client.ApplyTargetAsync(
                 new AudioTarget(
                     "display-topology-hardware",
                     "Display Topology Hardware",
-                    new AudioRoute(
-                        new AudioEndpointId(
-                            outputId))));
+                    new AudioRoute(new AudioEndpointId(outputId))
+                )
+            );
 
-            using var tone =
-                new ToneSource(
-                    ToneAmplitude);
+            using var tone = new ToneSource(ToneAmplitude);
 
             tone.Start();
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromSeconds(2));
 
-            DriverStatus beforeTransition =
-                control.GetStatus();
+            DriverStatus beforeTransition = control.GetStatus();
 
-            ToneMeasurement baseline =
-                MeasureLoopback(
-                    new AudioEndpointId(
-                        outputId),
-                    TimeSpan.FromSeconds(3));
+            ToneMeasurement baseline = MeasureLoopback(new AudioEndpointId(outputId), TimeSpan.FromSeconds(3));
 
-            Assert.True(
-                baseline.Peak >
-                SilenceFloor,
-                "The baseline tone did not reach the physical output.");
+            Assert.True(baseline.Peak > SilenceFloor, "The baseline tone did not reach the physical output.");
 
             // A "before" reading for the same route-health fields printed
             // after the transition, so a jump in ResyncCount/ClockOffsetFrames
             // there can be judged against what this machine's normal,
             // undisturbed steady state actually looks like rather than an
             // assumed baseline of zero.
-            AudioEngineHealth baselineHealth =
-                await client.GetHealthAsync();
+            AudioEngineHealth baselineHealth = await client.GetHealthAsync();
 
-            AudioRouteHealth baselineRoute =
-                Assert.Single(
-                    baselineHealth.Routes);
+            AudioRouteHealth baselineRoute = Assert.Single(baselineHealth.Routes);
 
             Console.WriteLine(
-                $"Route health after baseline: state={baselineRoute.State}, " +
-                $"underrun-count={baselineRoute.UnderrunCount}, " +
-                $"resync-count={baselineRoute.ResyncCount}, " +
-                $"clock-offset-frames={baselineRoute.ClockOffsetFrames:F2}, " +
-                $"drift-correction-ppm={baselineRoute.DriftCorrectionPpm:F2}, " +
-                $"stall-recovery-count={baselineRoute.StallRecoveryCount}, " +
-                $"output-dry-count={baselineRoute.OutputEndpointDryCount}, " +
-                $"output-recovery-fades={baselineRoute.OutputRecoveryFadeCount}, " +
-                $"longest-submit-gap={baselineRoute.LongestOutputSubmitGapMilliseconds:F1}ms.");
+                $"Route health after baseline: state={baselineRoute.State}, "
+                    + $"underrun-count={baselineRoute.UnderrunCount}, "
+                    + $"resync-count={baselineRoute.ResyncCount}, "
+                    + $"clock-offset-frames={baselineRoute.ClockOffsetFrames:F2}, "
+                    + $"drift-correction-ppm={baselineRoute.DriftCorrectionPpm:F2}, "
+                    + $"stall-recovery-count={baselineRoute.StallRecoveryCount}, "
+                    + $"output-dry-count={baselineRoute.OutputEndpointDryCount}, "
+                    + $"output-recovery-fades={baselineRoute.OutputRecoveryFadeCount}, "
+                    + $"longest-submit-gap={baselineRoute.LongestOutputSubmitGapMilliseconds:F1}ms."
+            );
 
             Console.WriteLine(
-                "Change Windows display topology now (connect/disconnect a display or press Win+P). " +
-                "Leave the PCMODE_AUDIO_OUTPUT_ID endpoint connected; capture runs for 20 seconds.");
+                "Change Windows display topology now (connect/disconnect a display or press Win+P). "
+                    + "Leave the PCMODE_AUDIO_OUTPUT_ID endpoint connected; capture runs for 20 seconds."
+            );
 
-            ToneMeasurement transition =
-                MeasureLoopback(
-                    new AudioEndpointId(
-                        outputId),
-                    TimeSpan.FromSeconds(20));
+            ToneMeasurement transition = MeasureLoopback(new AudioEndpointId(outputId), TimeSpan.FromSeconds(20));
 
-            DriverStatus afterTransition =
-                control.GetStatus();
+            DriverStatus afterTransition = control.GetStatus();
 
             // Captured immediately after the transition window, before any
             // assertion can throw and skip past it -- a failed or restarted
@@ -315,23 +224,21 @@ public sealed class VirtualEndpointHardwareTests
             // flat counters means the interruption never became visible to
             // this code at all, i.e. it happened in Windows' own audio
             // engine or the physical device, not in anything PCMode wrote.
-            AudioEngineHealth health =
-                await client.GetHealthAsync();
+            AudioEngineHealth health = await client.GetHealthAsync();
 
-            AudioRouteHealth route =
-                Assert.Single(
-                    health.Routes);
+            AudioRouteHealth route = Assert.Single(health.Routes);
 
             Console.WriteLine(
-                $"Route health after transition: state={route.State}, " +
-                $"endpoint-state={route.EndpointState}, " +
-                $"underrun-count={route.UnderrunCount}, " +
-                $"resync-count={route.ResyncCount}, " +
-                $"is-resynchronizing={route.IsResynchronizing}, " +
-                $"clock-offset-frames={route.ClockOffsetFrames:F2}, " +
-                $"drift-correction-ppm={route.DriftCorrectionPpm:F2}, " +
-                $"resample-ratio={route.ResampleRatio:F6}, " +
-                $"last-failure={route.LastFailure?.Message ?? "(none)"}.");
+                $"Route health after transition: state={route.State}, "
+                    + $"endpoint-state={route.EndpointState}, "
+                    + $"underrun-count={route.UnderrunCount}, "
+                    + $"resync-count={route.ResyncCount}, "
+                    + $"is-resynchronizing={route.IsResynchronizing}, "
+                    + $"clock-offset-frames={route.ClockOffsetFrames:F2}, "
+                    + $"drift-correction-ppm={route.DriftCorrectionPpm:F2}, "
+                    + $"resample-ratio={route.ResampleRatio:F6}, "
+                    + $"last-failure={route.LastFailure?.Message ?? "(none)"}."
+            );
 
             // The decisive question: did AudioRouteRuntime.Process ever
             // actually observe an abnormal wall-clock gap between calls and
@@ -344,8 +251,9 @@ public sealed class VirtualEndpointHardwareTests
             // a successful WASAPI write), and no route-level fix can reach
             // it.
             Console.WriteLine(
-                $"Route stall recovery: count={route.StallRecoveryCount}, " +
-                $"longest-process-gap={route.LongestProcessGapMilliseconds:F1}ms.");
+                $"Route stall recovery: count={route.StallRecoveryCount}, "
+                    + $"longest-process-gap={route.LongestProcessGapMilliseconds:F1}ms."
+            );
 
             // The output stream's own account, which answers a different
             // question from the route's and is the one that actually
@@ -368,26 +276,28 @@ public sealed class VirtualEndpointHardwareTests
             // figures printed above: these counters are cumulative over the
             // route's life, not per window.
             Console.WriteLine(
-                $"Output stream: dry-count={route.OutputEndpointDryCount}, " +
-                $"recovery-fades={route.OutputRecoveryFadeCount}, " +
-                $"longest-submit-gap={route.LongestOutputSubmitGapMilliseconds:F1}ms, " +
-                $"longest-write={route.LongestOutputWriteMilliseconds:F1}ms, " +
-                $"longest-buffer-wait={route.LongestOutputBufferWaitMilliseconds:F1}ms " +
-                $"(baseline dry-count={baselineRoute.OutputEndpointDryCount}, " +
-                $"recovery-fades={baselineRoute.OutputRecoveryFadeCount}, " +
-                $"longest-submit-gap={baselineRoute.LongestOutputSubmitGapMilliseconds:F1}ms, " +
-                $"longest-write={baselineRoute.LongestOutputWriteMilliseconds:F1}ms, " +
-                $"longest-buffer-wait=" +
-                $"{baselineRoute.LongestOutputBufferWaitMilliseconds:F1}ms).");
+                $"Output stream: dry-count={route.OutputEndpointDryCount}, "
+                    + $"recovery-fades={route.OutputRecoveryFadeCount}, "
+                    + $"longest-submit-gap={route.LongestOutputSubmitGapMilliseconds:F1}ms, "
+                    + $"longest-write={route.LongestOutputWriteMilliseconds:F1}ms, "
+                    + $"longest-buffer-wait={route.LongestOutputBufferWaitMilliseconds:F1}ms "
+                    + $"(baseline dry-count={baselineRoute.OutputEndpointDryCount}, "
+                    + $"recovery-fades={baselineRoute.OutputRecoveryFadeCount}, "
+                    + $"longest-submit-gap={baselineRoute.LongestOutputSubmitGapMilliseconds:F1}ms, "
+                    + $"longest-write={baselineRoute.LongestOutputWriteMilliseconds:F1}ms, "
+                    + $"longest-buffer-wait="
+                    + $"{baselineRoute.LongestOutputBufferWaitMilliseconds:F1}ms)."
+            );
 
             // Whether the driver's own transport ring overflowed because the
             // Host wasn't reading fast enough -- distinguishes a Host-thread
             // stall wide enough to affect the input side too, from a stall
             // confined to the physical output write.
             Console.WriteLine(
-                $"Driver packets dropped: before={beforeTransition.PacketsDropped}, " +
-                $"after={afterTransition.PacketsDropped}, " +
-                $"delta={afterTransition.PacketsDropped - beforeTransition.PacketsDropped}.");
+                $"Driver packets dropped: before={beforeTransition.PacketsDropped}, "
+                    + $"after={afterTransition.PacketsDropped}, "
+                    + $"delta={afterTransition.PacketsDropped - beforeTransition.PacketsDropped}."
+            );
 
             // How many separate silent stretches occurred, not just the
             // longest one -- one big gap and many small ones look identical
@@ -397,33 +307,33 @@ public sealed class VirtualEndpointHardwareTests
                     ? "none"
                     : string.Join(
                         ", ",
-                        transition.SilentGapFrameCounts
-                            .OrderByDescending(
-                                frames =>
-                                    frames)
+                        transition
+                            .SilentGapFrameCounts.OrderByDescending(frames => frames)
                             .Take(10)
-                            .Select(
-                                frames =>
-                                    $"{frames * 1000.0 / transition.SampleRate:F1}ms"));
+                            .Select(frames => $"{frames * 1000.0 / transition.SampleRate:F1}ms")
+                    );
 
             Console.WriteLine(
-                $"Silent gaps during transition: count={transition.SilentGapFrameCounts.Count}, " +
-                $"total={transition.SilentGapFrameCounts.Sum() * 1000.0 / transition.SampleRate:F1}ms, " +
-                $"longest 10={gapSummary}.");
+                $"Silent gaps during transition: count={transition.SilentGapFrameCounts.Count}, "
+                    + $"total={transition.SilentGapFrameCounts.Sum() * 1000.0 / transition.SampleRate:F1}ms, "
+                    + $"longest 10={gapSummary}."
+            );
 
             Console.WriteLine(
-                $"Baseline: peak={baseline.Peak:F5}, rms={baseline.Rms:F5}, " +
-                $"max-step={baseline.MaximumSampleStep:F5}, " +
-                $"longest-silence={baseline.LongestSilentRunFrames * 1000.0 / baseline.SampleRate:F1}ms, " +
-                $"longest-read-gap={baseline.LongestReadGap.TotalMilliseconds:F1}ms, " +
-                $"into-silence={baseline.MaximumStepIntoSilence:F5}, " +
-                $"out-of-silence={baseline.MaximumStepOutOfSilence:F5}.");
+                $"Baseline: peak={baseline.Peak:F5}, rms={baseline.Rms:F5}, "
+                    + $"max-step={baseline.MaximumSampleStep:F5}, "
+                    + $"longest-silence={baseline.LongestSilentRunFrames * 1000.0 / baseline.SampleRate:F1}ms, "
+                    + $"longest-read-gap={baseline.LongestReadGap.TotalMilliseconds:F1}ms, "
+                    + $"into-silence={baseline.MaximumStepIntoSilence:F5}, "
+                    + $"out-of-silence={baseline.MaximumStepOutOfSilence:F5}."
+            );
 
             Console.WriteLine(
-                $"Transition: peak={transition.Peak:F5}, rms={transition.Rms:F5}, " +
-                $"max-step={transition.MaximumSampleStep:F5}, " +
-                $"longest-silence={transition.LongestSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms, " +
-                $"longest-read-gap={transition.LongestReadGap.TotalMilliseconds:F1}ms.");
+                $"Transition: peak={transition.Peak:F5}, rms={transition.Rms:F5}, "
+                    + $"max-step={transition.MaximumSampleStep:F5}, "
+                    + $"longest-silence={transition.LongestSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms, "
+                    + $"longest-read-gap={transition.LongestReadGap.TotalMilliseconds:F1}ms."
+            );
 
             // Which boundary the worst jump actually happened at. The
             // route-level fade-in only ever touches the resume side (silence
@@ -431,8 +341,9 @@ public sealed class VirtualEndpointHardwareTests
             // fix cannot be the answer to the failing max-step assertion no
             // matter how it's tuned, because it never runs on that boundary.
             Console.WriteLine(
-                $"Step by boundary: into-silence={transition.MaximumStepIntoSilence:F5}, " +
-                $"out-of-silence={transition.MaximumStepOutOfSilence:F5}.");
+                $"Step by boundary: into-silence={transition.MaximumStepIntoSilence:F5}, "
+                    + $"out-of-silence={transition.MaximumStepOutOfSilence:F5}."
+            );
 
             // Both boundary figures sitting below the overall maximum means
             // the worst jump happened between two audible samples, so
@@ -448,28 +359,29 @@ public sealed class VirtualEndpointHardwareTests
             // checked. Discontinuities during baseline, when nothing is
             // being disturbed, are the control.
             Console.WriteLine(
-                $"Capture integrity: discontinuity-packets={transition.CaptureDiscontinuityCount} " +
-                $"(baseline {baseline.CaptureDiscontinuityCount}), " +
-                $"worst-step-on-packet-seam={transition.MaximumStepAtPacketBoundary}, " +
-                $"worst-out-of-silence-on-packet-seam=" +
-                $"{transition.MaximumStepOutOfSilenceAtPacketBoundary}, " +
-                $"seams-excluded-from-step-analysis={transition.ExcludedSeamCount} " +
-                $"(baseline {baseline.ExcludedSeamCount}), " +
-                $"position-gaps={transition.CapturePositionGapCount} " +
-                $"(baseline {baseline.CapturePositionGapCount}), " +
-                $"frames-lost-by-capture=" +
-                $"{transition.CaptureMissingFrameCount * 1000.0 / transition.SampleRate:F1}ms " +
-                $"(baseline " +
-                $"{baseline.CaptureMissingFrameCount * 1000.0 / baseline.SampleRate:F1}ms).");
+                $"Capture integrity: discontinuity-packets={transition.CaptureDiscontinuityCount} "
+                    + $"(baseline {baseline.CaptureDiscontinuityCount}), "
+                    + $"worst-step-on-packet-seam={transition.MaximumStepAtPacketBoundary}, "
+                    + $"worst-out-of-silence-on-packet-seam="
+                    + $"{transition.MaximumStepOutOfSilenceAtPacketBoundary}, "
+                    + $"seams-excluded-from-step-analysis={transition.ExcludedSeamCount} "
+                    + $"(baseline {baseline.ExcludedSeamCount}), "
+                    + $"position-gaps={transition.CapturePositionGapCount} "
+                    + $"(baseline {baseline.CapturePositionGapCount}), "
+                    + $"frames-lost-by-capture="
+                    + $"{transition.CaptureMissingFrameCount * 1000.0 / transition.SampleRate:F1}ms "
+                    + $"(baseline "
+                    + $"{baseline.CaptureMissingFrameCount * 1000.0 / baseline.SampleRate:F1}ms)."
+            );
 
             Console.WriteLine(
-                $"Worst step at {transition.MaximumStepSeconds:F3}s into the " +
-                $"capture, surrounding samples: " +
-                string.Join(
-                    " ",
-                    transition.MaximumStepNeighbourhood.Select(
-                        sample =>
-                            sample.ToString("+0.000;-0.000"))));
+                $"Worst step at {transition.MaximumStepSeconds:F3}s into the "
+                    + $"capture, surrounding samples: "
+                    + string.Join(
+                        " ",
+                        transition.MaximumStepNeighbourhood.Select(sample => sample.ToString("+0.000;-0.000"))
+                    )
+            );
 
             // How many times the driver's own render timer fell behind real
             // time and signaled the Host to re-prime (see RenderStream.cpp's
@@ -478,9 +390,10 @@ public sealed class VirtualEndpointHardwareTests
             // here during the transition, and not during baseline, points at
             // the driver's own timer rather than the physical output route.
             Console.WriteLine(
-                $"Driver discontinuity signals: before={beforeTransition.DiscontinuityCount}, " +
-                $"after={afterTransition.DiscontinuityCount}, " +
-                $"delta={afterTransition.DiscontinuityCount - beforeTransition.DiscontinuityCount}.");
+                $"Driver discontinuity signals: before={beforeTransition.DiscontinuityCount}, "
+                    + $"after={afterTransition.DiscontinuityCount}, "
+                    + $"delta={afterTransition.DiscontinuityCount - beforeTransition.DiscontinuityCount}."
+            );
 
             tone.Stop();
 
@@ -493,10 +406,11 @@ public sealed class VirtualEndpointHardwareTests
             // did not reach the route, which puts the loss in the driver
             // transport between them.
             Console.WriteLine(
-                $"Tone source: longest-submit-gap=" +
-                $"{tone.Diagnostics.LongestSubmitGapMilliseconds:F1}ms, " +
-                $"virtual-endpoint-dry-count={tone.Diagnostics.EndpointDryCount}, " +
-                $"recovery-fades={tone.Diagnostics.RecoveryFadeCount}.");
+                $"Tone source: longest-submit-gap="
+                    + $"{tone.Diagnostics.LongestSubmitGapMilliseconds:F1}ms, "
+                    + $"virtual-endpoint-dry-count={tone.Diagnostics.EndpointDryCount}, "
+                    + $"recovery-fades={tone.Diagnostics.RecoveryFadeCount}."
+            );
 
             // Stepping around lost frames is only legitimate while the
             // capture remains a faithful account of the endpoint. Past a
@@ -504,86 +418,62 @@ public sealed class VirtualEndpointHardwareTests
             // and every figure derived from it -- silence, steps, the lot --
             // is describing the recording rather than the output. Fail
             // loudly there instead of quietly excluding more and more.
-            double captureLossMilliseconds =
-                transition.CaptureMissingFrameCount *
-                1000.0 /
-                transition.SampleRate;
+            double captureLossMilliseconds = transition.CaptureMissingFrameCount * 1000.0 / transition.SampleRate;
 
             Assert.True(
-                captureLossMilliseconds <=
-                transition.TotalFrames *
-                1000.0 /
-                transition.SampleRate *
-                0.01,
-                $"The loopback capture itself lost {captureLossMilliseconds:F1}ms of " +
-                $"audio, too much for the waveform analysis below to describe what " +
-                $"the endpoint actually rendered.");
+                captureLossMilliseconds <= transition.TotalFrames * 1000.0 / transition.SampleRate * 0.01,
+                $"The loopback capture itself lost {captureLossMilliseconds:F1}ms of "
+                    + $"audio, too much for the waveform analysis below to describe what "
+                    + $"the endpoint actually rendered."
+            );
 
-            float maximumExpectedPeak =
-                Math.Min(
-                    1.0f,
-                    baseline.Peak * 2.0f +
-                    0.01f);
+            float maximumExpectedPeak = Math.Min(1.0f, baseline.Peak * 2.0f + 0.01f);
 
             Assert.True(
-                transition.Peak <=
-                maximumExpectedPeak,
-                $"Display topology change produced a peak of {transition.Peak:F5}; " +
-                $"baseline was {baseline.Peak:F5} and the allowed ceiling was {maximumExpectedPeak:F5}.");
+                transition.Peak <= maximumExpectedPeak,
+                $"Display topology change produced a peak of {transition.Peak:F5}; "
+                    + $"baseline was {baseline.Peak:F5} and the allowed ceiling was {maximumExpectedPeak:F5}."
+            );
 
             Assert.True(
-                transition.NonSilentFrames >
-                transition.TotalFrames * 0.85,
-                "The unaffected output was heavily interrupted during display endpoint churn.");
+                transition.NonSilentFrames > transition.TotalFrames * 0.85,
+                "The unaffected output was heavily interrupted during display endpoint churn."
+            );
 
-            float maximumExpectedStep =
-                baseline.MaximumSampleStep *
-                    3.0f +
-                0.005f;
+            float maximumExpectedStep = baseline.MaximumSampleStep * 3.0f + 0.005f;
 
             Assert.True(
-                transition.MaximumSampleStep <=
-                maximumExpectedStep,
-                $"The output waveform jumped by {transition.MaximumSampleStep:F5}; " +
-                $"baseline maximum was {baseline.MaximumSampleStep:F5} and the allowed ceiling was {maximumExpectedStep:F5}.");
+                transition.MaximumSampleStep <= maximumExpectedStep,
+                $"The output waveform jumped by {transition.MaximumSampleStep:F5}; "
+                    + $"baseline maximum was {baseline.MaximumSampleStep:F5} and the allowed ceiling was {maximumExpectedStep:F5}."
+            );
 
-            long maximumSilentRunFrames =
-                Math.Max(
-                    transition.SampleRate /
-                        10,
-                    baseline.LongestSilentRunFrames *
-                        3 +
-                    transition.SampleRate /
-                        100);
+            long maximumSilentRunFrames = Math.Max(
+                transition.SampleRate / 10,
+                baseline.LongestSilentRunFrames * 3 + transition.SampleRate / 100
+            );
 
             Assert.True(
-                transition.LongestSilentRunFrames <=
-                maximumSilentRunFrames,
-                $"The output was continuously silent for " +
-                $"{transition.LongestSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms; " +
-                $"the allowed ceiling was {maximumSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms.");
+                transition.LongestSilentRunFrames <= maximumSilentRunFrames,
+                $"The output was continuously silent for "
+                    + $"{transition.LongestSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms; "
+                    + $"the allowed ceiling was {maximumSilentRunFrames * 1000.0 / transition.SampleRate:F1}ms."
+            );
 
-            TimeSpan maximumReadGap =
-                TimeSpan.FromMilliseconds(
-                    Math.Max(
-                        100,
-                        baseline.LongestReadGap.TotalMilliseconds *
-                            3 +
-                        20));
+            TimeSpan maximumReadGap = TimeSpan.FromMilliseconds(
+                Math.Max(100, baseline.LongestReadGap.TotalMilliseconds * 3 + 20)
+            );
 
             Assert.True(
-                transition.LongestReadGap <=
-                maximumReadGap,
-                $"Loopback delivery stalled for {transition.LongestReadGap.TotalMilliseconds:F1}ms; " +
-                $"the allowed ceiling was {maximumReadGap.TotalMilliseconds:F1}ms.");
+                transition.LongestReadGap <= maximumReadGap,
+                $"Loopback delivery stalled for {transition.LongestReadGap.TotalMilliseconds:F1}ms; "
+                    + $"the allowed ceiling was {maximumReadGap.TotalMilliseconds:F1}ms."
+            );
 
             Assert.DoesNotContain(
                 route.State,
-                new[]
-                {
-                    AudioRouteHealthState.Unavailable,
-                    AudioRouteHealthState.Failed
-                });
+                new[] { AudioRouteHealthState.Unavailable, AudioRouteHealthState.Failed }
+            );
         }
         finally
         {
@@ -591,72 +481,62 @@ public sealed class VirtualEndpointHardwareTests
             {
                 await client.ShutdownAsync();
             }
-            catch
-            {
-            }
+            catch { }
 
-            process.WaitForExit(
-                5000);
+            process.WaitForExit(5000);
 
-            KillIfStillRunning(
-                process);
+            KillIfStillRunning(process);
         }
     }
 
-    private const float ToneAmplitude =
-        0.2f;
+    private const float ToneAmplitude = 0.2f;
 
     /// <summary>
     /// Below this the capture is indistinguishable from a silent device.
     /// Well under <see cref="ToneAmplitude"/> so that system volume, or a
     /// route configured quieter than unity, does not fail the test.
     /// </summary>
-    private const float SilenceFloor =
-        0.005f;
+    private const float SilenceFloor = 0.005f;
 
-    private readonly record struct
-        ToneMeasurement(
-            long TotalFrames,
-            long NonSilentFrames,
-            float Peak,
-            double Rms,
-            float MaximumSampleStep,
-            float MaximumStepIntoSilence,
-            float MaximumStepOutOfSilence,
-            double MaximumStepSeconds,
-            IReadOnlyList<float> MaximumStepNeighbourhood,
-            bool MaximumStepAtPacketBoundary,
-            bool MaximumStepOutOfSilenceAtPacketBoundary,
-            long CaptureDiscontinuityCount,
-            long CapturePositionGapCount,
-            long CaptureMissingFrameCount,
-            long ExcludedSeamCount,
-            long LongestSilentRunFrames,
-            TimeSpan LongestReadGap,
-            int SampleRate,
-            IReadOnlyList<long> SilentGapFrameCounts);
+    private readonly record struct ToneMeasurement(
+        long TotalFrames,
+        long NonSilentFrames,
+        float Peak,
+        double Rms,
+        float MaximumSampleStep,
+        float MaximumStepIntoSilence,
+        float MaximumStepOutOfSilence,
+        double MaximumStepSeconds,
+        IReadOnlyList<float> MaximumStepNeighbourhood,
+        bool MaximumStepAtPacketBoundary,
+        bool MaximumStepOutOfSilenceAtPacketBoundary,
+        long CaptureDiscontinuityCount,
+        long CapturePositionGapCount,
+        long CaptureMissingFrameCount,
+        long ExcludedSeamCount,
+        long LongestSilentRunFrames,
+        TimeSpan LongestReadGap,
+        int SampleRate,
+        IReadOnlyList<long> SilentGapFrameCounts
+    );
 
     /// <summary>
     /// A 440 Hz sine played into the PCMode virtual endpoint the same way any
     /// ordinary shared-mode application would play it.
     /// </summary>
-    private sealed class ToneSource :
-        IDisposable
+    private sealed class ToneSource : IDisposable
     {
         private readonly float _amplitude;
 
-        private readonly CancellationTokenSource
-            _stop = new();
+        private readonly CancellationTokenSource _stop = new();
 
         private Thread? _thread;
 
         private Exception? _failure;
 
-        private readonly ManualResetEventSlim
-            _ready = new(false);
+        private readonly ManualResetEventSlim _ready = new(false);
 
-        public ToneSource(
-            float amplitude)
+        public ToneSource(float amplitude)
         {
             _amplitude = amplitude;
         }
@@ -687,55 +567,40 @@ public sealed class VirtualEndpointHardwareTests
             CoreAudioEndpointSnapshot endpoint =
                 new CoreAudioEndpointCatalog()
                     .GetActiveRenderEndpoints()
-                    .FirstOrDefault(e =>
-                        e.FriendlyName.Contains(
-                            "PCMode",
-                            StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault(e => e.FriendlyName.Contains("PCMode", StringComparison.OrdinalIgnoreCase))
                 ?? throw new InvalidOperationException(
-                    "The PCMode virtual endpoint is not present as an active render device.");
+                    "The PCMode virtual endpoint is not present as an active render device."
+                );
 
             _thread = new Thread(() =>
             {
                 try
                 {
-                    using var output =
-                        new WasapiRenderOutput(
-                            endpoint.Id,
-                            endpoint.Format);
+                    using var output = new WasapiRenderOutput(endpoint.Id, endpoint.Format);
 
                     output.Start();
 
-                    Format =
-                        output.Format;
+                    Format = output.Format;
 
                     _ready.Set();
 
-                    int rate =
-                        output.Format.SampleRate;
+                    int rate = output.Format.SampleRate;
 
-                    int channels =
-                        output.Format.ChannelCount;
+                    int channels = output.Format.ChannelCount;
 
-                    int framesPerBlock =
-                        rate / 100;
+                    int framesPerBlock = rate / 100;
 
-                    var samples =
-                        new float[
-                            framesPerBlock *
-                            channels];
+                    var samples = new float[framesPerBlock * channels];
 
                     double phase = 0;
 
-                    double step =
-                        2 * Math.PI * 440.0 / rate;
+                    double step = 2 * Math.PI * 440.0 / rate;
 
                     while (!_stop.IsCancellationRequested)
                     {
                         for (int f = 0; f < framesPerBlock; f++)
                         {
-                            float v =
-                                (float)(Math.Sin(phase) *
-                                    _amplitude);
+                            float v = (float)(Math.Sin(phase) * _amplitude);
 
                             phase += step;
 
@@ -745,14 +610,10 @@ public sealed class VirtualEndpointHardwareTests
                             }
                         }
 
-                        output.Write(
-                            new AudioBlock(
-                                samples,
-                                output.Format));
+                        output.Write(new AudioBlock(samples, output.Format));
                     }
 
-                    Diagnostics =
-                        output.GetDiagnostics();
+                    Diagnostics = output.GetDiagnostics();
 
                     output.Stop();
                 }
@@ -764,23 +625,21 @@ public sealed class VirtualEndpointHardwareTests
             })
             {
                 IsBackground = true,
-                Name = "hardware-test-tone"
+                Name = "hardware-test-tone",
             };
 
             _thread.Start();
 
-            if (!_ready.Wait(
-                    TimeSpan.FromSeconds(10)))
+            if (!_ready.Wait(TimeSpan.FromSeconds(10)))
             {
                 throw new InvalidOperationException(
-                    "The tone source did not start streaming to the virtual endpoint within 10s.");
+                    "The tone source did not start streaming to the virtual endpoint within 10s."
+                );
             }
 
             if (_failure is not null)
             {
-                throw new InvalidOperationException(
-                    "The tone source could not open the virtual endpoint.",
-                    _failure);
+                throw new InvalidOperationException("The tone source could not open the virtual endpoint.", _failure);
             }
         }
 
@@ -798,21 +657,13 @@ public sealed class VirtualEndpointHardwareTests
         }
     }
 
-    private static ToneMeasurement
-        MeasureLoopback(
-            AudioEndpointId outputId,
-            TimeSpan duration)
+    private static ToneMeasurement MeasureLoopback(AudioEndpointId outputId, TimeSpan duration)
     {
-        using var loopback =
-            new WasapiLoopbackInput(
-                outputId);
+        using var loopback = new WasapiLoopbackInput(outputId);
 
         loopback.Start();
 
-        var buffer =
-            new float[
-                4800 *
-                loopback.Format.ChannelCount];
+        var buffer = new float[4800 * loopback.Format.ChannelCount];
 
         long totalFrames = 0;
         long nonSilentFrames = 0;
@@ -822,8 +673,7 @@ public sealed class VirtualEndpointHardwareTests
         float maximumSampleStep = 0;
         long silentRunFrames = 0;
         long longestSilentRunFrames = 0;
-        TimeSpan longestReadGap =
-            TimeSpan.Zero;
+        TimeSpan longestReadGap = TimeSpan.Zero;
 
         // Splits the single MaximumSampleStep figure by which boundary it
         // occurred at: audio going silent (onset) versus silence resuming
@@ -848,14 +698,12 @@ public sealed class VirtualEndpointHardwareTests
         // stops dead is the endpoint starving.
         const int NeighbourhoodFrames = 24;
 
-        var precedingFrames =
-            new float[NeighbourhoodFrames];
+        var precedingFrames = new float[NeighbourhoodFrames];
 
         int precedingCount = 0;
         int precedingHead = 0;
 
-        var maximumStepNeighbourhood =
-            new List<float>();
+        var maximumStepNeighbourhood = new List<float>();
 
         int neighbourhoodTailRemaining = 0;
         long maximumStepFrameIndex = -1;
@@ -876,35 +724,25 @@ public sealed class VirtualEndpointHardwareTests
         // very different causes -- this distinguishes "one bad moment at the
         // topology change" from "sustained, repeated glitching for a while
         // afterward".
-        var silentGapFrameCounts =
-            new List<long>();
+        var silentGapFrameCounts = new List<long>();
 
-        var previousSamples =
-            new float[
-                loopback.Format.ChannelCount];
+        var previousSamples = new float[loopback.Format.ChannelCount];
 
-        bool hasPreviousFrame =
-            false;
+        bool hasPreviousFrame = false;
 
-        long previousReadTimestamp =
-            0;
+        long previousReadTimestamp = 0;
 
-        var clock =
-            Stopwatch.StartNew();
+        var clock = Stopwatch.StartNew();
 
         long excludedSeamCount = 0;
 
         while (clock.Elapsed < duration)
         {
-            long discontinuitiesBeforeRead =
-                loopback.DiscontinuityCount;
+            long discontinuitiesBeforeRead = loopback.DiscontinuityCount;
 
-            long positionGapsBeforeRead =
-                loopback.PositionGapCount;
+            long positionGapsBeforeRead = loopback.PositionGapCount;
 
-            int frames =
-                loopback.Read(
-                    buffer);
+            int frames = loopback.Read(buffer);
 
             if (frames <= 0)
             {
@@ -922,206 +760,129 @@ public sealed class VirtualEndpointHardwareTests
             // real glitch in the samples alone. Dropping the previous-frame
             // state makes the first frame after the seam start a fresh
             // comparison instead.
-            if (loopback.DiscontinuityCount >
-                    discontinuitiesBeforeRead ||
-                loopback.PositionGapCount >
-                    positionGapsBeforeRead)
+            if (
+                loopback.DiscontinuityCount > discontinuitiesBeforeRead
+                || loopback.PositionGapCount > positionGapsBeforeRead
+            )
             {
                 excludedSeamCount++;
 
-                hasPreviousFrame =
-                    false;
+                hasPreviousFrame = false;
 
-                precedingCount =
-                    0;
+                precedingCount = 0;
             }
 
-            long readTimestamp =
-                Stopwatch.GetTimestamp();
+            long readTimestamp = Stopwatch.GetTimestamp();
 
             if (previousReadTimestamp != 0)
             {
-                TimeSpan readGap =
-                    Stopwatch.GetElapsedTime(
-                        previousReadTimestamp,
-                        readTimestamp);
+                TimeSpan readGap = Stopwatch.GetElapsedTime(previousReadTimestamp, readTimestamp);
 
-                if (readGap >
-                    longestReadGap)
+                if (readGap > longestReadGap)
                 {
-                    longestReadGap =
-                        readGap;
+                    longestReadGap = readGap;
                 }
             }
 
-            previousReadTimestamp =
-                readTimestamp;
+            previousReadTimestamp = readTimestamp;
 
             totalFrames += frames;
 
-            int samples =
-                frames *
-                loopback.Format.ChannelCount;
+            int samples = frames * loopback.Format.ChannelCount;
 
-            for (int frame = 0;
-                 frame < frames;
-                 frame++)
+            for (int frame = 0; frame < frames; frame++)
             {
-                float framePeak =
-                    0;
+                float framePeak = 0;
 
-                float frameStep =
-                    0;
+                float frameStep = 0;
 
-                float maximumStepBeforeFrame =
-                    maximumSampleStep;
+                float maximumStepBeforeFrame = maximumSampleStep;
 
-                for (int channel = 0;
-                     channel < loopback.Format.ChannelCount;
-                     channel++)
+                for (int channel = 0; channel < loopback.Format.ChannelCount; channel++)
                 {
-                    int sampleIndex =
-                        frame *
-                            loopback.Format.ChannelCount +
-                        channel;
+                    int sampleIndex = frame * loopback.Format.ChannelCount + channel;
 
-                    float sample =
-                        buffer[sampleIndex];
+                    float sample = buffer[sampleIndex];
 
-                    float magnitude =
-                        Math.Abs(sample);
+                    float magnitude = Math.Abs(sample);
 
-                    framePeak =
-                        Math.Max(
-                            framePeak,
-                            magnitude);
+                    framePeak = Math.Max(framePeak, magnitude);
 
                     if (hasPreviousFrame)
                     {
-                        float step =
-                            Math.Abs(
-                                sample -
-                                previousSamples[channel]);
+                        float step = Math.Abs(sample - previousSamples[channel]);
 
-                        maximumSampleStep =
-                            Math.Max(
-                                maximumSampleStep,
-                                step);
+                        maximumSampleStep = Math.Max(maximumSampleStep, step);
 
-                        frameStep =
-                            Math.Max(
-                                frameStep,
-                                step);
+                        frameStep = Math.Max(frameStep, step);
                     }
 
-                    previousSamples[channel] =
-                        sample;
+                    previousSamples[channel] = sample;
 
-                    sumOfSquares +=
-                        sample *
-                        (double)sample;
+                    sumOfSquares += sample * (double)sample;
                 }
 
-                float leadingSample =
-                    buffer[
-                        frame *
-                        loopback.Format.ChannelCount];
+                float leadingSample = buffer[frame * loopback.Format.ChannelCount];
 
                 if (neighbourhoodTailRemaining > 0)
                 {
-                    maximumStepNeighbourhood.Add(
-                        leadingSample);
+                    maximumStepNeighbourhood.Add(leadingSample);
 
                     neighbourhoodTailRemaining--;
                 }
 
-                if (hasPreviousFrame &&
-                    frameStep >
-                    maximumStepBeforeFrame)
+                if (hasPreviousFrame && frameStep > maximumStepBeforeFrame)
                 {
-                    maximumStepFrameIndex =
-                        totalFrames -
-                        frames +
-                        frame;
+                    maximumStepFrameIndex = totalFrames - frames + frame;
 
-                    maximumStepAtPacketBoundary =
-                        frame == 0;
+                    maximumStepAtPacketBoundary = frame == 0;
 
                     maximumStepNeighbourhood.Clear();
 
-                    for (int i = 0;
-                         i < precedingCount;
-                         i++)
+                    for (int i = 0; i < precedingCount; i++)
                     {
                         maximumStepNeighbourhood.Add(
                             precedingFrames[
-                                (precedingHead -
-                                 precedingCount +
-                                 i +
-                                 (2 * NeighbourhoodFrames)) %
-                                NeighbourhoodFrames]);
+                                (precedingHead - precedingCount + i + (2 * NeighbourhoodFrames)) % NeighbourhoodFrames
+                            ]
+                        );
                     }
 
-                    maximumStepNeighbourhood.Add(
-                        leadingSample);
+                    maximumStepNeighbourhood.Add(leadingSample);
 
-                    neighbourhoodTailRemaining =
-                        NeighbourhoodFrames;
+                    neighbourhoodTailRemaining = NeighbourhoodFrames;
                 }
 
-                precedingFrames[precedingHead] =
-                    leadingSample;
+                precedingFrames[precedingHead] = leadingSample;
 
-                precedingHead =
-                    (precedingHead + 1) %
-                    NeighbourhoodFrames;
+                precedingHead = (precedingHead + 1) % NeighbourhoodFrames;
 
-                precedingCount =
-                    Math.Min(
-                        precedingCount + 1,
-                        NeighbourhoodFrames);
+                precedingCount = Math.Min(precedingCount + 1, NeighbourhoodFrames);
 
-                bool frameIsSilent =
-                    framePeak <=
-                    SilenceFloor;
+                bool frameIsSilent = framePeak <= SilenceFloor;
 
                 if (hasPreviousFrame)
                 {
-                    if (previousFrameWasSilent &&
-                        !frameIsSilent)
+                    if (previousFrameWasSilent && !frameIsSilent)
                     {
-                        if (frameStep >
-                            maximumStepOutOfSilence)
+                        if (frameStep > maximumStepOutOfSilence)
                         {
-                            maximumStepOutOfSilenceAtPacketBoundary =
-                                frame == 0;
+                            maximumStepOutOfSilenceAtPacketBoundary = frame == 0;
                         }
 
-                        maximumStepOutOfSilence =
-                            Math.Max(
-                                maximumStepOutOfSilence,
-                                frameStep);
+                        maximumStepOutOfSilence = Math.Max(maximumStepOutOfSilence, frameStep);
                     }
-                    else if (!previousFrameWasSilent &&
-                             frameIsSilent)
+                    else if (!previousFrameWasSilent && frameIsSilent)
                     {
-                        maximumStepIntoSilence =
-                            Math.Max(
-                                maximumStepIntoSilence,
-                                frameStep);
+                        maximumStepIntoSilence = Math.Max(maximumStepIntoSilence, frameStep);
                     }
                 }
 
-                previousFrameWasSilent =
-                    frameIsSilent;
+                previousFrameWasSilent = frameIsSilent;
 
-                hasPreviousFrame =
-                    true;
+                hasPreviousFrame = true;
 
-                peak =
-                    Math.Max(
-                        peak,
-                        framePeak);
+                peak = Math.Max(peak, framePeak);
 
                 if (!frameIsSilent)
                 {
@@ -1129,20 +890,15 @@ public sealed class VirtualEndpointHardwareTests
 
                     if (silentRunFrames > 0)
                     {
-                        silentGapFrameCounts.Add(
-                            silentRunFrames);
+                        silentGapFrameCounts.Add(silentRunFrames);
                     }
 
-                    silentRunFrames =
-                        0;
+                    silentRunFrames = 0;
                 }
                 else
                 {
                     silentRunFrames++;
-                    longestSilentRunFrames =
-                        Math.Max(
-                            longestSilentRunFrames,
-                            silentRunFrames);
+                    longestSilentRunFrames = Math.Max(longestSilentRunFrames, silentRunFrames);
                 }
             }
 
@@ -1151,17 +907,12 @@ public sealed class VirtualEndpointHardwareTests
 
         if (silentRunFrames > 0)
         {
-            silentGapFrameCounts.Add(
-                silentRunFrames);
+            silentGapFrameCounts.Add(silentRunFrames);
         }
 
         loopback.Stop();
 
-        double rms =
-            sampleCount > 0
-                ? Math.Sqrt(
-                    sumOfSquares / sampleCount)
-                : 0;
+        double rms = sampleCount > 0 ? Math.Sqrt(sumOfSquares / sampleCount) : 0;
 
         return new ToneMeasurement(
             totalFrames,
@@ -1171,10 +922,7 @@ public sealed class VirtualEndpointHardwareTests
             maximumSampleStep,
             maximumStepIntoSilence,
             maximumStepOutOfSilence,
-            maximumStepFrameIndex < 0
-                ? 0.0
-                : maximumStepFrameIndex /
-                  (double)loopback.Format.SampleRate,
+            maximumStepFrameIndex < 0 ? 0.0 : maximumStepFrameIndex / (double)loopback.Format.SampleRate,
             maximumStepNeighbourhood,
             maximumStepAtPacketBoundary,
             maximumStepOutOfSilenceAtPacketBoundary,
@@ -1185,7 +933,8 @@ public sealed class VirtualEndpointHardwareTests
             longestSilentRunFrames,
             longestReadGap,
             loopback.Format.SampleRate,
-            silentGapFrameCounts);
+            silentGapFrameCounts
+        );
     }
 
     /// <summary>
@@ -1195,8 +944,7 @@ public sealed class VirtualEndpointHardwareTests
     /// single-consumer handle busy, failing every hardware test that runs
     /// after it for a reason that has nothing to do with their own bodies.
     /// </summary>
-    private static void KillIfStillRunning(
-        Process process)
+    private static void KillIfStillRunning(Process process)
     {
         if (process.HasExited)
         {
@@ -1205,44 +953,30 @@ public sealed class VirtualEndpointHardwareTests
 
         try
         {
-            process.Kill(
-                entireProcessTree: true);
+            process.Kill(entireProcessTree: true);
 
-            process.WaitForExit(
-                5_000);
+            process.WaitForExit(5_000);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
-    private static string
-        RequireEnvironmentVariable(
-            string name)
+    private static string RequireEnvironmentVariable(string name)
     {
-        string? value =
-            Environment.GetEnvironmentVariable(
-                name);
+        string? value = Environment.GetEnvironmentVariable(name);
 
-        if (string.IsNullOrWhiteSpace(
-                value))
+        if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException(
-                $"Environment variable {name} is required.");
+            throw new InvalidOperationException($"Environment variable {name} is required.");
         }
 
         return value;
     }
 
-    private static string
-        ResolveTopologyTestOutputId()
+    private static string ResolveTopologyTestOutputId()
     {
-        string? configured =
-            Environment.GetEnvironmentVariable(
-                "PCMODE_AUDIO_OUTPUT_ID");
+        string? configured = Environment.GetEnvironmentVariable("PCMODE_AUDIO_OUTPUT_ID");
 
-        if (!string.IsNullOrWhiteSpace(
-                configured))
+        if (!string.IsNullOrWhiteSpace(configured))
         {
             return configured;
         }
@@ -1251,22 +985,15 @@ public sealed class VirtualEndpointHardwareTests
         [
             .. new CoreAudioEndpointCatalog()
                 .GetActiveRenderEndpoints()
-                .Where(
-                    endpoint =>
-                        endpoint.FriendlyName.Contains(
-                            "Realtek",
-                            StringComparison.OrdinalIgnoreCase))
+                .Where(endpoint => endpoint.FriendlyName.Contains("Realtek", StringComparison.OrdinalIgnoreCase)),
         ];
 
-        CoreAudioEndpointSnapshot[]
-            secondOutputs =
-            [
-                .. realtek.Where(
-                    endpoint =>
-                        endpoint.FriendlyName.Contains(
-                            "HD Audio 2nd output",
-                            StringComparison.OrdinalIgnoreCase))
-            ];
+        CoreAudioEndpointSnapshot[] secondOutputs =
+        [
+            .. realtek.Where(endpoint =>
+                endpoint.FriendlyName.Contains("HD Audio 2nd output", StringComparison.OrdinalIgnoreCase)
+            ),
+        ];
 
         if (secondOutputs.Length == 1)
         {
@@ -1280,11 +1007,9 @@ public sealed class VirtualEndpointHardwareTests
 
         CoreAudioEndpointSnapshot[] speakers =
         [
-            .. realtek.Where(
-                endpoint =>
-                    endpoint.FriendlyName.Contains(
-                        "Speakers",
-                        StringComparison.OrdinalIgnoreCase))
+            .. realtek.Where(endpoint =>
+                endpoint.FriendlyName.Contains("Speakers", StringComparison.OrdinalIgnoreCase)
+            ),
         ];
 
         if (speakers.Length == 1)
@@ -1292,17 +1017,16 @@ public sealed class VirtualEndpointHardwareTests
             return speakers[0].Id.Value;
         }
 
-        string candidates =
-            string.Join(
-                Environment.NewLine,
-                realtek.Select(
-                    endpoint =>
-                        $"  {endpoint.FriendlyName}: {endpoint.Id.Value}"));
+        string candidates = string.Join(
+            Environment.NewLine,
+            realtek.Select(endpoint => $"  {endpoint.FriendlyName}: {endpoint.Id.Value}")
+        );
 
         throw new InvalidOperationException(
-            "Set PCMODE_AUDIO_OUTPUT_ID to the unaffected physical output endpoint. " +
-            $"Automatic Realtek discovery found {realtek.Length} active matches:" +
-            Environment.NewLine +
-            candidates);
+            "Set PCMODE_AUDIO_OUTPUT_ID to the unaffected physical output endpoint. "
+                + $"Automatic Realtek discovery found {realtek.Length} active matches:"
+                + Environment.NewLine
+                + candidates
+        );
     }
 }

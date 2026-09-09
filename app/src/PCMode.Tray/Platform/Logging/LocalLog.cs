@@ -1,5 +1,5 @@
-using System.Text;
 using System.IO;
+using System.Text;
 using PCMode.Engine;
 
 namespace PCMode.Tray.Platform.Logging;
@@ -29,16 +29,16 @@ public sealed class LocalLog
     private readonly long _maximumBytes;
     private readonly int _fileCount;
 
-    public LocalLog(
-        string root,
-        long maximumBytes = DefaultMaximumBytes,
-        int fileCount = DefaultFileCount)
+    public LocalLog(string root, long maximumBytes = DefaultMaximumBytes, int fileCount = DefaultFileCount)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
 
         if (maximumBytes < 256)
         {
-            throw new ArgumentOutOfRangeException(nameof(maximumBytes), "A log file needs room for at least one useful entry.");
+            throw new ArgumentOutOfRangeException(
+                nameof(maximumBytes),
+                "A log file needs room for at least one useful entry."
+            );
         }
 
         if (fileCount < 1)
@@ -76,8 +76,8 @@ public sealed class LocalLog
                 RotateIfNeeded(Encoding.UTF8.GetByteCount(entry));
                 File.AppendAllText(CurrentFile, entry, Encoding.UTF8);
             }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            catch (Exception exception)
+                when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 // Best effort by design. There is nowhere safer to report a
                 // logging failure, and recursive logging would only make it worse.
@@ -105,8 +105,8 @@ public sealed class LocalLog
                 string[] lines = File.ReadAllLines(CurrentFile);
                 return [.. lines.TakeLast(maximumLines)];
             }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            catch (Exception exception)
+                when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
                 return [];
             }
@@ -155,9 +155,7 @@ public sealed class LocalLog
     }
 
     private static string SingleLine(string text) =>
-        text.Replace("\r\n", " | ", StringComparison.Ordinal)
-            .Replace('\r', ' ')
-            .Replace('\n', ' ');
+        text.Replace("\r\n", " | ", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ');
 
     private static string Limit(string? text, int maximumCharacters)
     {

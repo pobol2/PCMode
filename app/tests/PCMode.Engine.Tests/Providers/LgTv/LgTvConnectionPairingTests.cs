@@ -51,10 +51,13 @@ public sealed class LgTvConnectionPairingTests
     {
         var connection = new LgTvConnection(set, keys);
 
-        Assert.True(connection.TryConfigure(
-            System.Text.Json.JsonDocument.Parse(
-                $$"""{"host":"{{Host}}","macAddress":"{{Mac}}"}""").RootElement,
-            out string? problem), problem);
+        Assert.True(
+            connection.TryConfigure(
+                System.Text.Json.JsonDocument.Parse($$"""{"host":"{{Host}}","macAddress":"{{Mac}}"}""").RootElement,
+                out string? problem
+            ),
+            problem
+        );
 
         return connection;
     }

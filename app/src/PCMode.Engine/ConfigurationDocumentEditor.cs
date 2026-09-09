@@ -87,7 +87,10 @@ internal static class ConfigurationDocumentEditor
             // The same validation a real startup runs, against the same
             // production provider list -- not a second, hand-rolled check
             // that could disagree with it.
-            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(resolvedRoot, candidate);
+            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(
+                resolvedRoot,
+                candidate
+            );
             ModeConfiguration.Parse(candidate, providers, path);
         }
         catch (ModeConfigurationException exception)

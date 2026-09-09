@@ -60,7 +60,8 @@ public sealed record LgTvProfile(
     string PictureMode,
     IReadOnlyList<LgTvSetting> Signal,
     IReadOnlyList<LgTvSetting> Settings,
-    string? InputName)
+    string? InputName
+)
 {
     /// <summary>The settings category the signal half is written under.</summary>
     public const string SignalCategory = "other";
@@ -83,36 +84,36 @@ public sealed record LgTvProfile(
     /// between "hdmiPcMode_hdmi4" and "uhdDeepColorHDMI4" is the television's,
     /// not a mistake.
     /// </remarks>
-    public static readonly IReadOnlyDictionary<string, string> SignalNames =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["uhddeepcolor_hdmi{n}"] = "uhdDeepColorHDMI{n}",
-            ["hdmipcmode_hdmi{n}"] = "hdmiPcMode_hdmi{n}",
-            ["gamemode_hdmi{n}"] = "gameMode_hdmi{n}",
-            ["gameoptimization_hdmi{n}"] = "gameOptimizationHDMI{n}",
-            ["gameoptimization"] = "gameOptimization",
-            ["freesyncoled_hdmi{n}"] = "freesyncOLEDHDMI{n}",
-            ["freesync"] = "freesync",
-            ["inputoptimization"] = "inputOptimization",
-        };
+    public static readonly IReadOnlyDictionary<string, string> SignalNames = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["uhddeepcolor_hdmi{n}"] = "uhdDeepColorHDMI{n}",
+        ["hdmipcmode_hdmi{n}"] = "hdmiPcMode_hdmi{n}",
+        ["gamemode_hdmi{n}"] = "gameMode_hdmi{n}",
+        ["gameoptimization_hdmi{n}"] = "gameOptimizationHDMI{n}",
+        ["gameoptimization"] = "gameOptimization",
+        ["freesyncoled_hdmi{n}"] = "freesyncOLEDHDMI{n}",
+        ["freesync"] = "freesync",
+        ["inputoptimization"] = "inputOptimization",
+    };
 
     /// <summary>The settings whose value is not simply on or off.</summary>
-    private static readonly IReadOnlyDictionary<string, string[]> Choices =
-        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["inputoptimization"] = ["auto", "on", "standard", "boost"],
-        };
+    private static readonly IReadOnlyDictionary<string, string[]> Choices = new Dictionary<string, string[]>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["inputoptimization"] = ["auto", "on", "standard", "boost"],
+    };
 
     /// <summary>Values accepted for one configuration-side signal setting.</summary>
     public static IReadOnlyList<string> SignalValuesFor(string writtenName) =>
-        Choices.TryGetValue(writtenName, out string[]? choices)
-            ? choices
-            : ["on", "off"];
+        Choices.TryGetValue(writtenName, out string[]? choices) ? choices : ["on", "off"];
 
     /// <summary>Whether one configuration-side signal setting is tied to one HDMI socket.</summary>
     public static bool SignalUsesHdmi(string writtenName) =>
-        SignalNames.TryGetValue(writtenName, out string? wireName) &&
-        wireName.Contains("{n}", StringComparison.Ordinal);
+        SignalNames.TryGetValue(writtenName, out string? wireName)
+        && wireName.Contains("{n}", StringComparison.Ordinal);
 
     /// <summary>
     /// Converts a parsed wire-side signal name back to the portable configuration
@@ -142,7 +143,8 @@ public sealed record LgTvProfile(
                 string candidate = wire.Replace(
                     "{n}",
                     hdmi.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    StringComparison.Ordinal);
+                    StringComparison.Ordinal
+                );
 
                 if (string.Equals(candidate, wireName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -171,15 +173,16 @@ public sealed record LgTvProfile(
         IReadOnlyDictionary<string, string> inputs,
         string? legacyDefaultInput,
         out IReadOnlyDictionary<string, LgTvProfile>? profiles,
-        out string? problem)
+        out string? problem
+    )
     {
         profiles = null;
 
         if (element.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"'{LgTvSettings.SettingsPath}.profiles' must be an object mapping a name you " +
-                "choose to that profile's television settings.";
+                $"'{LgTvSettings.SettingsPath}.profiles' must be an object mapping a name you "
+                + "choose to that profile's television settings.";
 
             return false;
         }
@@ -198,7 +201,17 @@ public sealed record LgTvProfile(
             string name = property.Name.Trim();
             string where = $"'{LgTvSettings.SettingsPath}.profiles.{name}'";
 
-            if (!TryParseOne(where, name, property.Value, inputs, legacyDefaultInput, out LgTvProfile? profile, out problem))
+            if (
+                !TryParseOne(
+                    where,
+                    name,
+                    property.Value,
+                    inputs,
+                    legacyDefaultInput,
+                    out LgTvProfile? profile,
+                    out problem
+                )
+            )
             {
                 return false;
             }
@@ -217,10 +230,10 @@ public sealed record LgTvProfile(
                 // whichever lost would read as wrong forever. A mode that wants
                 // the same picture as another names the same profile.
                 problem =
-                    $"'{LgTvSettings.SettingsPath}.profiles' gives both " +
-                    $"'{pictureModes[profile.PictureMode]}' and '{name}' the picture mode " +
-                    $"'{profile.PictureMode}'. That is the only setting the television reports " +
-                    "back, so nothing could tell which of them it is in.";
+                    $"'{LgTvSettings.SettingsPath}.profiles' gives both "
+                    + $"'{pictureModes[profile.PictureMode]}' and '{name}' the picture mode "
+                    + $"'{profile.PictureMode}'. That is the only setting the television reports "
+                    + "back, so nothing could tell which of them it is in.";
 
                 return false;
             }
@@ -238,7 +251,8 @@ public sealed record LgTvProfile(
         IReadOnlyDictionary<string, string> inputs,
         string? legacyDefaultInput,
         out LgTvProfile? profile,
-        out string? problem)
+        out string? problem
+    )
     {
         profile = null;
 
@@ -257,8 +271,10 @@ public sealed record LgTvProfile(
         {
             if (property.NameEquals("pictureMode"))
             {
-                if (property.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                if (
+                    property.Value.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(property.Value.GetString())
+                )
                 {
                     problem = $"{where}.pictureMode must be a value in quotes, like \"hdrFilmMaker\".";
                     return false;
@@ -268,8 +284,10 @@ public sealed record LgTvProfile(
             }
             else if (property.NameEquals("input"))
             {
-                if (property.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                if (
+                    property.Value.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(property.Value.GetString())
+                )
                 {
                     problem = $"{where}.input must be a value in quotes, naming one of this television's inputs.";
                     return false;
@@ -294,8 +312,8 @@ public sealed record LgTvProfile(
             else
             {
                 problem =
-                    $"{where} does not understand '{property.Name}'. " +
-                    "It takes 'pictureMode', 'input', 'signal' and 'settings'.";
+                    $"{where} does not understand '{property.Name}'. "
+                    + "It takes 'pictureMode', 'input', 'signal' and 'settings'.";
 
                 return false;
             }
@@ -307,18 +325,19 @@ public sealed record LgTvProfile(
             // that can be read back. Without it the profile could be written and
             // never confirmed, which is a resource that always reports success.
             problem =
-                $"{where} has no 'pictureMode'. It is the only setting the television reports " +
-                "back, so a profile without one could never be verified.";
+                $"{where} has no 'pictureMode'. It is the only setting the television reports "
+                + "back, so a profile without one could never be verified.";
 
             return false;
         }
 
         if (declaredInput is not null && !inputs.ContainsKey(declaredInput))
         {
-            problem = inputs.Count == 0
-                ? $"{where}.input is '{declaredInput}', and no inputs are defined."
-                : $"{where}.input is '{declaredInput}', which is not one of the inputs defined here: " +
-                  $"{string.Join(", ", inputs.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
+            problem =
+                inputs.Count == 0
+                    ? $"{where}.input is '{declaredInput}', and no inputs are defined."
+                    : $"{where}.input is '{declaredInput}', which is not one of the inputs defined here: "
+                        + $"{string.Join(", ", inputs.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
 
             return false;
         }
@@ -327,13 +346,16 @@ public sealed record LgTvProfile(
         // document written before a profile could name its own already pointed
         // at; otherwise, with exactly one input to mean, that one -- the ordinary
         // machine needs to say this nowhere at all.
-        string? resolvedInput = declaredInput ?? legacyDefaultInput ?? (inputs.Count == 1 ? inputs.Keys.Single() : null);
+        string? resolvedInput =
+            declaredInput ?? legacyDefaultInput ?? (inputs.Count == 1 ? inputs.Keys.Single() : null);
         string? hdmi = resolvedInput is null ? null : HdmiNumber(inputs[resolvedInput]);
 
         IReadOnlyList<LgTvSetting> signal = [];
 
-        if (signalSection is JsonElement declaredSignal &&
-            !TryParseSignal(where, declaredSignal, hdmi, out signal, out problem))
+        if (
+            signalSection is JsonElement declaredSignal
+            && !TryParseSignal(where, declaredSignal, hdmi, out signal, out problem)
+        )
         {
             return false;
         }
@@ -348,7 +370,8 @@ public sealed record LgTvProfile(
         JsonElement element,
         string? hdmi,
         out IReadOnlyList<LgTvSetting> signal,
-        out string? problem)
+        out string? problem
+    )
     {
         signal = [];
 
@@ -368,8 +391,8 @@ public sealed record LgTvProfile(
             if (!SignalNames.TryGetValue(written, out string? wire))
             {
                 problem =
-                    $"{where}.signal does not understand '{written}'. It takes: " +
-                    $"{string.Join(", ", SignalNames.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
+                    $"{where}.signal does not understand '{written}'. It takes: "
+                    + $"{string.Join(", ", SignalNames.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
 
                 return false;
             }
@@ -380,8 +403,10 @@ public sealed record LgTvProfile(
                 return false;
             }
 
-            if (property.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(property.Value.GetString()))
+            if (
+                property.Value.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(property.Value.GetString())
+            )
             {
                 problem = $"{where}.signal.{written} must be a value in quotes.";
                 return false;
@@ -402,8 +427,8 @@ public sealed record LgTvProfile(
             if (wire.Contains("{n}", StringComparison.Ordinal) && string.IsNullOrWhiteSpace(hdmi))
             {
                 problem =
-                    $"{where}.signal sets '{written}', which applies to one HDMI socket, and nothing " +
-                    $"says which. Add {where}.input, naming one of this television's inputs.";
+                    $"{where}.signal sets '{written}', which applies to one HDMI socket, and nothing "
+                    + $"says which. Add {where}.input, naming one of this television's inputs.";
 
                 return false;
             }
@@ -430,7 +455,8 @@ public sealed record LgTvProfile(
         string where,
         JsonElement element,
         out IReadOnlyList<LgTvSetting> settings,
-        out string? problem)
+        out string? problem
+    )
     {
         settings = [];
 
@@ -456,8 +482,8 @@ public sealed record LgTvProfile(
             if (string.Equals(key, PictureModeKey, StringComparison.OrdinalIgnoreCase))
             {
                 problem =
-                    $"{where}.settings sets '{PictureModeKey}', which belongs in " +
-                    $"{where}.pictureMode. Two places to write it is one place to disagree.";
+                    $"{where}.settings sets '{PictureModeKey}', which belongs in "
+                    + $"{where}.pictureMode. Two places to write it is one place to disagree.";
 
                 return false;
             }
@@ -468,8 +494,10 @@ public sealed record LgTvProfile(
                 return false;
             }
 
-            if (property.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(property.Value.GetString()))
+            if (
+                property.Value.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(property.Value.GetString())
+            )
             {
                 problem = $"{where}.settings.{key} must be a value in quotes.";
                 return false;
@@ -491,11 +519,7 @@ public sealed record LgTvProfile(
             return null;
         }
 
-        Match hdmi = Regex.Match(
-            inputId,
-            @"([1-9])$",
-            RegexOptions.CultureInvariant,
-            TimeSpan.FromSeconds(1));
+        Match hdmi = Regex.Match(inputId, @"([1-9])$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
         return hdmi.Success ? hdmi.Groups[1].Value : null;
     }

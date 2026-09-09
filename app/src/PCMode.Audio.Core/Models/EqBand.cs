@@ -16,54 +16,42 @@ public readonly record struct EqBand
 
     public float Q { get; }
 
-    public EqBand(
-        EqFilterType type,
-        float frequencyHz,
-        float gainDb = 0.0f,
-        float q = 0.70710677f)
+    public EqBand(EqFilterType type, float frequencyHz, float gainDb = 0.0f, float q = 0.70710677f)
     {
         if (!Enum.IsDefined(type))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(type));
+            throw new ArgumentOutOfRangeException(nameof(type));
         }
 
-        if (!float.IsFinite(frequencyHz) ||
-            frequencyHz <= 0.0f)
+        if (!float.IsFinite(frequencyHz) || frequencyHz <= 0.0f)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(frequencyHz),
                 frequencyHz,
-                "Frequency must be finite and greater than zero.");
+                "Frequency must be finite and greater than zero."
+            );
         }
 
-        if (!float.IsFinite(gainDb) ||
-            gainDb < MinGainDb ||
-            gainDb > MaxGainDb)
+        if (!float.IsFinite(gainDb) || gainDb < MinGainDb || gainDb > MaxGainDb)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(gainDb),
                 gainDb,
-                $"Gain must be finite and between {MinGainDb} dB and {MaxGainDb} dB.");
+                $"Gain must be finite and between {MinGainDb} dB and {MaxGainDb} dB."
+            );
         }
 
-        if (!float.IsFinite(q) ||
-            q < MinQ ||
-            q > MaxQ)
+        if (!float.IsFinite(q) || q < MinQ || q > MaxQ)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(q),
-                q,
-                $"Q must be finite and between {MinQ} and {MaxQ}.");
+            throw new ArgumentOutOfRangeException(nameof(q), q, $"Q must be finite and between {MinQ} and {MaxQ}.");
         }
 
-        if ((type == EqFilterType.LowPass ||
-             type == EqFilterType.HighPass) &&
-            gainDb != 0.0f)
+        if ((type == EqFilterType.LowPass || type == EqFilterType.HighPass) && gainDb != 0.0f)
         {
             throw new ArgumentException(
                 "Low-pass and high-pass filters do not use gain; specify 0 dB.",
-                nameof(gainDb));
+                nameof(gainDb)
+            );
         }
 
         Type = type;

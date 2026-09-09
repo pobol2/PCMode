@@ -58,11 +58,14 @@ public sealed class AppViewModelTests
 
     private static (AppViewModel Model, IReadOnlyDictionary<PageId, StubPage> Pages) CreateModel()
     {
-        Dictionary<PageId, StubPage> pages = NavigationRegistry.Items
-            .ToDictionary(item => item.Page, _ => new StubPage());
+        Dictionary<PageId, StubPage> pages = NavigationRegistry.Items.ToDictionary(
+            item => item.Page,
+            _ => new StubPage()
+        );
 
         var catalog = new ElementCatalog(
-            pages.Select(pair => KeyValuePair.Create<PageId, object>(pair.Key, pair.Value)));
+            pages.Select(pair => KeyValuePair.Create<PageId, object>(pair.Key, pair.Value))
+        );
 
         return (new AppViewModel(new NavigationState(), catalog), pages);
     }

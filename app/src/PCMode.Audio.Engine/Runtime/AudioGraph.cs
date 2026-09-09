@@ -4,8 +4,7 @@ using PCMode.Audio.Engine.Contracts;
 
 namespace PCMode.Audio.Engine.Runtime;
 
-public sealed class AudioGraph :
-    IDisposable
+public sealed class AudioGraph : IDisposable
 {
     private readonly IAudioInputStream _input;
 
@@ -19,68 +18,49 @@ public sealed class AudioGraph :
 
     private bool _disposed;
 
-    public AudioFormat Format =>
-        _input.Format;
+    public AudioFormat Format => _input.Format;
 
     public int BlockFrameCapacity { get; }
 
-    public IReadOnlyList<AudioRouteRuntime> Routes =>
-        _routes;
+    public IReadOnlyList<AudioRouteRuntime> Routes => _routes;
 
     public bool InputFailed { get; private set; }
 
-    public bool HasAnyOperationalRoute =>
-        _routes.Any(
-            route =>
-                route.IsOperational);
+    public bool HasAnyOperationalRoute => _routes.Any(route => route.IsOperational);
 
-    public AudioGraph(
-        IAudioInputStream input,
-        IEnumerable<AudioRouteRuntime> routes,
-        int blockFrameCapacity)
+    public AudioGraph(IAudioInputStream input, IEnumerable<AudioRouteRuntime> routes, int blockFrameCapacity)
     {
-        ArgumentNullException.ThrowIfNull(
-            input);
+        ArgumentNullException.ThrowIfNull(input);
 
-        ArgumentNullException.ThrowIfNull(
-            routes);
+        ArgumentNullException.ThrowIfNull(routes);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            blockFrameCapacity);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(blockFrameCapacity);
 
-        _input =
-            input;
+        _input = input;
 
-        _routes =
-            routes.ToArray();
+        _routes = routes.ToArray();
 
         if (_routes.Length == 0)
         {
             throw new ArgumentException(
                 "An audio graph must contain at least one configured runtime route.",
-                nameof(routes));
+                nameof(routes)
+            );
         }
 
-        for (int i = 0;
-             i < _routes.Length;
-             i++)
+        for (int i = 0; i < _routes.Length; i++)
         {
-            if (_routes[i].Format !=
-                input.Format)
+            if (_routes[i].Format != input.Format)
             {
                 throw new NotSupportedException(
-                    $"Route '{_routes[i].Route.EndpointId}' does not match the input nominal format.");
+                    $"Route '{_routes[i].Route.EndpointId}' does not match the input nominal format."
+                );
             }
         }
 
-        BlockFrameCapacity =
-            blockFrameCapacity;
+        BlockFrameCapacity = blockFrameCapacity;
 
-        _inputSamples =
-            new float[
-                checked(
-                    blockFrameCapacity *
-                    input.Format.ChannelCount)];
+        _inputSamples = new float[checked(blockFrameCapacity * input.Format.ChannelCount)];
     }
 
     public void Start()
@@ -92,17 +72,13 @@ public sealed class AudioGraph :
             return;
         }
 
-        int runningRoutes =
-            0;
+        int runningRoutes = 0;
 
         try
         {
-            for (int i = 0;
-                 i < _routes.Length;
-                 i++)
+            for (int i = 0; i < _routes.Length; i++)
             {
-                AudioRouteRuntime route =
-                    _routes[i];
+                AudioRouteRuntime route = _routes[i];
 
                 try
                 {
@@ -112,12 +88,12 @@ public sealed class AudioGraph :
                 }
                 catch (Exception ex)
                 {
-                    if (route.Route.Requirement ==
-                        AudioRouteRequirement.Required)
+                    if (route.Route.Requirement == AudioRouteRequirement.Required)
                     {
                         throw new InvalidOperationException(
                             $"Required audio route '{route.Route.EndpointId}' failed to start.",
-                            ex);
+                            ex
+                        );
                     }
 
                     // Optional route failure is preserved in Health and
@@ -128,8 +104,7 @@ public sealed class AudioGraph :
 
             if (runningRoutes == 0)
             {
-                throw new InvalidOperationException(
-                    "No configured audio route could be started.");
+                throw new InvalidOperationException("No configured audio route could be started.");
             }
 
             try
@@ -138,29 +113,20 @@ public sealed class AudioGraph :
             }
             catch (Exception ex)
             {
-                InputFailed =
-                    true;
+                InputFailed = true;
 
-                throw new InvalidOperationException(
-                    "Failed to start the shared audio input stream.",
-                    ex);
+                throw new InvalidOperationException("Failed to start the shared audio input stream.", ex);
             }
 
-            InputFailed =
-                false;
+            InputFailed = false;
 
-            _started =
-                true;
+            _started = true;
         }
         catch
         {
-            for (int i =
-                     _routes.Length - 1;
-                 i >= 0;
-                 i--)
+            for (int i = _routes.Length - 1; i >= 0; i--)
             {
-                TryStopRoute(
-                    _routes[i]);
+                TryStopRoute(_routes[i]);
             }
 
             TryStopInput();
@@ -175,35 +141,27 @@ public sealed class AudioGraph :
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "The audio graph must be started before processing.");
+            throw new InvalidOperationException("The audio graph must be started before processing.");
         }
 
         int frameCount;
 
         try
         {
-            frameCount =
-                _input.Read(
-                    _inputSamples);
+            frameCount = _input.Read(_inputSamples);
         }
         catch
         {
-            InputFailed =
-                true;
+            InputFailed = true;
 
             throw;
         }
 
-        if (frameCount < 0 ||
-            frameCount >
-                BlockFrameCapacity)
+        if (frameCount < 0 || frameCount > BlockFrameCapacity)
         {
-            InputFailed =
-                true;
+            InputFailed = true;
 
-            throw new InvalidOperationException(
-                "The input stream returned an invalid frame count.");
+            throw new InvalidOperationException("The input stream returned an invalid frame count.");
         }
 
         if (frameCount == 0)
@@ -211,33 +169,17 @@ public sealed class AudioGraph :
             return 0;
         }
 
-        int sampleCount =
-            checked(
-                frameCount *
-                Format.ChannelCount);
+        int sampleCount = checked(frameCount * Format.ChannelCount);
 
-        long blockFramePosition =
-            _framePosition;
+        long blockFramePosition = _framePosition;
 
-        _framePosition =
-            checked(
-                _framePosition +
-                frameCount);
+        _framePosition = checked(_framePosition + frameCount);
 
-        var block =
-            new AudioBlock(
-                _inputSamples.AsSpan(
-                    0,
-                    sampleCount),
-                Format,
-                blockFramePosition);
+        var block = new AudioBlock(_inputSamples.AsSpan(0, sampleCount), Format, blockFramePosition);
 
-        for (int i = 0;
-             i < _routes.Length;
-             i++)
+        for (int i = 0; i < _routes.Length; i++)
         {
-            AudioRouteRuntime route =
-                _routes[i];
+            AudioRouteRuntime route = _routes[i];
 
             if (!route.IsOperational)
             {
@@ -246,8 +188,7 @@ public sealed class AudioGraph :
 
             try
             {
-                route.Process(
-                    block);
+                route.Process(block);
             }
             catch
             {
@@ -262,19 +203,13 @@ public sealed class AudioGraph :
         return frameCount;
     }
 
-    public bool HasOperationalRoute(
-        AudioEndpointId endpointId)
+    public bool HasOperationalRoute(AudioEndpointId endpointId)
     {
-        for (int i = 0;
-             i < _routes.Length;
-             i++)
+        for (int i = 0; i < _routes.Length; i++)
         {
-            AudioRouteRuntime route =
-                _routes[i];
+            AudioRouteRuntime route = _routes[i];
 
-            if (route.Route.EndpointId ==
-                    endpointId &&
-                route.IsOperational)
+            if (route.Route.EndpointId == endpointId && route.IsOperational)
             {
                 return true;
             }
@@ -283,40 +218,29 @@ public sealed class AudioGraph :
         return false;
     }
 
-    public void ReplaceOrAddRoute(
-        AudioRouteRuntime replacement)
+    public void ReplaceOrAddRoute(AudioRouteRuntime replacement)
     {
         ThrowIfDisposed();
 
-        ArgumentNullException.ThrowIfNull(
-            replacement);
+        ArgumentNullException.ThrowIfNull(replacement);
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "The audio graph must be running before a route can be recovered.");
+            throw new InvalidOperationException("The audio graph must be running before a route can be recovered.");
         }
 
-        if (replacement.Format !=
-            Format)
+        if (replacement.Format != Format)
         {
-            throw new NotSupportedException(
-                "Recovered route does not match the graph nominal format.");
+            throw new NotSupportedException("Recovered route does not match the graph nominal format.");
         }
 
-        int existingIndex =
-            -1;
+        int existingIndex = -1;
 
-        for (int i = 0;
-             i < _routes.Length;
-             i++)
+        for (int i = 0; i < _routes.Length; i++)
         {
-            if (_routes[i]
-                    .Route.EndpointId ==
-                replacement.Route.EndpointId)
+            if (_routes[i].Route.EndpointId == replacement.Route.EndpointId)
             {
-                existingIndex =
-                    i;
+                existingIndex = i;
 
                 break;
             }
@@ -328,8 +252,7 @@ public sealed class AudioGraph :
             // method is used. Dispose it before the replacement starts so
             // its cleanup cannot overwrite the shared Health writer after
             // the new route has reported Running.
-            TryDisposeRoute(
-                _routes[existingIndex]);
+            TryDisposeRoute(_routes[existingIndex]);
         }
 
         try
@@ -338,29 +261,23 @@ public sealed class AudioGraph :
         }
         catch
         {
-            TryDisposeRoute(
-                replacement);
+            TryDisposeRoute(replacement);
 
             throw;
         }
 
         if (existingIndex >= 0)
         {
-            _routes[existingIndex] =
-                replacement;
+            _routes[existingIndex] = replacement;
 
             return;
         }
 
-        int oldLength =
-            _routes.Length;
+        int oldLength = _routes.Length;
 
-        Array.Resize(
-            ref _routes,
-            oldLength + 1);
+        Array.Resize(ref _routes, oldLength + 1);
 
-        _routes[oldLength] =
-            replacement;
+        _routes[oldLength] = replacement;
     }
 
     public void Stop()
@@ -372,8 +289,7 @@ public sealed class AudioGraph :
             return;
         }
 
-        var errors =
-            new List<Exception>();
+        var errors = new List<Exception>();
 
         try
         {
@@ -381,19 +297,12 @@ public sealed class AudioGraph :
         }
         catch (Exception ex)
         {
-            errors.Add(
-                new InvalidOperationException(
-                    "Failed to stop the shared audio input stream.",
-                    ex));
+            errors.Add(new InvalidOperationException("Failed to stop the shared audio input stream.", ex));
         }
 
-        for (int i =
-                 _routes.Length - 1;
-             i >= 0;
-             i--)
+        for (int i = _routes.Length - 1; i >= 0; i--)
         {
-            AudioRouteRuntime route =
-                _routes[i];
+            AudioRouteRuntime route = _routes[i];
 
             try
             {
@@ -402,20 +311,16 @@ public sealed class AudioGraph :
             catch (Exception ex)
             {
                 errors.Add(
-                    new InvalidOperationException(
-                        $"Failed to stop audio route '{route.Route.EndpointId}'.",
-                        ex));
+                    new InvalidOperationException($"Failed to stop audio route '{route.Route.EndpointId}'.", ex)
+                );
             }
         }
 
-        _started =
-            false;
+        _started = false;
 
         if (errors.Count > 0)
         {
-            throw new AggregateException(
-                "One or more audio graph components failed to stop.",
-                errors);
+            throw new AggregateException("One or more audio graph components failed to stop.", errors);
         }
     }
 
@@ -426,8 +331,7 @@ public sealed class AudioGraph :
             return;
         }
 
-        var errors =
-            new List<Exception>();
+        var errors = new List<Exception>();
 
         if (_started)
         {
@@ -437,20 +341,15 @@ public sealed class AudioGraph :
             }
             catch (AggregateException ex)
             {
-                errors.AddRange(
-                    ex.InnerExceptions);
+                errors.AddRange(ex.InnerExceptions);
             }
             catch (Exception ex)
             {
-                errors.Add(
-                    ex);
+                errors.Add(ex);
             }
         }
 
-        for (int i =
-                 _routes.Length - 1;
-             i >= 0;
-             i--)
+        for (int i = _routes.Length - 1; i >= 0; i--)
         {
             try
             {
@@ -459,9 +358,8 @@ public sealed class AudioGraph :
             catch (Exception ex)
             {
                 errors.Add(
-                    new InvalidOperationException(
-                        $"Failed to dispose audio route '{_routes[i].Route.EndpointId}'.",
-                        ex));
+                    new InvalidOperationException($"Failed to dispose audio route '{_routes[i].Route.EndpointId}'.", ex)
+                );
             }
         }
 
@@ -471,20 +369,14 @@ public sealed class AudioGraph :
         }
         catch (Exception ex)
         {
-            errors.Add(
-                new InvalidOperationException(
-                    "Failed to dispose the shared audio input stream.",
-                    ex));
+            errors.Add(new InvalidOperationException("Failed to dispose the shared audio input stream.", ex));
         }
 
-        _disposed =
-            true;
+        _disposed = true;
 
         if (errors.Count > 0)
         {
-            throw new AggregateException(
-                "One or more audio graph components failed to dispose.",
-                errors);
+            throw new AggregateException("One or more audio graph components failed to dispose.", errors);
         }
     }
 
@@ -494,39 +386,29 @@ public sealed class AudioGraph :
         {
             _input.Stop();
         }
-        catch
-        {
-        }
+        catch { }
     }
 
-    private static void TryStopRoute(
-        AudioRouteRuntime route)
+    private static void TryStopRoute(AudioRouteRuntime route)
     {
         try
         {
             route.Stop();
         }
-        catch
-        {
-        }
+        catch { }
     }
 
-    private static void TryDisposeRoute(
-        AudioRouteRuntime route)
+    private static void TryDisposeRoute(AudioRouteRuntime route)
     {
         try
         {
             route.Dispose();
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

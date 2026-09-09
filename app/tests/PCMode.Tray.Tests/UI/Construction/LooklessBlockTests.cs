@@ -1,9 +1,9 @@
 using System.Windows.Controls;
 using System.Windows.Media;
-using PCMode.Tray.UI.Framework;
-using PCMode.Tray.Tests.UI.Construction.Fixtures;
-using Region = PCMode.Tray.UI.Framework.Region;
 using PCMode.Tray.Tests;
+using PCMode.Tray.Tests.UI.Construction.Fixtures;
+using PCMode.Tray.UI.Framework;
+using Region = PCMode.Tray.UI.Framework.Region;
 
 namespace PCMode.Tray.Tests.UI.Construction;
 
@@ -34,8 +34,7 @@ public sealed class LooklessBlockTests
             Wpf.Realize(block);
 
             Assert.NotNull(block.Template);
-            Assert.IsType<Region>(
-                block.Template.FindName(FixtureRootBlock.HeaderRegion, block));
+            Assert.IsType<Region>(block.Template.FindName(FixtureRootBlock.HeaderRegion, block));
         });
     }
 
@@ -64,7 +63,8 @@ public sealed class LooklessBlockTests
 
             Assert.Contains(
                 Wpf.Descendants<ContentPresenter>(region),
-                presenter => Equals("Displays", presenter.Content));
+                presenter => Equals("Displays", presenter.Content)
+            );
         });
     }
 }

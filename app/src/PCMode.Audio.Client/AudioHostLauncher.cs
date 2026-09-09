@@ -10,93 +10,61 @@ public sealed class AudioHostLauncher
 
     private readonly string _pipeName;
 
-    public AudioHostLauncher(
-        string? hostPath = null,
-        string pipeName =
-            HostProtocolVersion.DefaultPipeName)
+    public AudioHostLauncher(string? hostPath = null, string pipeName = HostProtocolVersion.DefaultPipeName)
     {
-        _hostPath =
-            hostPath ??
-            Path.Combine(
-                AppContext.BaseDirectory,
-                "PCMode.Audio.Host.exe");
+        _hostPath = hostPath ?? Path.Combine(AppContext.BaseDirectory, "PCMode.Audio.Host.exe");
 
-        _pipeName =
-            pipeName;
+        _pipeName = pipeName;
     }
 
     public Process Launch()
     {
-        ProcessStartInfo startInfo =
-            CreateStartInfo();
+        ProcessStartInfo startInfo = CreateStartInfo();
 
-        AddPipeArguments(
-            startInfo);
+        AddPipeArguments(startInfo);
 
-        return Start(
-            startInfo);
+        return Start(startInfo);
     }
 
-    public Process LaunchDevelopment(
-        AudioEndpointId sourceId)
+    public Process LaunchDevelopment(AudioEndpointId sourceId)
     {
         if (sourceId == default)
         {
-            throw new ArgumentException(
-                "Development source endpoint is required.",
-                nameof(sourceId));
+            throw new ArgumentException("Development source endpoint is required.", nameof(sourceId));
         }
 
-        ProcessStartInfo startInfo =
-            CreateStartInfo();
+        ProcessStartInfo startInfo = CreateStartInfo();
 
-        startInfo.ArgumentList.Add(
-            "--development-source-id");
+        startInfo.ArgumentList.Add("--development-source-id");
 
-        startInfo.ArgumentList.Add(
-            sourceId.Value);
+        startInfo.ArgumentList.Add(sourceId.Value);
 
-        AddPipeArguments(
-            startInfo);
+        AddPipeArguments(startInfo);
 
-        return Start(
-            startInfo);
+        return Start(startInfo);
     }
 
-    public async Task<Process>
-        LaunchAndWaitUntilReadyAsync(
-            IAudioHostClient client,
-            TimeSpan timeout,
-            CancellationToken cancellationToken =
-                default)
+    public async Task<Process> LaunchAndWaitUntilReadyAsync(
+        IAudioHostClient client,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default
+    )
     {
-        Process process =
-            Launch();
+        Process process = Launch();
 
-        return await WaitUntilReadyOrKillAsync(
-            process,
-            client,
-            timeout,
-            cancellationToken);
+        return await WaitUntilReadyOrKillAsync(process, client, timeout, cancellationToken);
     }
 
-    public async Task<Process>
-        LaunchDevelopmentAndWaitUntilReadyAsync(
-            AudioEndpointId sourceId,
-            IAudioHostClient client,
-            TimeSpan timeout,
-            CancellationToken cancellationToken =
-                default)
+    public async Task<Process> LaunchDevelopmentAndWaitUntilReadyAsync(
+        AudioEndpointId sourceId,
+        IAudioHostClient client,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default
+    )
     {
-        Process process =
-            LaunchDevelopment(
-                sourceId);
+        Process process = LaunchDevelopment(sourceId);
 
-        return await WaitUntilReadyOrKillAsync(
-            process,
-            client,
-            timeout,
-            cancellationToken);
+        return await WaitUntilReadyOrKillAsync(process, client, timeout, cancellationToken);
     }
 
     /// <summary>
@@ -110,15 +78,12 @@ public sealed class AudioHostLauncher
         Process process,
         IAudioHostClient client,
         TimeSpan timeout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         try
         {
-            return await WaitUntilReadyAsync(
-                process,
-                client,
-                timeout,
-                cancellationToken);
+            return await WaitUntilReadyAsync(process, client, timeout, cancellationToken);
         }
         catch
         {
@@ -129,121 +94,84 @@ public sealed class AudioHostLauncher
                     process.Kill(entireProcessTree: true);
                     process.WaitForExit(5_000);
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             throw;
         }
     }
 
-    private async Task<Process>
-        WaitUntilReadyAsync(
-            Process process,
-            IAudioHostClient client,
-            TimeSpan timeout,
-            CancellationToken cancellationToken)
+    private async Task<Process> WaitUntilReadyAsync(
+        Process process,
+        IAudioHostClient client,
+        TimeSpan timeout,
+        CancellationToken cancellationToken
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            client);
+        ArgumentNullException.ThrowIfNull(client);
 
-        Stopwatch stopwatch =
-            Stopwatch.StartNew();
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
-        while (stopwatch.Elapsed <
-               timeout)
+        while (stopwatch.Elapsed < timeout)
         {
-            cancellationToken
-                .ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (process.HasExited)
             {
-                throw new InvalidOperationException(
-                    $"PCMode.Audio.Host exited with code {process.ExitCode}.");
+                throw new InvalidOperationException($"PCMode.Audio.Host exited with code {process.ExitCode}.");
             }
 
             try
             {
-                await client.GetStatusAsync(
-                    cancellationToken);
+                await client.GetStatusAsync(cancellationToken);
 
                 return process;
             }
-            catch (IOException)
-            {
-            }
-            catch (TimeoutException)
-            {
-            }
+            catch (IOException) { }
+            catch (TimeoutException) { }
 
-            await Task.Delay(
-                100,
-                cancellationToken);
+            await Task.Delay(100, cancellationToken);
         }
 
-        throw new TimeoutException(
-            "PCMode.Audio.Host did not become ready.");
+        throw new TimeoutException("PCMode.Audio.Host did not become ready.");
     }
 
-    private ProcessStartInfo
-        CreateStartInfo()
+    private ProcessStartInfo CreateStartInfo()
     {
-        if (!File.Exists(
-                _hostPath))
+        if (!File.Exists(_hostPath))
         {
-            throw new FileNotFoundException(
-                "PCMode.Audio.Host executable was not found.",
-                _hostPath);
+            throw new FileNotFoundException("PCMode.Audio.Host executable was not found.", _hostPath);
         }
 
         ProcessStartInfo startInfo;
 
-        if (string.Equals(
-                Path.GetExtension(
-                    _hostPath),
-                ".dll",
-                StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(Path.GetExtension(_hostPath), ".dll", StringComparison.OrdinalIgnoreCase))
         {
-            startInfo =
-                new ProcessStartInfo(
-                    "dotnet");
+            startInfo = new ProcessStartInfo("dotnet");
 
-            startInfo.ArgumentList.Add(
-                _hostPath);
+            startInfo.ArgumentList.Add(_hostPath);
         }
         else
         {
-            startInfo =
-                new ProcessStartInfo(
-                    _hostPath);
+            startInfo = new ProcessStartInfo(_hostPath);
         }
 
-        startInfo.UseShellExecute =
-            false;
+        startInfo.UseShellExecute = false;
 
-        startInfo.CreateNoWindow =
-            true;
+        startInfo.CreateNoWindow = true;
 
         return startInfo;
     }
 
-    private void AddPipeArguments(
-        ProcessStartInfo startInfo)
+    private void AddPipeArguments(ProcessStartInfo startInfo)
     {
-        startInfo.ArgumentList.Add(
-            "--pipe-name");
+        startInfo.ArgumentList.Add("--pipe-name");
 
-        startInfo.ArgumentList.Add(
-            _pipeName);
+        startInfo.ArgumentList.Add(_pipeName);
     }
 
-    private static Process Start(
-        ProcessStartInfo startInfo)
+    private static Process Start(ProcessStartInfo startInfo)
     {
-        return Process.Start(
-                   startInfo)
-               ?? throw new InvalidOperationException(
-                   "Failed to start PCMode.Audio.Host.");
+        return Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start PCMode.Audio.Host.");
     }
 }

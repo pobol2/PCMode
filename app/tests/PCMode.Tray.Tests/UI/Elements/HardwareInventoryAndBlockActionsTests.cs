@@ -1,9 +1,9 @@
 using System.Windows;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Tests;
 using WpfButton = System.Windows.Controls.Button;
 using WpfContextMenu = System.Windows.Controls.ContextMenu;
 using WpfMenuItem = System.Windows.Controls.MenuItem;
-using PCMode.Tray.Tests;
 
 namespace PCMode.Tray.Tests.UI.Components;
 
@@ -46,7 +46,6 @@ public sealed class HardwareInventoryAndBlockActionsTests
         public bool CanActivate => true;
     }
 
-    
     private static void ClickMenuItemByTag(WpfContextMenu menu, string tag)
     {
         WpfMenuItem item = FindDescendant<WpfMenuItem>(menu, candidate => Equals(candidate.Tag, tag));
@@ -77,9 +76,7 @@ public sealed class HardwareInventoryAndBlockActionsTests
             {
                 return FindDescendant(child, predicate);
             }
-            catch (InvalidOperationException)
-            {
-            }
+            catch (InvalidOperationException) { }
         }
 
         throw new InvalidOperationException($"No matching {typeof(T).Name} was found.");

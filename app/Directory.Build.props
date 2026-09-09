@@ -1,5 +1,4 @@
 <Project>
-
   <!--
     Shared settings for the native side of PCMode.
 
@@ -54,5 +53,4 @@
     -->
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
-
 </Project>

@@ -7,41 +7,29 @@ using PCMode.Audio.Protocol.Messages;
 
 namespace PCMode.Audio.Host;
 
-public sealed class AudioHostRuntime :
-    IAsyncDisposable
+public sealed class AudioHostRuntime : IAsyncDisposable
 {
-    private const int MaxPendingCommands =
-        128;
+    private const int MaxPendingCommands = 128;
 
-    private const int InitialRecoveryDelayMilliseconds =
-        250;
+    private const int InitialRecoveryDelayMilliseconds = 250;
 
-    private const int MaximumRecoveryDelayMilliseconds =
-        5_000;
+    private const int MaximumRecoveryDelayMilliseconds = 5_000;
 
     private readonly AudioEndpointId _sourceId;
 
-    private readonly Func<IAudioEngine>
-        _engineFactory;
+    private readonly Func<IAudioEngine> _engineFactory;
 
-    private readonly Func<IDisposable>?
-        _threadRegistrationFactory;
+    private readonly Func<IDisposable>? _threadRegistrationFactory;
 
-    private readonly Func<AudioEngineState, AudioInputHealth>?
-        _inputHealthProvider;
+    private readonly Func<AudioEngineState, AudioInputHealth>? _inputHealthProvider;
 
-    private readonly ConcurrentQueue<RuntimeCommand>
-        _commands =
-            new();
+    private readonly ConcurrentQueue<RuntimeCommand> _commands = new();
 
-    private readonly AutoResetEvent _wake =
-        new(false);
+    private readonly AutoResetEvent _wake = new(false);
 
-    private readonly ManualResetEventSlim _started =
-        new(false);
+    private readonly ManualResetEventSlim _started = new(false);
 
-    private readonly ManualResetEventSlim _stopped =
-        new(false);
+    private readonly ManualResetEventSlim _stopped = new(false);
 
     private Thread? _thread;
 
@@ -57,60 +45,46 @@ public sealed class AudioHostRuntime :
 
     private long _nextRecoveryTick;
 
-    private int _recoveryDelayMilliseconds =
-        InitialRecoveryDelayMilliseconds;
+    private int _recoveryDelayMilliseconds = InitialRecoveryDelayMilliseconds;
 
     private bool _recoveryScheduled;
 
     public AudioHostRuntime(
         AudioEndpointId sourceId,
         Func<IAudioEngine> engineFactory,
-        Func<IDisposable>? threadRegistrationFactory =
-            null,
-        Func<AudioEngineState, AudioInputHealth>?
-            inputHealthProvider = null)
+        Func<IDisposable>? threadRegistrationFactory = null,
+        Func<AudioEngineState, AudioInputHealth>? inputHealthProvider = null
+    )
     {
         if (sourceId == default)
         {
-            throw new ArgumentException(
-                "Source endpoint is required.",
-                nameof(sourceId));
+            throw new ArgumentException("Source endpoint is required.", nameof(sourceId));
         }
 
-        ArgumentNullException.ThrowIfNull(
-            engineFactory);
+        ArgumentNullException.ThrowIfNull(engineFactory);
 
-        _sourceId =
-            sourceId;
+        _sourceId = sourceId;
 
-        _engineFactory =
-            engineFactory;
+        _engineFactory = engineFactory;
 
-        _threadRegistrationFactory =
-            threadRegistrationFactory;
+        _threadRegistrationFactory = threadRegistrationFactory;
 
-        _inputHealthProvider =
-            inputHealthProvider;
+        _inputHealthProvider = inputHealthProvider;
     }
 
     public void Start()
     {
         if (_thread is not null)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime is already started.");
+            throw new InvalidOperationException("Audio Host runtime is already started.");
         }
 
-        _thread =
-            new Thread(
-                ThreadMain)
-            {
-                Name =
-                    "PCMode.Audio.Host.Audio",
+        _thread = new Thread(ThreadMain)
+        {
+            Name = "PCMode.Audio.Host.Audio",
 
-                IsBackground =
-                    false
-            };
+            IsBackground = false,
+        };
 
         // MTA, deliberately, and the single most important line in this
         // method. An STA thread that touches COM is given a hidden
@@ -136,56 +110,44 @@ public sealed class AudioHostRuntime :
         // because it does not pump. The input pump thread has always been
         // MTA, which is why the input side of this pipeline stayed clean
         // through every topology change while the render side stalled.
-        _thread.SetApartmentState(
-            ApartmentState.MTA);
+        _thread.SetApartmentState(ApartmentState.MTA);
 
         _thread.Start();
 
-        if (!_started.Wait(
-                TimeSpan.FromSeconds(
-                    10)))
+        if (!_started.Wait(TimeSpan.FromSeconds(10)))
         {
-            throw new TimeoutException(
-                "Audio Host runtime startup timed out.");
+            throw new TimeoutException("Audio Host runtime startup timed out.");
         }
 
         if (_threadFailure is not null)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime failed to start.",
-                _threadFailure);
+            throw new InvalidOperationException("Audio Host runtime failed to start.", _threadFailure);
         }
     }
 
-    public Task ApplyAsync(
-        AudioTarget target)
+    public Task ApplyAsync(AudioTarget target)
     {
-        ArgumentNullException.ThrowIfNull(
-            target);
+        ArgumentNullException.ThrowIfNull(target);
 
-        return InvokeAsync<object?>(
-            engine =>
+        return InvokeAsync<object?>(engine =>
+        {
+            _desiredTarget = target;
+
+            try
             {
-                _desiredTarget =
-                    target;
+                engine.Apply(target);
 
-                try
-                {
-                    engine.Apply(
-                        target);
+                UpdateRecoveryAfterApply(engine);
+            }
+            catch
+            {
+                ScheduleRecovery();
 
-                    UpdateRecoveryAfterApply(
-                        engine);
-                }
-                catch
-                {
-                    ScheduleRecovery();
+                throw;
+            }
 
-                    throw;
-                }
-
-                return null;
-            });
+            return null;
+        });
     }
 
     /// <summary>
@@ -205,66 +167,52 @@ public sealed class AudioHostRuntime :
         bool muted,
         float gainDb,
         TimeSpan delay,
-        ParametricEqProfile? parametricEq)
+        ParametricEqProfile? parametricEq
+    )
     {
-        return InvokeAsync<object?>(
-            engine =>
+        return InvokeAsync<object?>(engine =>
+        {
+            try
             {
-                try
-                {
-                    engine.Recalibrate(
-                        endpointId,
-                        volume,
-                        muted,
-                        gainDb,
-                        delay,
-                        parametricEq);
+                engine.Recalibrate(endpointId, volume, muted, gainDb, delay, parametricEq);
 
-                    _desiredTarget =
-                        engine.ActiveTarget;
+                _desiredTarget = engine.ActiveTarget;
 
-                    UpdateRecoveryAfterApply(
-                        engine);
-                }
-                catch
-                {
-                    _desiredTarget =
-                        engine.ActiveTarget;
+                UpdateRecoveryAfterApply(engine);
+            }
+            catch
+            {
+                _desiredTarget = engine.ActiveTarget;
 
-                    ScheduleRecovery();
+                ScheduleRecovery();
 
-                    throw;
-                }
+                throw;
+            }
 
-                return null;
-            });
+            return null;
+        });
     }
 
     public Task StopAsync()
     {
-        return InvokeAsync<object?>(
-            engine =>
-            {
-                _desiredTarget =
-                    null;
+        return InvokeAsync<object?>(engine =>
+        {
+            _desiredTarget = null;
 
-                ResetRecoveryBackoff();
+            ResetRecoveryBackoff();
 
-                engine.Stop();
+            engine.Stop();
 
-                return null;
-            });
+            return null;
+        });
     }
 
-    public async Task<AudioEngineHealth>
-        GetHealthAsync()
+    public async Task<AudioEngineHealth> GetHealthAsync()
     {
-        EngineHealthSnapshot snapshot =
-            await InvokeAsync(
-                engine =>
-                    new EngineHealthSnapshot(
-                        engine.GetHealth(),
-                        engine.State));
+        EngineHealthSnapshot snapshot = await InvokeAsync(engine => new EngineHealthSnapshot(
+            engine.GetHealth(),
+            engine.State
+        ));
 
         if (_inputHealthProvider is null)
         {
@@ -273,9 +221,7 @@ public sealed class AudioHostRuntime :
 
         try
         {
-            return snapshot.Health.WithInput(
-                _inputHealthProvider(
-                    snapshot.EngineState));
+            return snapshot.Health.WithInput(_inputHealthProvider(snapshot.EngineState));
         }
         catch (Exception ex)
         {
@@ -283,42 +229,40 @@ public sealed class AudioHostRuntime :
                 new AudioInputHealth(
                     AudioInputKind.Unknown,
                     AudioInputHealthState.Failed,
-                    lastFailure:
-                        AudioFailure.FromException(
-                            ex)));
+                    lastFailure: AudioFailure.FromException(ex)
+                )
+            );
         }
     }
 
-    public Task<AudioHostStatus>
-        GetStatusAsync()
+    public Task<IReadOnlyList<AudioRouteWaveform>> GetWaveformAsync()
     {
-        return InvokeAsync(
-            engine =>
-            {
-                AudioTarget? target =
-                    engine.ActiveTarget;
-
-                return new AudioHostStatus(
-                    HostProtocolVersion.Current,
-                    Environment.ProcessId,
-                    _startedUtc,
-                    _sourceId.Value,
-                    ToRuntimeState(
-                        engine.State),
-                    target?.Id,
-                    target?.Name);
-            });
+        return InvokeAsync(engine => engine.GetWaveform());
     }
 
-    public async Task ShutdownAsync(
-        CancellationToken cancellationToken =
-            default)
+    public Task<AudioHostStatus> GetStatusAsync()
     {
-        Thread? thread =
-            _thread;
+        return InvokeAsync(engine =>
+        {
+            AudioTarget? target = engine.ActiveTarget;
 
-        if (thread is null ||
-            _stopped.IsSet)
+            return new AudioHostStatus(
+                HostProtocolVersion.Current,
+                Environment.ProcessId,
+                _startedUtc,
+                _sourceId.Value,
+                ToRuntimeState(engine.State),
+                target?.Id,
+                target?.Name
+            );
+        });
+    }
+
+    public async Task ShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        Thread? thread = _thread;
+
+        if (thread is null || _stopped.IsSet)
         {
             return;
         }
@@ -328,8 +272,7 @@ public sealed class AudioHostRuntime :
             await InvokeAsync<object?>(
                 engine =>
                 {
-                    _desiredTarget =
-                        null;
+                    _desiredTarget = null;
 
                     ResetRecoveryBackoff();
 
@@ -337,32 +280,24 @@ public sealed class AudioHostRuntime :
 
                     return null;
                 },
-                requestShutdown: true);
+                requestShutdown: true
+            );
         }
         catch when (_stopped.IsSet)
         {
             return;
         }
 
-        bool stopped =
-            await Task.Run(
-                () =>
-                    _stopped.Wait(
-                        TimeSpan.FromSeconds(
-                            5)),
-                cancellationToken);
+        bool stopped = await Task.Run(() => _stopped.Wait(TimeSpan.FromSeconds(5)), cancellationToken);
 
         if (!stopped)
         {
-            throw new TimeoutException(
-                "Audio Host runtime did not stop cleanly.");
+            throw new TimeoutException("Audio Host runtime did not stop cleanly.");
         }
 
         if (_threadFailure is not null)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime failed.",
-                _threadFailure);
+            throw new InvalidOperationException("Audio Host runtime failed.", _threadFailure);
         }
     }
 
@@ -380,108 +315,78 @@ public sealed class AudioHostRuntime :
         }
     }
 
-    private Task<T> InvokeAsync<T>(
-        Func<IAudioEngine, T> operation,
-        bool requestShutdown = false)
+    private Task<T> InvokeAsync<T>(Func<IAudioEngine, T> operation, bool requestShutdown = false)
     {
-        ArgumentNullException.ThrowIfNull(
-            operation);
+        ArgumentNullException.ThrowIfNull(operation);
 
         if (_thread is null)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime is not started.");
+            throw new InvalidOperationException("Audio Host runtime is not started.");
         }
 
         if (_stopped.IsSet)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime is stopped.");
+            throw new InvalidOperationException("Audio Host runtime is stopped.");
         }
 
         if (_threadFailure is not null)
         {
-            throw new InvalidOperationException(
-                "Audio Host runtime has failed.",
-                _threadFailure);
+            throw new InvalidOperationException("Audio Host runtime has failed.", _threadFailure);
         }
 
-        int pending =
-            Interlocked.Increment(
-                ref _pendingCommandCount);
+        int pending = Interlocked.Increment(ref _pendingCommandCount);
 
-        if (pending >
-            MaxPendingCommands)
+        if (pending > MaxPendingCommands)
         {
-            Interlocked.Decrement(
-                ref _pendingCommandCount);
+            Interlocked.Decrement(ref _pendingCommandCount);
 
             throw new InvalidOperationException(
-                $"Audio Host command queue is full ({MaxPendingCommands} pending commands)." );
+                $"Audio Host command queue is full ({MaxPendingCommands} pending commands)."
+            );
         }
 
-        var completion =
-            new TaskCompletionSource<object?>(
-                TaskCreationOptions
-                    .RunContinuationsAsynchronously);
+        var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _commands.Enqueue(
-            new RuntimeCommand(
-                engine =>
-                    operation(
-                        engine),
-                completion,
-                requestShutdown));
+        _commands.Enqueue(new RuntimeCommand(engine => operation(engine), completion, requestShutdown));
 
         _wake.Set();
 
-        return AwaitResultAsync<T>(
-            completion.Task);
+        return AwaitResultAsync<T>(completion.Task);
     }
 
-    private static async Task<T> AwaitResultAsync<T>(
-        Task<object?> task)
+    private static async Task<T> AwaitResultAsync<T>(Task<object?> task)
     {
-        object? result =
-            await task;
+        object? result = await task;
 
         return (T)result!;
     }
 
     private void ThreadMain()
     {
-        IAudioEngine? engine =
-            null;
+        IAudioEngine? engine = null;
 
-        IDisposable? threadRegistration =
-            null;
+        IDisposable? threadRegistration = null;
 
         try
         {
-            threadRegistration =
-                _threadRegistrationFactory
-                    ?.Invoke();
+            threadRegistration = _threadRegistrationFactory?.Invoke();
 
-            engine =
-                _engineFactory();
+            engine = _engineFactory();
 
-            _startedUtc =
-                DateTimeOffset.UtcNow;
+            _startedUtc = DateTimeOffset.UtcNow;
 
             _started.Set();
 
             while (!_shutdownRequested)
             {
-                DrainCommands(
-                    engine);
+                DrainCommands(engine);
 
                 if (_shutdownRequested)
                 {
                     break;
                 }
 
-                if (engine.State ==
-                    AudioEngineState.Running)
+                if (engine.State == AudioEngineState.Running)
                 {
                     try
                     {
@@ -496,27 +401,21 @@ public sealed class AudioHostRuntime :
                     }
                 }
 
-                TryRecoverDesiredTarget(
-                    engine);
+                TryRecoverDesiredTarget(engine);
 
-                if (engine.State !=
-                    AudioEngineState.Running)
+                if (engine.State != AudioEngineState.Running)
                 {
-                    _wake.WaitOne(
-                        TimeSpan.FromMilliseconds(
-                            25));
+                    _wake.WaitOne(TimeSpan.FromMilliseconds(25));
                 }
             }
         }
         catch (Exception ex)
         {
-            _threadFailure =
-                ex;
+            _threadFailure = ex;
 
             _started.Set();
 
-            FailPendingCommands(
-                ex);
+            FailPendingCommands(ex);
         }
         finally
         {
@@ -526,49 +425,37 @@ public sealed class AudioHostRuntime :
                 {
                     engine.Stop();
                 }
-                catch
-                {
-                }
+                catch { }
 
                 try
                 {
                     engine.Dispose();
                 }
-                catch
-                {
-                }
+                catch { }
             }
 
             try
             {
                 threadRegistration?.Dispose();
             }
-            catch
-            {
-            }
+            catch { }
 
-            FailPendingCommands(
-                new InvalidOperationException(
-                    "Audio Host runtime has stopped."));
+            FailPendingCommands(new InvalidOperationException("Audio Host runtime has stopped."));
 
             _stopped.Set();
         }
     }
 
-    private void TryRecoverDesiredTarget(
-        IAudioEngine engine)
+    private void TryRecoverDesiredTarget(IAudioEngine engine)
     {
-        AudioTarget? target =
-            _desiredTarget;
+        AudioTarget? target = _desiredTarget;
 
         if (target is null)
         {
             return;
         }
 
-        if (engine.State ==
-                AudioEngineState.Running &&
-            !engine.NeedsRecovery)
+        if (engine.State == AudioEngineState.Running && !engine.NeedsRecovery)
         {
             return;
         }
@@ -583,25 +470,20 @@ public sealed class AudioHostRuntime :
             return;
         }
 
-        long now =
-            Environment.TickCount64;
+        long now = Environment.TickCount64;
 
-        if (now <
-            _nextRecoveryTick)
+        if (now < _nextRecoveryTick)
         {
             return;
         }
 
-        _recoveryScheduled =
-            false;
+        _recoveryScheduled = false;
 
         try
         {
-            engine.Apply(
-                target);
+            engine.Apply(target);
 
-            UpdateRecoveryAfterApply(
-                engine);
+            UpdateRecoveryAfterApply(engine);
         }
         catch
         {
@@ -609,8 +491,7 @@ public sealed class AudioHostRuntime :
         }
     }
 
-    private void UpdateRecoveryAfterApply(
-        IAudioEngine engine)
+    private void UpdateRecoveryAfterApply(IAudioEngine engine)
     {
         if (engine.NeedsRecovery)
         {
@@ -629,119 +510,83 @@ public sealed class AudioHostRuntime :
             return;
         }
 
-        long now =
-            Environment.TickCount64;
+        long now = Environment.TickCount64;
 
-        _nextRecoveryTick =
-            now +
-            _recoveryDelayMilliseconds;
+        _nextRecoveryTick = now + _recoveryDelayMilliseconds;
 
-        _recoveryScheduled =
-            true;
+        _recoveryScheduled = true;
 
-        _recoveryDelayMilliseconds =
-            Math.Min(
-                _recoveryDelayMilliseconds *
-                    2,
-                MaximumRecoveryDelayMilliseconds);
+        _recoveryDelayMilliseconds = Math.Min(_recoveryDelayMilliseconds * 2, MaximumRecoveryDelayMilliseconds);
     }
 
     private void ResetRecoveryBackoff()
     {
-        _recoveryScheduled =
-            false;
+        _recoveryScheduled = false;
 
-        _nextRecoveryTick =
-            0;
+        _nextRecoveryTick = 0;
 
-        _recoveryDelayMilliseconds =
-            InitialRecoveryDelayMilliseconds;
+        _recoveryDelayMilliseconds = InitialRecoveryDelayMilliseconds;
     }
 
-    private void DrainCommands(
-        IAudioEngine engine)
+    private void DrainCommands(IAudioEngine engine)
     {
-        while (_commands.TryDequeue(
-                   out RuntimeCommand? command))
+        while (_commands.TryDequeue(out RuntimeCommand? command))
         {
-            Interlocked.Decrement(
-                ref _pendingCommandCount);
+            Interlocked.Decrement(ref _pendingCommandCount);
 
             try
             {
-                object? result =
-                    command.Operation(
-                        engine);
+                object? result = command.Operation(engine);
 
-                command.Completion
-                    .TrySetResult(
-                        result);
+                command.Completion.TrySetResult(result);
 
                 if (command.RequestShutdown)
                 {
-                    _shutdownRequested =
-                        true;
+                    _shutdownRequested = true;
 
                     return;
                 }
             }
             catch (Exception ex)
             {
-                command.Completion
-                    .TrySetException(
-                        ex);
+                command.Completion.TrySetException(ex);
             }
         }
     }
 
-    private void FailPendingCommands(
-        Exception exception)
+    private void FailPendingCommands(Exception exception)
     {
-        while (_commands.TryDequeue(
-                   out RuntimeCommand? command))
+        while (_commands.TryDequeue(out RuntimeCommand? command))
         {
-            Interlocked.Decrement(
-                ref _pendingCommandCount);
+            Interlocked.Decrement(ref _pendingCommandCount);
 
-            command.Completion
-                .TrySetException(
-                    exception);
+            command.Completion.TrySetException(exception);
         }
     }
 
-    private static AudioEngineRuntimeState
-        ToRuntimeState(
-            AudioEngineState state)
+    private static AudioEngineRuntimeState ToRuntimeState(AudioEngineState state)
     {
         return state switch
         {
-            AudioEngineState.Stopped =>
-                AudioEngineRuntimeState.Stopped,
+            AudioEngineState.Stopped => AudioEngineRuntimeState.Stopped,
 
-            AudioEngineState.Starting =>
-                AudioEngineRuntimeState.Starting,
+            AudioEngineState.Starting => AudioEngineRuntimeState.Starting,
 
-            AudioEngineState.Running =>
-                AudioEngineRuntimeState.Running,
+            AudioEngineState.Running => AudioEngineRuntimeState.Running,
 
-            AudioEngineState.Stopping =>
-                AudioEngineRuntimeState.Stopping,
+            AudioEngineState.Stopping => AudioEngineRuntimeState.Stopping,
 
-            AudioEngineState.Failed =>
-                AudioEngineRuntimeState.Failed,
+            AudioEngineState.Failed => AudioEngineRuntimeState.Failed,
 
-            _ =>
-                throw new ArgumentOutOfRangeException(
-                    nameof(state))
+            _ => throw new ArgumentOutOfRangeException(nameof(state)),
         };
     }
 
-    private sealed record EngineHealthSnapshot(
-        AudioEngineHealth Health,
-        AudioEngineState EngineState);
+    private sealed record EngineHealthSnapshot(AudioEngineHealth Health, AudioEngineState EngineState);
 
     private sealed record RuntimeCommand(
         Func<IAudioEngine, object?> Operation,
         TaskCompletionSource<object?> Completion,
-        bool RequestShutdown);
+        bool RequestShutdown
+    );
 }

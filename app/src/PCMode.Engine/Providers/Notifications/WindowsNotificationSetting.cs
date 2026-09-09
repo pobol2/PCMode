@@ -66,9 +66,11 @@ public sealed class WindowsNotificationSetting : INotificationSetting
 
     public void AllowToasts(bool allowed)
     {
-        using RegistryKey settings = Registry.CurrentUser.CreateSubKey(SettingsKey)
+        using RegistryKey settings =
+            Registry.CurrentUser.CreateSubKey(SettingsKey)
             ?? throw new InvalidOperationException(
-                $"Could not open HKCU\\{SettingsKey} to change whether notifications are shown.");
+                $"Could not open HKCU\\{SettingsKey} to change whether notifications are shown."
+            );
 
         settings.SetValue(ToastsEnabled, allowed ? 1 : 0, RegistryValueKind.DWord);
     }
@@ -91,7 +93,8 @@ public sealed class WindowsNotificationSetting : INotificationSetting
             "Settings",
             SmtoAbortIfHung,
             millisecondsTimeout: 1000,
-            out _);
+            out _
+        );
     }
 
     private const int WmSettingChange = 0x001A;
@@ -106,5 +109,6 @@ public sealed class WindowsNotificationSetting : INotificationSetting
         string lParam,
         uint flags,
         uint millisecondsTimeout,
-        out nint result);
+        out nint result
+    );
 }

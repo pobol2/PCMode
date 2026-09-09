@@ -66,7 +66,8 @@ public sealed record ResourceHealth(
     string? Detail,
     string? Diagnostics,
     string? RequiredBy,
-    bool Optional);
+    bool Optional
+);
 
 /// <summary>
 /// A mode's health as a whole: an overall verdict and every resource behind it.
@@ -90,7 +91,8 @@ public sealed record ModeHealth(
     IReadOnlyList<ResourceHealth> Resources,
     DateTimeOffset ObservedUtc,
     string Summary,
-    ConfiguredTarget? Target = null)
+    ConfiguredTarget? Target = null
+)
 {
     /// <summary>What to call the target this describes.</summary>
     public string DisplayName => Target?.DisplayPath ?? Mode;
@@ -116,25 +118,30 @@ public sealed record ModeHealth(
 
         foreach (TransitionStep step in outcome.Steps)
         {
-            resources.Add(new ResourceHealth(
-                step.Resource,
-                step.ResourceName,
-                StateOf(step),
-                step.Target,
-                step.Observed ?? step.Current,
-                DetailOf(step),
-                Diagnostics: null,
-                step.RequiredBy,
-                step.Optional));
+            resources.Add(
+                new ResourceHealth(
+                    step.Resource,
+                    step.ResourceName,
+                    StateOf(step),
+                    step.Target,
+                    step.Observed ?? step.Current,
+                    DetailOf(step),
+                    Diagnostics: null,
+                    step.RequiredBy,
+                    step.Optional
+                )
+            );
         }
 
-        ResourceHealthState overall = resources.Count == 0
-            ? ResourceHealthState.Unknown
-            : resources
-                .Select(resource => resource.State)
-                .Aggregate(
-                    ResourceHealthState.Correct,
-                    (worst, state) => Severity(state) > Severity(worst) ? state : worst);
+        ResourceHealthState overall =
+            resources.Count == 0
+                ? ResourceHealthState.Unknown
+                : resources
+                    .Select(resource => resource.State)
+                    .Aggregate(
+                        ResourceHealthState.Correct,
+                        (worst, state) => Severity(state) > Severity(worst) ? state : worst
+                    );
 
         return new ModeHealth(outcome.Mode, overall, resources, observedUtc, outcome.Message, outcome.Target);
     }
@@ -153,19 +160,30 @@ public sealed record ModeHealth(
     public static ModeHealth From(
         TransitionOutcome outcome,
         DateTimeOffset observedUtc,
-        IReadOnlyDictionary<string, IModeResourceProvider> providers)
+        IReadOnlyDictionary<string, IModeResourceProvider> providers
+    )
     {
         ArgumentNullException.ThrowIfNull(providers);
 
         ModeHealth health = From(outcome, observedUtc);
 
-        List<ResourceHealth> withDiagnostics = [.. health.Resources.Select(resource =>
-            providers.TryGetValue(resource.Key, out IModeResourceProvider? provider) &&
-            provider is IHealthReportingProvider reporting
-                ? resource with { Diagnostics = SafeDetail(reporting, resource.Target) }
-                : resource)];
+        List<ResourceHealth> withDiagnostics =
+        [
+            .. health.Resources.Select(resource =>
+                providers.TryGetValue(resource.Key, out IModeResourceProvider? provider)
+                && provider is IHealthReportingProvider reporting
+                    ? resource with
+                    {
+                        Diagnostics = SafeDetail(reporting, resource.Target),
+                    }
+                    : resource
+            ),
+        ];
 
-        return health with { Resources = withDiagnostics };
+        return health with
+        {
+            Resources = withDiagnostics,
+        };
     }
 
     private static string? SafeDetail(IHealthReportingProvider provider, string target)
@@ -183,29 +201,31 @@ public sealed record ModeHealth(
         }
     }
 
-    private static ResourceHealthState StateOf(TransitionStep step) => step.Status switch
-    {
-        TransitionStepStatus.AlreadyCorrect or TransitionStepStatus.Applied => ResourceHealthState.Correct,
-        TransitionStepStatus.Failed => step.Optional ? ResourceHealthState.Degraded : ResourceHealthState.Failed,
-        TransitionStepStatus.Omitted => ResourceHealthState.Unavailable,
-        TransitionStepStatus.NotReached => ResourceHealthState.Pending,
+    private static ResourceHealthState StateOf(TransitionStep step) =>
+        step.Status switch
+        {
+            TransitionStepStatus.AlreadyCorrect or TransitionStepStatus.Applied => ResourceHealthState.Correct,
+            TransitionStepStatus.Failed => step.Optional ? ResourceHealthState.Degraded : ResourceHealthState.Failed,
+            TransitionStepStatus.Omitted => ResourceHealthState.Unavailable,
+            TransitionStepStatus.NotReached => ResourceHealthState.Pending,
 
-        // Planned belongs to a dry run only, and ModeEngine reports it exactly
-        // when the reading it took does not already match the target -- so
-        // "would change" reads as pending, the same as anything else not yet
-        // where it should be.
-        TransitionStepStatus.Planned => ResourceHealthState.Pending,
+            // Planned belongs to a dry run only, and ModeEngine reports it exactly
+            // when the reading it took does not already match the target -- so
+            // "would change" reads as pending, the same as anything else not yet
+            // where it should be.
+            TransitionStepStatus.Planned => ResourceHealthState.Pending,
 
-        _ => ResourceHealthState.Unknown,
-    };
+            _ => ResourceHealthState.Unknown,
+        };
 
-    private static string? DetailOf(TransitionStep step) => step.Status switch
-    {
-        TransitionStepStatus.Failed => step.Problem,
-        TransitionStepStatus.Omitted => step.Problem,
-        TransitionStepStatus.NotReached => "Not reached before the transition stopped.",
-        _ => null,
-    };
+    private static string? DetailOf(TransitionStep step) =>
+        step.Status switch
+        {
+            TransitionStepStatus.Failed => step.Problem,
+            TransitionStepStatus.Omitted => step.Problem,
+            TransitionStepStatus.NotReached => "Not reached before the transition stopped.",
+            _ => null,
+        };
 
     /// <summary>
     /// Worst first. <see cref="ResourceHealthState.Unavailable"/> ranks level
@@ -215,17 +235,18 @@ public sealed record ModeHealth(
     /// correct resources plus a few sensibly-omitted ones still reads as
     /// healthy overall.
     /// </summary>
-    private static int Severity(ResourceHealthState state) => state switch
-    {
-        ResourceHealthState.Correct => 0,
-        ResourceHealthState.Unavailable => 0,
-        ResourceHealthState.Unverified => 1,
-        ResourceHealthState.Pending => 2,
-        ResourceHealthState.Unknown => 3,
-        ResourceHealthState.Degraded => 4,
-        ResourceHealthState.Failed => 5,
-        _ => 3,
-    };
+    private static int Severity(ResourceHealthState state) =>
+        state switch
+        {
+            ResourceHealthState.Correct => 0,
+            ResourceHealthState.Unavailable => 0,
+            ResourceHealthState.Unverified => 1,
+            ResourceHealthState.Pending => 2,
+            ResourceHealthState.Unknown => 3,
+            ResourceHealthState.Degraded => 4,
+            ResourceHealthState.Failed => 5,
+            _ => 3,
+        };
 }
 
 /// <summary>

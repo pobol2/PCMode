@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
-
+using PCMode.Audio.Core.Processing;
 // The tray enables WinForms for the notify icon, whose implicit usings bring
 // System.Drawing's own Point into scope alongside WPF's.
 using Point = System.Windows.Point;
@@ -61,9 +61,10 @@ public static class ResponseGraph
 
         for (int index = 0; index < samples.Count; index++)
         {
-            double t = logSpan > 0.0
-                ? (Math.Log10(samples[index].FrequencyHz) - minLog) / logSpan
-                : samples.Count == 1 ? 0.0 : index / (double)(samples.Count - 1);
+            double t =
+                logSpan > 0.0 ? (Math.Log10(samples[index].FrequencyHz) - minLog) / logSpan
+                : samples.Count == 1 ? 0.0
+                : index / (double)(samples.Count - 1);
 
             double clampedDb = Math.Clamp(samples[index].MagnitudeDb, MinDb, MaxDb);
             double normalized = (clampedDb - MinDb) / (MaxDb - MinDb);

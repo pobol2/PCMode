@@ -38,7 +38,11 @@ state/
 
 # IDE and user-specific settings
 .vs/
-.vscode/
+# .vscode/* rather than .vscode/, because git cannot re-include a file inside an
+# excluded directory: the shared formatting policy below has to stay reachable.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.suo
 *.user

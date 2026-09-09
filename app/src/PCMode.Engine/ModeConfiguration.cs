@@ -18,10 +18,7 @@ public sealed class ModeConfigurationException(string message) : Exception(messa
 /// <see cref="DisplayName"/>.
 /// </param>
 /// <param name="Target">Which Space, Activity and Source this is.</param>
-public sealed record ConfiguredMode(
-    string Name,
-    IReadOnlyList<ConfiguredResource> Resources,
-    ConfiguredTarget Target)
+public sealed record ConfiguredMode(string Name, IReadOnlyList<ConfiguredResource> Resources, ConfiguredTarget Target)
 {
     /// <summary>What to call this target in something a person reads.</summary>
     public string DisplayName => Target.DisplayPath;
@@ -159,7 +156,8 @@ public sealed class ModeConfiguration
     public static ModeConfiguration Parse(
         string json,
         IReadOnlyList<IModeResourceProvider> providers,
-        string? path = null)
+        string? path = null
+    )
     {
         ArgumentNullException.ThrowIfNull(providers);
 
@@ -182,12 +180,15 @@ public sealed class ModeConfiguration
         if (document.SchemaVersion != SchemaVersion)
         {
             throw new ModeConfigurationException(
-                $"The configuration is schema version {document.SchemaVersion}, and this build reads " +
-                $"version {SchemaVersion}.");
+                $"The configuration is schema version {document.SchemaVersion}, and this build reads "
+                    + $"version {SchemaVersion}."
+            );
         }
 
-        Dictionary<string, IModeResourceProvider> known =
-            providers.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, IModeResourceProvider> known = providers.ToDictionary(
+            provider => provider.Key,
+            StringComparer.OrdinalIgnoreCase
+        );
 
         Configure(document.Providers, known, providers);
 
@@ -200,15 +201,17 @@ public sealed class ModeConfiguration
             // rather than ignored, so a document that still has one is not
             // silently treated as having no targets at all.
             throw new ModeConfigurationException(
-                "The configuration defines 'modes', the flat list from before Space -> Activity -> Source. " +
-                "This build no longer converts it; open the configuration with a version of PCMode that " +
-                "still supports the conversion first.");
+                "The configuration defines 'modes', the flat list from before Space -> Activity -> Source. "
+                    + "This build no longer converts it; open the configuration with a version of PCMode that "
+                    + "still supports the conversion first."
+            );
         }
 
         if (!declaresSpaces)
         {
             throw new ModeConfigurationException(
-                $"The configuration is schema version {SchemaVersion} and defines no spaces.");
+                $"The configuration is schema version {SchemaVersion} and defines no spaces."
+            );
         }
 
         IReadOnlyList<ConfiguredSpace> read = TargetHierarchyReader.Read(document.Spaces!.Value, known);
@@ -235,17 +238,23 @@ public sealed class ModeConfiguration
         {
             foreach (ConfiguredActivity activity in space.Activities)
             {
-                modes.Add(new ConfiguredMode(
-                    ConfiguredTarget.For(space, activity, source: null).Key,
-                    TargetComposition.Compose(space, activity, source: null),
-                    ConfiguredTarget.For(space, activity, source: null)));
+                modes.Add(
+                    new ConfiguredMode(
+                        ConfiguredTarget.For(space, activity, source: null).Key,
+                        TargetComposition.Compose(space, activity, source: null),
+                        ConfiguredTarget.For(space, activity, source: null)
+                    )
+                );
 
                 foreach (ConfiguredSource source in activity.Sources)
                 {
-                    modes.Add(new ConfiguredMode(
-                        ConfiguredTarget.For(space, activity, source).Key,
-                        TargetComposition.Compose(space, activity, source),
-                        ConfiguredTarget.For(space, activity, source)));
+                    modes.Add(
+                        new ConfiguredMode(
+                            ConfiguredTarget.For(space, activity, source).Key,
+                            TargetComposition.Compose(space, activity, source),
+                            ConfiguredTarget.For(space, activity, source)
+                        )
+                    );
                 }
             }
         }
@@ -270,7 +279,8 @@ public sealed class ModeConfiguration
     private static void Configure(
         Dictionary<string, JsonElement>? declared,
         Dictionary<string, IModeResourceProvider> known,
-        IReadOnlyList<IModeResourceProvider> providers)
+        IReadOnlyList<IModeResourceProvider> providers
+    )
     {
         // Which section each provider reads. Usually its own key, and deliberately
         // allowed to be shared: one television is two resources, and its address
@@ -302,8 +312,9 @@ public sealed class ModeConfiguration
                 throw new ModeConfigurationException(
                     known.TryGetValue(key, out IModeResourceProvider? owner)
                         ? $"'providers.{key}' has settings, but {owner.DisplayName} takes none."
-                        : $"'providers' has settings for '{key}', which nothing here reads. " +
-                          $"Known: {string.Join(", ", readers.Keys.Order(StringComparer.OrdinalIgnoreCase))}.");
+                        : $"'providers' has settings for '{key}', which nothing here reads. "
+                            + $"Known: {string.Join(", ", readers.Keys.Order(StringComparer.OrdinalIgnoreCase))}."
+                );
             }
 
             if (!settings.TryAdd(key, value))
@@ -349,55 +360,55 @@ public sealed class ModeConfiguration
     /// </remarks>
     public static string DefaultDocument() =>
         """
-        {
-          "schemaVersion": 1,
-          "application": {
-            "picker": {
-              "monitor": "primary",
-              "favorites": [
-                { "direction": "Up",    "target": "desk/desktop" },
-                { "direction": "Right", "target": "desk/youtube" },
-                { "direction": "Down",  "target": "desk/gaming" },
-                { "direction": "Left",  "target": "desk/movie" }
-              ]
-            },
-            "shortcuts": [
-              { "target": "desk/desktop", "key": "D" },
-              { "target": "desk/youtube", "key": "Y" },
-              { "target": "desk/gaming", "key": "G" },
-              { "target": "desk/movie", "key": "M" }
-            ],
-            "controller": { "enabled": true },
-            "startup": {
-              "startWithWindows": false,
-              "behavior": "doNothing",
-              "target": null
-            }
-          },
-          "providers": {
-            "cursor": {
-              "positions": {
-                "Center": { "xPercent": 50, "yPercent": 50 },
-                "Corner": { "xFromRight": 2, "yFromBottom": 200 }
-              }
-            }
-          },
-          "spaces": [
             {
-              "id": "desk",
-              "name": "Desk",
-              "resources": { "cursor": "Corner" },
-              "activities": [
-                { "id": "desktop", "name": "Desktop", "resources": { "theme": "Light", "cursor": "Center" } },
-                { "id": "youtube", "name": "YouTube", "resources": { "theme": "Dark" } },
-                { "id": "gaming",  "name": "Gaming",  "resources": { "theme": "Dark" } },
-                { "id": "movie",   "name": "Movie",   "resources": { "theme": "Dark" } }
+              "schemaVersion": 1,
+              "application": {
+                "picker": {
+                  "monitor": "primary",
+                  "favorites": [
+                    { "direction": "Up",    "target": "desk/desktop" },
+                    { "direction": "Right", "target": "desk/youtube" },
+                    { "direction": "Down",  "target": "desk/gaming" },
+                    { "direction": "Left",  "target": "desk/movie" }
+                  ]
+                },
+                "shortcuts": [
+                  { "target": "desk/desktop", "key": "D" },
+                  { "target": "desk/youtube", "key": "Y" },
+                  { "target": "desk/gaming", "key": "G" },
+                  { "target": "desk/movie", "key": "M" }
+                ],
+                "controller": { "enabled": true },
+                "startup": {
+                  "startWithWindows": false,
+                  "behavior": "doNothing",
+                  "target": null
+                }
+              },
+              "providers": {
+                "cursor": {
+                  "positions": {
+                    "Center": { "xPercent": 50, "yPercent": 50 },
+                    "Corner": { "xFromRight": 2, "yFromBottom": 200 }
+                  }
+                }
+              },
+              "spaces": [
+                {
+                  "id": "desk",
+                  "name": "Desk",
+                  "resources": { "cursor": "Corner" },
+                  "activities": [
+                    { "id": "desktop", "name": "Desktop", "resources": { "theme": "Light", "cursor": "Center" } },
+                    { "id": "youtube", "name": "YouTube", "resources": { "theme": "Dark" } },
+                    { "id": "gaming",  "name": "Gaming",  "resources": { "theme": "Dark" } },
+                    { "id": "movie",   "name": "Movie",   "resources": { "theme": "Dark" } }
+                  ]
+                }
               ]
             }
-          ]
-        }
 
-        """;
+            """;
 
     /// <summary>
     /// Tolerant about shape, strict about meaning.

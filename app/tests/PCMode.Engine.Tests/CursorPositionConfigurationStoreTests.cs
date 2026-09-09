@@ -19,7 +19,13 @@ public sealed class CursorPositionConfigurationStoreTests
         root.Write(Document);
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Save(
-            root.Path, "Middle", xPercent: 50, xFromRight: null, yPercent: 50, yFromBottom: null);
+            root.Path,
+            "Middle",
+            xPercent: 50,
+            xFromRight: null,
+            yPercent: 50,
+            yFromBottom: null
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -40,7 +46,13 @@ public sealed class CursorPositionConfigurationStoreTests
         root.Write(Document);
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Save(
-            root.Path, "Ambiguous", xPercent: 50, xFromRight: 10, yPercent: 50, yFromBottom: null);
+            root.Path,
+            "Ambiguous",
+            xPercent: 50,
+            xFromRight: 10,
+            yPercent: 50,
+            yFromBottom: null
+        );
 
         Assert.False(outcome.Success);
 
@@ -54,7 +66,8 @@ public sealed class CursorPositionConfigurationStoreTests
     public void Deleting_a_position_still_referenced_by_a_mode_is_refused()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "cursor": { "positions": { "Corner": { "xFromRight": 5, "yFromBottom": 5 } } } },
@@ -62,7 +75,8 @@ public sealed class CursorPositionConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "cursor": "Corner" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Delete(root.Path, "Corner");
 
@@ -86,7 +100,8 @@ public sealed class CursorPositionConfigurationStoreTests
         // same ModesReferencing check as any other 'cursor' resource; this
         // confirms it still refuses correctly when that level also happens to
         // name a display layout.
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": {
@@ -98,7 +113,8 @@ public sealed class CursorPositionConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "display": "Solo", "cursor": "Corner" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Delete(root.Path, "Corner");
 
@@ -118,7 +134,8 @@ public sealed class CursorPositionConfigurationStoreTests
         // Same point as the test above, for rename: the two resources ('cursor'
         // and 'display') are independent entries on the same level and must
         // not interfere with each other.
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": {
@@ -130,7 +147,8 @@ public sealed class CursorPositionConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "display": "Solo", "cursor": "Corner" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Rename(root.Path, "Corner", "Bottom Right");
         Assert.True(outcome.Success, outcome.Problem);
@@ -148,7 +166,8 @@ public sealed class CursorPositionConfigurationStoreTests
     public void Renaming_a_position_updates_every_mode_that_names_it()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "cursor": { "positions": { "Corner": { "xFromRight": 5, "yFromBottom": 5 } } } },
@@ -156,7 +175,8 @@ public sealed class CursorPositionConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "cursor": "Corner" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = CursorPositionConfigurationStore.Rename(root.Path, "Corner", "Bottom Right");
         Assert.True(outcome.Success, outcome.Problem);

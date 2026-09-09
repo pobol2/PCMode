@@ -25,9 +25,7 @@ public class Region : ContentControl
 
     static Region()
     {
-        DefaultStyleKeyProperty.OverrideMetadata(
-            typeof(Region),
-            new FrameworkPropertyMetadata(typeof(Region)));
+        DefaultStyleKeyProperty.OverrideMetadata(typeof(Region), new FrameworkPropertyMetadata(typeof(Region)));
     }
 
     /// <summary>The contract this slot was matched to, once its block applied its template.</summary>

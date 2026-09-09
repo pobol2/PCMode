@@ -21,10 +21,7 @@ public sealed class ConfigurationPageCommandsTests
     [Fact]
     public void A_null_delegate_hides_its_action_rather_than_disabling_it()
     {
-        var page = new FakePage
-        {
-            ActionsValue = new EntityActions { EntityNoun = "sample" },
-        };
+        var page = new FakePage { ActionsValue = new EntityActions { EntityNoun = "sample" } };
 
         Assert.False(page.Commands.ShowCreate);
         Assert.False(page.Commands.ShowRename);
@@ -65,7 +62,11 @@ public sealed class ConfigurationPageCommandsTests
             ActionsValue = new EntityActions
             {
                 EntityNoun = "space",
-                Create = name => { created = name; return null; },
+                Create = name =>
+                {
+                    created = name;
+                    return null;
+                },
             },
         };
 
@@ -87,7 +88,11 @@ public sealed class ConfigurationPageCommandsTests
             ActionsValue = new EntityActions
             {
                 EntityNoun = "space",
-                Create = _ => { created = true; return null; },
+                Create = _ =>
+                {
+                    created = true;
+                    return null;
+                },
             },
         };
 
@@ -218,10 +223,7 @@ public sealed class ConfigurationPageCommandsTests
     [Fact]
     public void The_empty_state_text_is_generated_from_the_entity_noun()
     {
-        var page = new FakePage
-        {
-            ActionsValue = new EntityActions { EntityNoun = "lighting scene" },
-        };
+        var page = new FakePage { ActionsValue = new EntityActions { EntityNoun = "lighting scene" } };
 
         Assert.Contains("lighting scene", page.Commands.EmptyStateText, StringComparison.Ordinal);
     }
@@ -229,9 +231,7 @@ public sealed class ConfigurationPageCommandsTests
     private sealed class FakePage : ConfigurationPageViewModelBase
     {
         public FakePage(IConfigurationPrompts? prompts = null)
-            : base(new FakeWorkspace(), prompts)
-        {
-        }
+            : base(new FakeWorkspace(), prompts) { }
 
         public bool Dirty { get; init; }
 
@@ -255,9 +255,7 @@ public sealed class ConfigurationPageCommandsTests
 
         public override void SelectKey(object key) => SelectedKey = key;
 
-        public override void Refresh()
-        {
-        }
+        public override void Refresh() { }
 
         protected override string? SaveChangesCore()
         {
@@ -297,7 +295,12 @@ public sealed class ConfigurationPageCommandsTests
             }
         }
 
-        public void PromptForNameAsync(string title, string message, string initialValue, Func<string, Task<string?>> apply)
+        public void PromptForNameAsync(
+            string title,
+            string message,
+            string initialValue,
+            Func<string, Task<string?>> apply
+        )
         {
             LastTitle = title;
             LastMessage = message;
@@ -310,7 +313,6 @@ public sealed class ConfigurationPageCommandsTests
             return ConfirmAnswer;
         }
 
-        public bool ConfirmDiscardIfDirty(IUnsavedChanges source) =>
-            !source.HasUnsavedChanges || AllowDiscard;
+        public bool ConfirmDiscardIfDirty(IUnsavedChanges source) => !source.HasUnsavedChanges || AllowDiscard;
     }
 }

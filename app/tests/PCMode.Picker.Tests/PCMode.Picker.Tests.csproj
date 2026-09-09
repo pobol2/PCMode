@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!--
     The picker's behaviour, checked without drawing anything.
 
@@ -27,5 +26,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PCMode.Picker\PCMode.Picker.csproj" />
   </ItemGroup>
-
 </Project>

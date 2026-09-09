@@ -11,14 +11,14 @@ public sealed record OpenRgbControllerInfo(
     string? Vendor,
     string Serial,
     string Location,
-    IReadOnlyList<string> Modes)
+    IReadOnlyList<string> Modes
+)
 {
     /// <summary>LEDs currently exposed by the controller, in SDK order.</summary>
     public IReadOnlyList<OpenRgbLedInfo> Leds { get; init; } = [];
 
     /// <summary>Modes that expose individual LED colours through the SDK.</summary>
-    public IReadOnlySet<string> PerLedModes { get; init; } =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlySet<string> PerLedModes { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>One reliably readable OpenRGB controller state.</summary>
@@ -55,30 +55,24 @@ public interface IOpenRgbClient
     /// Reads the current mode and colour state for each requested controller.
     /// Returns null when any requested controller cannot be read reliably.
     /// </summary>
-    IReadOnlyList<OpenRgbDeviceState>? ReadStates(
-        IReadOnlyList<int> deviceIndices,
-        TimeSpan within) => null;
+    IReadOnlyList<OpenRgbDeviceState>? ReadStates(IReadOnlyList<int> deviceIndices, TimeSpan within) => null;
 
     /// <summary>
     /// Reads one common colour from resolved OpenRGB device/mode pairs.
     /// Returns null when the current state cannot be read reliably or the devices disagree.
     /// </summary>
-    string? ReadColor(
-        IReadOnlyList<KeyValuePair<int, string>> devices,
-        TimeSpan within) => null;
+    string? ReadColor(IReadOnlyList<KeyValuePair<int, string>> devices, TimeSpan within) => null;
 
     /// <summary>Sets one colour on resolved OpenRGB device/mode pairs.</summary>
     void SetColor(
         IReadOnlyList<KeyValuePair<int, string>> devices,
         string rgb,
         TimeSpan within,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken
+    );
 
     /// <summary>Sets a mode and colour state independently for each resolved controller.</summary>
-    void SetStates(
-        IReadOnlyList<OpenRgbDeviceTarget> devices,
-        TimeSpan within,
-        CancellationToken cancellationToken)
+    void SetStates(IReadOnlyList<OpenRgbDeviceTarget> devices, TimeSpan within, CancellationToken cancellationToken)
     {
         foreach (OpenRgbDeviceTarget device in devices)
         {
@@ -86,7 +80,8 @@ public interface IOpenRgbClient
                 [new KeyValuePair<int, string>(device.Index, device.Mode)],
                 device.Color,
                 within,
-                cancellationToken);
+                cancellationToken
+            );
         }
     }
 }

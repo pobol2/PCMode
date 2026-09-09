@@ -34,7 +34,8 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
         string host,
         int port,
         string? pinnedFingerprint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(host);
 
@@ -63,8 +64,8 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
             // moment is what every later connection has to match, so something
             // else answering on the television's address afterwards is refused
             // rather than handed a client key.
-            return pinnedFingerprint is null ||
-                   string.Equals(pinnedFingerprint, presented, StringComparison.OrdinalIgnoreCase);
+            return pinnedFingerprint is null
+                || string.Equals(pinnedFingerprint, presented, StringComparison.OrdinalIgnoreCase);
         };
 
         try
@@ -86,8 +87,7 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
             // pinning is the whole of what authenticates this television.
             socket.Dispose();
 
-            throw new InvalidOperationException(
-                $"The television at {host} did not present a certificate.");
+            throw new InvalidOperationException($"The television at {host} did not present a certificate.");
         }
 
         return new WebSocketSession(socket, presented!);
@@ -124,10 +124,10 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
             mac.CopyTo(packet, 6 + (repeat * mac.Length));
         }
 
-        IPAddress? television = IPAddress.TryParse(host, out IPAddress? parsed) &&
-                                parsed.AddressFamily == AddressFamily.InterNetwork
-            ? parsed
-            : null;
+        IPAddress? television =
+            IPAddress.TryParse(host, out IPAddress? parsed) && parsed.AddressFamily == AddressFamily.InterNetwork
+                ? parsed
+                : null;
 
         (IPAddress Local, IPAddress Broadcast)? route = television is null ? null : LocalRouteTo(television);
 
@@ -219,7 +219,8 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
                 Encoding.UTF8.GetBytes(message),
                 WebSocketMessageType.Text,
                 endOfMessage: true,
-                cancellationToken);
+                cancellationToken
+            );
 
         public async Task<string> ReceiveAsync(CancellationToken cancellationToken)
         {
@@ -235,7 +236,8 @@ public sealed class WebSocketLgTvNetwork : ILgTvNetwork
                 if (received.MessageType == WebSocketMessageType.Close)
                 {
                     throw new WebSocketException(
-                        $"The television closed the connection. {received.CloseStatusDescription}");
+                        $"The television closed the connection. {received.CloseStatusDescription}"
+                    );
                 }
 
                 message.Write(buffer, 0, received.Count);

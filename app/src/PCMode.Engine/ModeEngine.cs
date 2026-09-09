@@ -97,7 +97,8 @@ public sealed record TransitionStep(
     string? RequiredBy = null,
     string? Observed = null,
     int Attempts = 0,
-    bool Optional = false);
+    bool Optional = false
+);
 
 /// <summary>The whole result of one request.</summary>
 /// <param name="Mode">
@@ -123,13 +124,14 @@ public sealed record TransitionOutcome(
     bool StateRecorded,
     string? StateProblem,
     bool Mutated = false,
-    ConfiguredTarget? Target = null)
+    ConfiguredTarget? Target = null
+)
 {
     public bool Succeeded => Status == TransitionStatus.Succeeded;
 
     /// <summary>How many resources were actually dispatched.</summary>
-    public int AppliedCount => Steps.Count(step =>
-        step.Status is TransitionStepStatus.Applied or TransitionStepStatus.AppliedUnverified);
+    public int AppliedCount =>
+        Steps.Count(step => step.Status is TransitionStepStatus.Applied or TransitionStepStatus.AppliedUnverified);
 
     /// <summary>What this transition left out, and why.</summary>
     public IReadOnlyList<TransitionStep> Omitted =>
@@ -268,7 +270,8 @@ public sealed class ModeEngine
         ModeStateStore state,
         IReadOnlyList<IModeResourceProvider> providers,
         TimeProvider? time = null,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null
+    )
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(state);
@@ -276,8 +279,7 @@ public sealed class ModeEngine
 
         if (timeout is TimeSpan given && given <= TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(timeout), given, "A transition needs some time to happen in.");
+            throw new ArgumentOutOfRangeException(nameof(timeout), given, "A transition needs some time to happen in.");
         }
 
         _configuration = configuration;
@@ -341,7 +343,13 @@ public sealed class ModeEngine
     /// </remarks>
     public TransitionOutcome? LastOutcome
     {
-        get { lock (_outcomeLock) { return _lastOutcome; } }
+        get
+        {
+            lock (_outcomeLock)
+            {
+                return _lastOutcome;
+            }
+        }
     }
 
     /// <summary>
@@ -355,9 +363,7 @@ public sealed class ModeEngine
         {
             TransitionOutcome? outcome = LastOutcome;
 
-            return outcome is null
-                ? null
-                : ModeHealth.From(outcome, _time.GetUtcNow(), _providers);
+            return outcome is null ? null : ModeHealth.From(outcome, _time.GetUtcNow(), _providers);
         }
     }
 
@@ -376,8 +382,8 @@ public sealed class ModeEngine
         string mode,
         bool dryRun = false,
         IProgress<TransitionStep>? progress = null,
-        CancellationToken cancellationToken = default) =>
-        ApplyCoreAsync(mode, dryRun, progress, cancellationToken, RecoveryKind.None, retryHandled: null);
+        CancellationToken cancellationToken = default
+    ) => ApplyCoreAsync(mode, dryRun, progress, cancellationToken, RecoveryKind.None, retryHandled: null);
 
     private async Task<TransitionOutcome> ApplyCoreAsync(
         string mode,
@@ -385,7 +391,8 @@ public sealed class ModeEngine
         IProgress<TransitionStep>? progress,
         CancellationToken cancellationToken,
         RecoveryKind recovery,
-        IReadOnlySet<string>? retryHandled)
+        IReadOnlySet<string>? retryHandled
+    )
     {
         // Lookup and validation happen before the guard is taken, so a request
         // that was never going to run cannot make the engine look busy.
@@ -399,7 +406,8 @@ public sealed class ModeEngine
             return Refused(
                 target.Key,
                 $"'{target.DisplayPath}' is disabled. Enable it in Spaces before switching to it.",
-                target: target);
+                target: target
+            );
         }
 
         ConfiguredMode configured = _configuration.Find(target.Key)!;
@@ -438,7 +446,8 @@ public sealed class ModeEngine
                     outcome = Refused(
                         configured.Name,
                         $"'{configured.DisplayName}' was superseded by a newer request before it started.",
-                        target: target);
+                        target: target
+                    );
 
                     RecordOutcome(configured.Name, outcome, recovery);
                     return outcome;
@@ -455,13 +464,18 @@ public sealed class ModeEngine
             // engine's own supersede signal -- as an outcome, never as a thrown
             // OperationCanceledException, so nothing here needs to catch one.
             outcome = await Task.Run(
-                () => RunAsync(plan!, dryRun, progress, linked.Token, recovery, retryHandled),
-                CancellationToken.None).ConfigureAwait(false);
+                    () => RunAsync(plan!, dryRun, progress, linked.Token, recovery, retryHandled),
+                    CancellationToken.None
+                )
+                .ConfigureAwait(false);
 
             // Attached once, here, rather than at each of the outcomes RunAsync
             // builds: which target this was is decided before the run starts and
             // cannot change during it.
-            outcome = outcome with { Target = target };
+            outcome = outcome with
+            {
+                Target = target,
+            };
 
             if (linked.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
             {
@@ -520,10 +534,10 @@ public sealed class ModeEngine
                 foreach (TransitionStep step in outcome.Steps)
                 {
                     bool repairKeepsOpenLoopHandled =
-                        recovery == RecoveryKind.Repair &&
-                        _providers.TryGetValue(step.Resource, out IModeResourceProvider? provider) &&
-                        provider is IResourceObservabilityProvider observability &&
-                        !observability.CanObserve(step.Target);
+                        recovery == RecoveryKind.Repair
+                        && _providers.TryGetValue(step.Resource, out IModeResourceProvider? provider)
+                        && provider is IResourceObservabilityProvider observability
+                        && !observability.CanObserve(step.Target);
 
                     if (step.Status == TransitionStepStatus.AppliedUnverified || repairKeepsOpenLoopHandled)
                     {
@@ -552,7 +566,8 @@ public sealed class ModeEngine
     /// </returns>
     public async Task<TransitionOutcome?> RetryAsync(
         IProgress<TransitionStep>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         string? mode;
         HashSet<string> retryHandled;
@@ -568,13 +583,8 @@ public sealed class ModeEngine
             return null;
         }
 
-        return await ApplyCoreAsync(
-            mode,
-            dryRun: false,
-            progress,
-            cancellationToken,
-            RecoveryKind.Retry,
-            retryHandled).ConfigureAwait(false);
+        return await ApplyCoreAsync(mode, dryRun: false, progress, cancellationToken, RecoveryKind.Retry, retryHandled)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -597,7 +607,8 @@ public sealed class ModeEngine
     /// </returns>
     public async Task<TransitionOutcome?> RepairAsync(
         IProgress<TransitionStep>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         string? mode = ReadCurrentTargetKey(out _);
 
@@ -607,12 +618,14 @@ public sealed class ModeEngine
         }
 
         return await ApplyCoreAsync(
-            mode,
-            dryRun: false,
-            progress,
-            cancellationToken,
-            RecoveryKind.Repair,
-            retryHandled: null).ConfigureAwait(false);
+                mode,
+                dryRun: false,
+                progress,
+                cancellationToken,
+                RecoveryKind.Repair,
+                retryHandled: null
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -635,7 +648,8 @@ public sealed class ModeEngine
         IProgress<TransitionStep>? progress,
         CancellationToken cancellationToken,
         RecoveryKind recovery,
-        IReadOnlySet<string>? retryHandled)
+        IReadOnlySet<string>? retryHandled
+    )
     {
         // The key is what is recorded and retried; the display path is what
         // every message says. Keeping them apart is the whole reason a target
@@ -660,9 +674,10 @@ public sealed class ModeEngine
             // this machine was in is still the mode it is in.
             return Refused(
                 mode,
-                $"'{name}' changed nothing: none of the {plan.Omissions.Count} resource(s) it sets " +
-                "are available on this machine.",
-                steps);
+                $"'{name}' changed nothing: none of the {plan.Omissions.Count} resource(s) it sets "
+                    + "are available on this machine.",
+                steps
+            );
         }
 
         // Fixed at the start, so that a transition's budget is the transition's
@@ -725,17 +740,16 @@ public sealed class ModeEngine
                         steps,
                         StateRecorded: false,
                         clearProblem,
-                        Mutated: true)
+                        Mutated: true
+                    )
                     : Refused(mode, $"'{name}' was cancelled before anything was changed.", steps);
             }
 
             // Before the read, because for a provider that cares what has already
             // moved, the read is one of the answers that depends on it.
-            if (planned.Provider is ITransitionAwareProvider aware &&
-                !TryTell(aware, changed, out string? confused))
+            if (planned.Provider is ITransitionAwareProvider aware && !TryTell(aware, changed, out string? confused))
             {
-                steps.Add(Report(progress, Describe(
-                    planned, current: null, TransitionStepStatus.Failed, confused)));
+                steps.Add(Report(progress, Describe(planned, current: null, TransitionStepStatus.Failed, confused)));
 
                 AddRemaining(steps, resources, index + 1, progress);
 
@@ -747,39 +761,61 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    mutated);
+                    mutated
+                );
             }
 
             bool intentionallyUnobservable = IsIntentionallyUnobservable(planned);
 
             if (intentionallyUnobservable && dryRun)
             {
-                steps.Add(Report(progress, Describe(
-                    planned,
-                    current: null,
-                    TransitionStepStatus.Unverified,
-                    "Runtime state is intentionally not observable; nothing was dispatched by this dry run.")));
+                steps.Add(
+                    Report(
+                        progress,
+                        Describe(
+                            planned,
+                            current: null,
+                            TransitionStepStatus.Unverified,
+                            "Runtime state is intentionally not observable; nothing was dispatched by this dry run."
+                        )
+                    )
+                );
                 continue;
             }
 
             if (intentionallyUnobservable && recovery == RecoveryKind.Repair)
             {
-                steps.Add(Report(progress, Describe(
-                    planned,
-                    current: null,
-                    TransitionStepStatus.Unverified,
-                    "Runtime state is intentionally not observable; Repair does not relaunch it without evidence that it is wrong.")));
+                steps.Add(
+                    Report(
+                        progress,
+                        Describe(
+                            planned,
+                            current: null,
+                            TransitionStepStatus.Unverified,
+                            "Runtime state is intentionally not observable; Repair does not relaunch it without evidence that it is wrong."
+                        )
+                    )
+                );
                 continue;
             }
 
-            if (intentionallyUnobservable && recovery == RecoveryKind.Retry &&
-                WasSuccessfullyHandled(retryHandled, planned))
+            if (
+                intentionallyUnobservable
+                && recovery == RecoveryKind.Retry
+                && WasSuccessfullyHandled(retryHandled, planned)
+            )
             {
-                steps.Add(Report(progress, Describe(
-                    planned,
-                    current: null,
-                    TransitionStepStatus.Unverified,
-                    "It was already dispatched successfully by the previous attempt; Retry does not launch it again.")));
+                steps.Add(
+                    Report(
+                        progress,
+                        Describe(
+                            planned,
+                            current: null,
+                            TransitionStepStatus.Unverified,
+                            "It was already dispatched successfully by the previous attempt; Retry does not launch it again."
+                        )
+                    )
+                );
                 continue;
             }
 
@@ -794,12 +830,18 @@ public sealed class ModeEngine
                 // happen. Same rule ResourceConvergence applies for real; a dry
                 // run that used a different one could show a clean pass for a
                 // mode that would still touch the machine.
-                steps.Add(Report(progress, Describe(
-                    planned,
-                    current,
-                    Matches(current, planned.Target) && !planned.Policy.DispatchAtLeastOnce
-                        ? TransitionStepStatus.AlreadyCorrect
-                        : TransitionStepStatus.Planned)));
+                steps.Add(
+                    Report(
+                        progress,
+                        Describe(
+                            planned,
+                            current,
+                            Matches(current, planned.Target) && !planned.Policy.DispatchAtLeastOnce
+                                ? TransitionStepStatus.AlreadyCorrect
+                                : TransitionStepStatus.Planned
+                        )
+                    )
+                );
 
                 continue;
             }
@@ -816,7 +858,8 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    mutated);
+                    mutated
+                );
             }
 
             ConvergenceResult result = await ResourceConvergence
@@ -833,32 +876,42 @@ public sealed class ModeEngine
                 // AlreadyCorrect covers a resource the planner added, too. A
                 // requirement that is already satisfied is satisfied; adding it
                 // to the plan was never a decision to change it.
-                steps.Add(Report(progress, Describe(
-                    planned,
-                    result.Before,
-                    result.Status is ConvergenceStatus.AlreadyCorrect
-                        ? TransitionStepStatus.AlreadyCorrect
-                        : intentionallyUnobservable
-                            ? TransitionStepStatus.AppliedUnverified
-                            : TransitionStepStatus.Applied,
-                    observed: result.Observed,
-                    attempts: result.Attempts)));
+                steps.Add(
+                    Report(
+                        progress,
+                        Describe(
+                            planned,
+                            result.Before,
+                            result.Status is ConvergenceStatus.AlreadyCorrect ? TransitionStepStatus.AlreadyCorrect
+                                : intentionallyUnobservable ? TransitionStepStatus.AppliedUnverified
+                                : TransitionStepStatus.Applied,
+                            observed: result.Observed,
+                            attempts: result.Attempts
+                        )
+                    )
+                );
 
                 continue;
             }
 
-            steps.Add(Report(progress, Describe(
-                planned,
-                result.Before,
-                // Blocked is not a failure of this resource. Nothing was
-                // dispatched for it, so it is reported as what it is: a step the
-                // transition never got to.
-                result.Status is ConvergenceStatus.Blocked
-                    ? TransitionStepStatus.NotReached
-                    : TransitionStepStatus.Failed,
-                result.Problem,
-                result.Observed,
-                result.Attempts)));
+            steps.Add(
+                Report(
+                    progress,
+                    Describe(
+                        planned,
+                        result.Before,
+                        // Blocked is not a failure of this resource. Nothing was
+                        // dispatched for it, so it is reported as what it is: a step the
+                        // transition never got to.
+                        result.Status is ConvergenceStatus.Blocked
+                            ? TransitionStepStatus.NotReached
+                            : TransitionStepStatus.Failed,
+                        result.Problem,
+                        result.Observed,
+                        result.Attempts
+                    )
+                )
+            );
 
             // Sequential execution stops at the first resource that did not get
             // there, whatever stopped it. Carrying on would apply the rest of a
@@ -879,7 +932,8 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    Mutated: false),
+                    Mutated: false
+                ),
 
                 ConvergenceStatus.Cancelled => new TransitionOutcome(
                     mode,
@@ -889,7 +943,8 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    mutated),
+                    mutated
+                ),
 
                 ConvergenceStatus.TimedOut => new TransitionOutcome(
                     mode,
@@ -899,7 +954,8 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    mutated),
+                    mutated
+                ),
 
                 _ => new TransitionOutcome(
                     mode,
@@ -909,7 +965,8 @@ public sealed class ModeEngine
                     steps,
                     StateRecorded: false,
                     clearProblem,
-                    mutated),
+                    mutated
+                ),
             };
         }
 
@@ -920,11 +977,13 @@ public sealed class ModeEngine
                 mode,
                 TransitionStatus.Succeeded,
                 DryRun: true,
-                $"Dry run of '{name}' walked {resources.Count} resource(s)" +
-                Mentioning(plan.Omissions) + ". Nothing was changed.",
+                $"Dry run of '{name}' walked {resources.Count} resource(s)"
+                    + Mentioning(plan.Omissions)
+                    + ". Nothing was changed.",
                 steps,
                 StateRecorded: false,
-                StateProblem: null);
+                StateProblem: null
+            );
         }
 
         bool recorded = _state.TryWrite(mode, _time.GetUtcNow(), out string? stateProblem);
@@ -939,7 +998,8 @@ public sealed class ModeEngine
             steps,
             recorded,
             stateProblem ?? clearProblem,
-            mutated);
+            mutated
+        );
     }
 
     /// <summary>The tail of a message that has omissions to admit to.</summary>
@@ -949,11 +1009,10 @@ public sealed class ModeEngine
     private static string MentioningUnverified(IReadOnlyList<TransitionStep> steps)
     {
         int count = steps.Count(step =>
-            step.Status is TransitionStepStatus.AppliedUnverified or TransitionStepStatus.Unverified);
+            step.Status is TransitionStepStatus.AppliedUnverified or TransitionStepStatus.Unverified
+        );
 
-        return count == 0
-            ? string.Empty
-            : $", with {count} unverified resource{(count == 1 ? string.Empty : "s")}";
+        return count == 0 ? string.Empty : $", with {count} unverified resource{(count == 1 ? string.Empty : "s")}";
     }
 
     private static string Name(OmittedResource omitted) => $"{omitted.ResourceName} '{omitted.Target}'";
@@ -962,14 +1021,12 @@ public sealed class ModeEngine
         step.Status is TransitionStepStatus.Applied or TransitionStepStatus.AppliedUnverified;
 
     private static bool IsIntentionallyUnobservable(PlannedResource planned) =>
-        planned.Provider is IResourceObservabilityProvider observability &&
-        !observability.CanObserve(planned.Target);
+        planned.Provider is IResourceObservabilityProvider observability && !observability.CanObserve(planned.Target);
 
     private static bool WasSuccessfullyHandled(IReadOnlySet<string>? handled, PlannedResource planned) =>
         handled?.Contains(UnverifiedDispatchKey(planned.Key, planned.Target)) == true;
 
-    private static string UnverifiedDispatchKey(string resource, string target) =>
-        $"{resource}\u001F{target}";
+    private static string UnverifiedDispatchKey(string resource, string target) => $"{resource}\u001F{target}";
 
     private static bool Matches(string? current, string target) =>
         current is not null && string.Equals(current, target, StringComparison.OrdinalIgnoreCase);
@@ -978,7 +1035,8 @@ public sealed class ModeEngine
         List<TransitionStep> steps,
         IReadOnlyList<PlannedResource> resources,
         int from,
-        IProgress<TransitionStep>? progress)
+        IProgress<TransitionStep>? progress
+    )
     {
         for (int index = from; index < resources.Count; index++)
         {
@@ -1000,7 +1058,8 @@ public sealed class ModeEngine
         TransitionStepStatus status,
         string? problem = null,
         string? observed = null,
-        int attempts = 0) =>
+        int attempts = 0
+    ) =>
         new(
             planned.Key,
             planned.ResourceName,
@@ -1011,7 +1070,8 @@ public sealed class ModeEngine
             planned.RequiredBy,
             observed,
             attempts,
-            planned.Optional);
+            planned.Optional
+        );
 
     /// <summary>
     /// A resource that will not be happening, reported as a step so that nothing
@@ -1028,7 +1088,8 @@ public sealed class ModeEngine
             omitted.RequiredBy,
             Observed: null,
             Attempts: 0,
-            Optional: true);
+            Optional: true
+        );
 
     private static TransitionStep Report(IProgress<TransitionStep>? progress, TransitionStep step)
     {
@@ -1048,10 +1109,7 @@ public sealed class ModeEngine
     /// application unnecessarily is silently declining to restart one that needed
     /// it. So the step fails, with the machine no further along than it was.
     /// </remarks>
-    private static bool TryTell(
-        ITransitionAwareProvider provider,
-        IReadOnlySet<string> changed,
-        out string? problem)
+    private static bool TryTell(ITransitionAwareProvider provider, IReadOnlySet<string> changed, out string? problem)
     {
         try
         {
@@ -1086,7 +1144,8 @@ public sealed class ModeEngine
         string mode,
         string message,
         IReadOnlyList<TransitionStep>? steps = null,
-        ConfiguredTarget? target = null) =>
+        ConfiguredTarget? target = null
+    ) =>
         new(
             mode,
             TransitionStatus.Refused,
@@ -1096,5 +1155,6 @@ public sealed class ModeEngine
             StateRecorded: false,
             StateProblem: null,
             Mutated: false,
-            target);
+            target
+        );
 }

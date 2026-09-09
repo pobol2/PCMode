@@ -17,9 +17,7 @@ internal static class Probe
     /// </summary>
     public static FixtureRootViewModel Page()
     {
-        var page = new FixtureRootViewModel(
-            "Displays",
-            new FixtureDetailViewModel("Resolution", "Scaling"));
+        var page = new FixtureRootViewModel("Displays", new FixtureDetailViewModel("Resolution", "Scaling"));
 
         page.Items.Add(new FixtureItemViewModel("Dell U2720Q"));
         page.Items.Add(new FixtureItemViewModel("LG C2"));

@@ -23,9 +23,7 @@ public sealed class ConfigurationPageCommands : ObservableObject
     private readonly ConfigurationPageViewModelBase _page;
     private readonly IConfigurationPrompts _prompts;
 
-    internal ConfigurationPageCommands(
-        ConfigurationPageViewModelBase page,
-        IConfigurationPrompts prompts)
+    internal ConfigurationPageCommands(ConfigurationPageViewModelBase page, IConfigurationPrompts prompts)
     {
         _page = page;
         _prompts = prompts;
@@ -34,31 +32,44 @@ public sealed class ConfigurationPageCommands : ObservableObject
         Discard = new RelayCommand(_page.DiscardChanges, () => _page.CanDiscard);
 
         Create = new RelayCommand(
-            () => Prompt(
-                actions => actions.Create,
-                actions => ($"New {actions.EntityNoun}", $"Name the new {actions.EntityNoun}.", string.Empty),
-                guard: true),
-            () => Actions?.Create is not null);
+            () =>
+                Prompt(
+                    actions => actions.Create,
+                    actions => ($"New {actions.EntityNoun}", $"Name the new {actions.EntityNoun}.", string.Empty),
+                    guard: true
+                ),
+            () => Actions?.Create is not null
+        );
 
         Rename = new RelayCommand(
-            () => Prompt(
-                actions => actions.Rename,
-                actions => (
-                    $"Rename {actions.EntityNoun}",
-                    $"Rename '{actions.CurrentDisplayName}'.",
-                    actions.CurrentDisplayName ?? string.Empty),
-                guard: false),
-            () => Actions?.Rename is not null);
+            () =>
+                Prompt(
+                    actions => actions.Rename,
+                    actions =>
+                        (
+                            $"Rename {actions.EntityNoun}",
+                            $"Rename '{actions.CurrentDisplayName}'.",
+                            actions.CurrentDisplayName ?? string.Empty
+                        ),
+                    guard: false
+                ),
+            () => Actions?.Rename is not null
+        );
 
         Duplicate = new RelayCommand(
-            () => Prompt(
-                actions => actions.Duplicate,
-                actions => (
-                    $"Duplicate {actions.EntityNoun}",
-                    $"Name the copy of '{actions.CurrentDisplayName}'.",
-                    $"{actions.CurrentDisplayName} copy"),
-                guard: false),
-            () => Actions?.Duplicate is not null);
+            () =>
+                Prompt(
+                    actions => actions.Duplicate,
+                    actions =>
+                        (
+                            $"Duplicate {actions.EntityNoun}",
+                            $"Name the copy of '{actions.CurrentDisplayName}'.",
+                            $"{actions.CurrentDisplayName} copy"
+                        ),
+                    guard: false
+                ),
+            () => Actions?.Duplicate is not null
+        );
 
         Delete = new RelayCommand(DeleteSelected, () => Actions?.Delete is not null);
 
@@ -70,15 +81,18 @@ public sealed class ConfigurationPageCommands : ObservableObject
                     await activate().ConfigureAwait(true);
                 }
             },
-            () => Actions is { Activate: not null, CanActivateNow: true });
+            () => Actions is { Activate: not null, CanActivateNow: true }
+        );
 
         AddEssential = new RelayCommand(
             () => EssentialActions?.Add?.Invoke(),
-            () => EssentialActions is { Add: not null, CanAdd: true });
+            () => EssentialActions is { Add: not null, CanAdd: true }
+        );
 
         RemoveEssential = new RelayCommand<object>(
             item => EssentialActions?.Remove?.Invoke(item),
-            _ => EssentialActions is { Remove: not null, CanRemove: true });
+            _ => EssentialActions is { Remove: not null, CanRemove: true }
+        );
     }
 
     private EntityActions? Actions => _page.Actions;
@@ -121,8 +135,7 @@ public sealed class ConfigurationPageCommands : ObservableObject
 
     public string ActivateLabel => Actions?.ActivateLabel ?? "Activate";
 
-    public string AddEssentialLabel =>
-        EssentialActions is { ItemNoun: { } noun } ? $"Add {noun}" : "Add";
+    public string AddEssentialLabel => EssentialActions is { ItemNoun: { } noun } ? $"Add {noun}" : "Add";
 
     /// <summary>
     /// The text a page shows when nothing is selected, generated from the
@@ -166,7 +179,8 @@ public sealed class ConfigurationPageCommands : ObservableObject
     private void Prompt(
         Func<EntityActions, Func<string, string?>?> select,
         Func<EntityActions, (string Title, string Message, string Initial)> wording,
-        bool guard)
+        bool guard
+    )
     {
         if (Actions is not { } actions || select(actions) is null)
         {

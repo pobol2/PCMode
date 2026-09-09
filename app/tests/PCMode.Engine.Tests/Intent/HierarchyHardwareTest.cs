@@ -19,8 +19,8 @@ public sealed class HierarchyHardwareFactAttribute : FactAttribute
         if (!HierarchyHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_HIERARCHY_HARDWARE_TEST=1 to run it: it composes a copy of this " +
-                "machine's real configuration and asks the real providers what the composed targets would do.";
+                "Hardware check. Set PCMODE_HIERARCHY_HARDWARE_TEST=1 to run it: it composes a copy of this "
+                + "machine's real configuration and asks the real providers what the composed targets would do.";
         }
     }
 }
@@ -42,8 +42,8 @@ public sealed class ExternalSourceHandoffHardwareFactAttribute : FactAttribute
         if (!HierarchyHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_HIERARCHY_HARDWARE_TEST=1 to run it: it applies a PC target and " +
-                "an External Source target on this machine's real configuration, one after the other, for real.";
+                "Hardware check. Set PCMODE_HIERARCHY_HARDWARE_TEST=1 to run it: it applies a PC target and "
+                + "an External Source target on this machine's real configuration, one after the other, for real.";
 
             return;
         }
@@ -51,8 +51,8 @@ public sealed class ExternalSourceHandoffHardwareFactAttribute : FactAttribute
         if (!HierarchyHardwareTest.HandoffTargetsNamed)
         {
             Skip =
-                "Set PCMODE_HIERARCHY_PC_TARGET and PCMODE_HIERARCHY_EXTERNAL_TARGET to two configured " +
-                "targets -- a PC Source (or an Activity with none) and an External Source -- to run this.";
+                "Set PCMODE_HIERARCHY_PC_TARGET and PCMODE_HIERARCHY_EXTERNAL_TARGET to two configured "
+                + "targets -- a PC Source (or an Activity with none) and an External Source -- to run this.";
         }
     }
 }
@@ -106,8 +106,8 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
         string.Equals(Environment.GetEnvironmentVariable(Switch), "1", StringComparison.Ordinal);
 
     internal static bool HandoffTargetsNamed =>
-        Environment.GetEnvironmentVariable(PcTargetVariable) is { Length: > 0 } &&
-        Environment.GetEnvironmentVariable(ExternalTargetVariable) is { Length: > 0 };
+        Environment.GetEnvironmentVariable(PcTargetVariable) is { Length: > 0 }
+        && Environment.GetEnvironmentVariable(ExternalTargetVariable) is { Length: > 0 };
 
     [HierarchyHardwareFact]
     public async Task This_machines_configuration_composes_and_walks_on_real_hardware()
@@ -118,7 +118,8 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
 
         Assert.True(
             File.Exists(PCModePaths.ConfigurationFile(source)),
-            $"There is no configuration at {PCModePaths.ConfigurationFile(source)}. Set {RootVariable} to a data root.");
+            $"There is no configuration at {PCModePaths.ConfigurationFile(source)}. Set {RootVariable} to a data root."
+        );
 
         string root = Copy(source);
         output.WriteLine($"Real data root:  {source}");
@@ -136,7 +137,7 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
 
             foreach (ConfiguredTarget target in engine.Targets)
             {
-                output.WriteLine($"  {target.Key,-40} {target.DisplayPath}");
+                output.WriteLine($"  {target.Key, -40} {target.DisplayPath}");
             }
 
             // ---- what each one would do to this machine ---------------------
@@ -150,15 +151,17 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
                 foreach (TransitionStep step in dryRun.Steps)
                 {
                     output.WriteLine(
-                        $"  {step.Status,-15} {step.ResourceName,-22} {step.Current ?? "?"} -> {step.Target}" +
-                        (step.Problem is null ? string.Empty : $"  ({step.Problem})"));
+                        $"  {step.Status, -15} {step.ResourceName, -22} {step.Current ?? "?"} -> {step.Target}"
+                            + (step.Problem is null ? string.Empty : $"  ({step.Problem})")
+                    );
                 }
 
                 // A dry run that cannot even be planned is a configuration this
                 // machine could not apply, which is exactly what this is for.
                 Assert.True(
                     dryRun.Status is TransitionStatus.Succeeded or TransitionStatus.Refused,
-                    $"'{target.DisplayPath}' could not be walked: {dryRun.Message}");
+                    $"'{target.DisplayPath}' could not be walked: {dryRun.Message}"
+                );
 
                 // A refusal for lack of hardware (the television is off, say)
                 // is an ordinary, expected outcome of a dry run on a machine
@@ -171,9 +174,10 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
                 // catching rather than shrugging off as "the room isn't
                 // ready".
                 Assert.False(
-                    dryRun.Status == TransitionStatus.Refused &&
-                    dryRun.Message.Contains("cannot be ordered", StringComparison.Ordinal),
-                    $"'{target.DisplayPath}' has a dependency cycle in its real configuration: {dryRun.Message}");
+                    dryRun.Status == TransitionStatus.Refused
+                        && dryRun.Message.Contains("cannot be ordered", StringComparison.Ordinal),
+                    $"'{target.DisplayPath}' has a dependency cycle in its real configuration: {dryRun.Message}"
+                );
             }
 
             await ApplyIfAskedAsync(engine);
@@ -211,7 +215,8 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
 
         Assert.True(
             File.Exists(PCModePaths.ConfigurationFile(source)),
-            $"There is no configuration at {PCModePaths.ConfigurationFile(source)}. Set {RootVariable} to a data root.");
+            $"There is no configuration at {PCModePaths.ConfigurationFile(source)}. Set {RootVariable} to a data root."
+        );
 
         string root = Copy(source);
         output.WriteLine($"Real data root:  {source}");
@@ -232,8 +237,9 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
 
             Assert.True(
                 external!.SourceKind == SourceKind.ExternalDevice,
-                $"'{external.DisplayPath}' is a {external.SourceKind?.ToString() ?? "target with no Source"}, " +
-                $"not an External Source. Point {ExternalTargetVariable} at one.");
+                $"'{external.DisplayPath}' is a {external.SourceKind?.ToString() ?? "target with no Source"}, "
+                    + $"not an External Source. Point {ExternalTargetVariable} at one."
+            );
 
             string? before = engine.ReadCurrentTargetKey(out _);
             output.WriteLine(string.Empty);
@@ -252,8 +258,10 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
             }
             finally
             {
-                if (before is not null &&
-                    !string.Equals(before, engine.ReadCurrentTargetKey(out _), StringComparison.OrdinalIgnoreCase))
+                if (
+                    before is not null
+                    && !string.Equals(before, engine.ReadCurrentTargetKey(out _), StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     TransitionOutcome restored = await engine.ApplyAsync(before);
                     output.WriteLine($"Put back: {restored.Status} -- {restored.Message}");
@@ -276,8 +284,9 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
         foreach (TransitionStep step in outcome.Steps)
         {
             output.WriteLine(
-                $"  {step.Status,-15} {step.ResourceName,-22} {step.Current ?? "?"} -> {step.Target}" +
-                (step.Problem is null ? string.Empty : $"  ({step.Problem})"));
+                $"  {step.Status, -15} {step.ResourceName, -22} {step.Current ?? "?"} -> {step.Target}"
+                    + (step.Problem is null ? string.Empty : $"  ({step.Problem})")
+            );
         }
 
         return outcome;
@@ -319,8 +328,9 @@ public sealed class HierarchyHardwareTest(ITestOutputHelper output)
             foreach (TransitionStep step in outcome.Steps)
             {
                 output.WriteLine(
-                    $"  {step.Status,-15} {step.ResourceName,-22} {step.Current ?? "?"} -> {step.Target}" +
-                    (step.Problem is null ? string.Empty : $"  ({step.Problem})"));
+                    $"  {step.Status, -15} {step.ResourceName, -22} {step.Current ?? "?"} -> {step.Target}"
+                        + (step.Problem is null ? string.Empty : $"  ({step.Problem})")
+                );
             }
 
             ModeHealth? health = engine.LastHealth;

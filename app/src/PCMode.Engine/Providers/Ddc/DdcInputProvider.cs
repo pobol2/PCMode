@@ -14,7 +14,11 @@ namespace PCMode.Engine;
 /// <see cref="Apply"/>. See <see cref="DisplayProvider"/>'s remarks for why
 /// that split exists.
 /// </remarks>
-public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider, IConvergentProvider, IHealthReportingProvider
+public sealed class DdcInputProvider
+    : IConfigurableProvider,
+        IAvailableProvider,
+        IConvergentProvider,
+        IHealthReportingProvider
 {
     /// <summary>
     /// The MCCS 2.2 standard input-select values common enough to name.
@@ -25,18 +29,19 @@ public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider
     /// value is real is decided by the monitor's own reported capabilities,
     /// not by this table's size.
     /// </remarks>
-    private static readonly IReadOnlyDictionary<string, uint> KnownInputs =
-        new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["VGA1"] = 0x01,
-            ["VGA2"] = 0x02,
-            ["DVI1"] = 0x03,
-            ["DVI2"] = 0x04,
-            ["DisplayPort1"] = 0x0F,
-            ["DisplayPort2"] = 0x10,
-            ["HDMI1"] = 0x11,
-            ["HDMI2"] = 0x12,
-        };
+    private static readonly IReadOnlyDictionary<string, uint> KnownInputs = new Dictionary<string, uint>(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["VGA1"] = 0x01,
+        ["VGA2"] = 0x02,
+        ["DVI1"] = 0x03,
+        ["DVI2"] = 0x04,
+        ["DisplayPort1"] = 0x0F,
+        ["DisplayPort2"] = 0x10,
+        ["HDMI1"] = 0x11,
+        ["HDMI2"] = 0x12,
+    };
 
     private readonly DdcMonitorConnection _connection;
 
@@ -78,29 +83,31 @@ public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider
         return capabilities.Supports(DdcVcpCode.InputSource)
             ? ResourceAvailability.Available
             : ResourceAvailability.Unavailable(
-                $"monitor '{_connection.Alias}' does not report DDC/CI input-select (VCP 0x60) support.");
+                $"monitor '{_connection.Alias}' does not report DDC/CI input-select (VCP 0x60) support."
+            );
     }
 
     /// <summary>
     /// Verified, with a little more patience than brightness: switching input
     /// can make a panel briefly drop and renegotiate its signal.
     /// </summary>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 3,
-        RetryInterval = TimeSpan.FromSeconds(3),
-        PollInterval = TimeSpan.FromMilliseconds(300),
-        Settle = TimeSpan.FromMilliseconds(500),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 3,
+            RetryInterval = TimeSpan.FromSeconds(3),
+            PollInterval = TimeSpan.FromMilliseconds(300),
+            Settle = TimeSpan.FromMilliseconds(500),
+        };
 
     public bool IsValidValue(string value, out string? problem)
     {
         if (!TryResolveInput(value, out _))
         {
             problem =
-                $"'{value}' is not a DDC/CI input. Give a known name ({string.Join(", ", KnownInputs.Keys)}), " +
-                "a decimal VCP value, or a hex value such as \"0x11\".";
+                $"'{value}' is not a DDC/CI input. Give a known name ({string.Join(", ", KnownInputs.Keys)}), "
+                + "a decimal VCP value, or a hex value such as \"0x11\".";
             return false;
         }
 
@@ -132,7 +139,10 @@ public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider
     {
         if (!TryResolveInput(value, out uint code))
         {
-            throw new ArgumentException($"The input cannot be set to '{value}': it is not a DDC/CI input.", nameof(value));
+            throw new ArgumentException(
+                $"The input cannot be set to '{value}': it is not a DDC/CI input.",
+                nameof(value)
+            );
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -142,13 +152,16 @@ public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider
         // VCP 0x60 has not said this value is wrong, only that it did not say
         // which values are right, so the write proceeds and the monitor gets
         // the last word.
-        if (_connection.TryGetCapabilities(out DdcCapabilities capabilities, out _) &&
-            capabilities.Features.TryGetValue(DdcVcpCode.InputSource, out DdcVcpCapability? supported) &&
-            supported.SupportedValues.Count > 0 &&
-            !supported.SupportedValues.Contains(code))
+        if (
+            _connection.TryGetCapabilities(out DdcCapabilities capabilities, out _)
+            && capabilities.Features.TryGetValue(DdcVcpCode.InputSource, out DdcVcpCapability? supported)
+            && supported.SupportedValues.Count > 0
+            && !supported.SupportedValues.Contains(code)
+        )
         {
             throw new InvalidOperationException(
-                $"Monitor '{_connection.Alias}' does not list '{value.Trim()}' (0x{code:X2}) among its supported inputs.");
+                $"Monitor '{_connection.Alias}' does not list '{value.Trim()}' (0x{code:X2}) among its supported inputs."
+            );
         }
 
         _connection.WriteVcp(DdcVcpCode.InputSource, code);
@@ -170,12 +183,11 @@ public sealed class DdcInputProvider : IConfigurableProvider, IAvailableProvider
 
         if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
         {
-            return uint.TryParse(
-                    trimmed.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out code) &&
-                code is > 0 and <= 0xFF;
+            return uint.TryParse(trimmed.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out code)
+                && code is > 0 and <= 0xFF;
         }
 
-        return uint.TryParse(trimmed, NumberStyles.None, CultureInfo.InvariantCulture, out code) &&
-            code is > 0 and <= 0xFF;
+        return uint.TryParse(trimmed, NumberStyles.None, CultureInfo.InvariantCulture, out code)
+            && code is > 0 and <= 0xFF;
     }
 }

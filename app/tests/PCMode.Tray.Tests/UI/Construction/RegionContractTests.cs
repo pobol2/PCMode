@@ -18,10 +18,7 @@ public sealed class RegionContractTests
     {
         Wpf.Run(() =>
         {
-            var block = new FixtureRootBlock
-            {
-                Template = Probe.InvalidLayout("LayoutMissingDetailRegion"),
-            };
+            var block = new FixtureRootBlock { Template = Probe.InvalidLayout("LayoutMissingDetailRegion") };
 
             var failure = Assert.Throws<TemplateContractException>(() => block.ApplyTemplate());
 
@@ -35,10 +32,7 @@ public sealed class RegionContractTests
     {
         Wpf.Run(() =>
         {
-            var block = new FixtureRootBlock
-            {
-                Template = Probe.InvalidLayout("LayoutWithSingleChildItemsRegion"),
-            };
+            var block = new FixtureRootBlock { Template = Probe.InvalidLayout("LayoutWithSingleChildItemsRegion") };
 
             var failure = Assert.Throws<TemplateContractException>(() => block.ApplyTemplate());
 
@@ -52,19 +46,13 @@ public sealed class RegionContractTests
     {
         Wpf.Run(() =>
         {
-            var block = new FixtureRootBlock
-            {
-                Template = Probe.Layout("FixtureRootSideBySideLayout"),
-            };
+            var block = new FixtureRootBlock { Template = Probe.Layout("FixtureRootSideBySideLayout") };
 
             block.ApplyTemplate();
 
-            Assert.IsType<Region>(
-                block.Template.FindName(FixtureRootBlock.HeaderRegion, block));
-            Assert.IsType<RepeatedRegion>(
-                block.Template.FindName(FixtureRootBlock.ItemsRegion, block));
-            Assert.IsType<Region>(
-                block.Template.FindName(FixtureRootBlock.DetailRegion, block));
+            Assert.IsType<Region>(block.Template.FindName(FixtureRootBlock.HeaderRegion, block));
+            Assert.IsType<RepeatedRegion>(block.Template.FindName(FixtureRootBlock.ItemsRegion, block));
+            Assert.IsType<Region>(block.Template.FindName(FixtureRootBlock.DetailRegion, block));
         });
     }
 
@@ -93,7 +81,8 @@ public sealed class RegionContractTests
 
             Assert.Equal(
                 [FixtureRootBlock.DetailRegion, FixtureRootBlock.HeaderRegion, FixtureRootBlock.ItemsRegion],
-                block.Regions.Select(region => region.Name).Order().ToArray());
+                block.Regions.Select(region => region.Name).Order().ToArray()
+            );
 
             // The contract carries the arity and what may appear, not just a name.
             RegionAttribute items = block.Regions.Single(region => region.Name == FixtureRootBlock.ItemsRegion);

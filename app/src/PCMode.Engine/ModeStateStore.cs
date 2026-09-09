@@ -28,19 +28,14 @@ public sealed class ModeStateStore(string path)
     /// <summary>The one document version this build reads and writes.</summary>
     public const int SchemaVersion = 1;
 
-    private static readonly JsonSerializerOptions ReadOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
+    private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private static readonly JsonSerializerOptions WriteOptions = new()
-    {
-        WriteIndented = true,
-    };
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
-    public string Path { get; } = !string.IsNullOrWhiteSpace(path)
-        ? path
-        : throw new ArgumentException("A state file path is required.", nameof(path));
+    public string Path { get; } =
+        !string.IsNullOrWhiteSpace(path)
+            ? path
+            : throw new ArgumentException("A state file path is required.", nameof(path));
 
     /// <summary>
     /// The recorded mode, or null with <paramref name="problem"/> saying why

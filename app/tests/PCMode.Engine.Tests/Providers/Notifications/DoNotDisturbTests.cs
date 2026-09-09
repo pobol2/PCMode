@@ -150,8 +150,9 @@ public sealed class DoNotDisturbTests
     [Fact]
     public void Leaves_the_setting_alone_when_asked_not_to_nudge_it()
     {
-        (DoNotDisturbProvider provider, FakeNotificationSetting setting) =
-            Configured("""{ "enabled": true, "refresh": false }""");
+        (DoNotDisturbProvider provider, FakeNotificationSetting setting) = Configured(
+            """{ "enabled": true, "refresh": false }"""
+        );
 
         provider.Apply("On", CancellationToken.None);
 

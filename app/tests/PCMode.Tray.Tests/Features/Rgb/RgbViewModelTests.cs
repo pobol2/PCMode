@@ -80,7 +80,8 @@ public sealed class RgbViewModelTests
                     new CaseRgbSceneEdit("Calm", [new CaseRgbSceneDeviceEdit(0, "Static", "001122")]),
                     new CaseRgbSceneEdit("Party", [new CaseRgbSceneDeviceEdit(0, "Static", "112233")]),
                 ],
-            });
+            }
+        );
         Assert.True(outcome.Success, outcome.Problem);
 
         var viewModel = new RgbViewModel(Workspaces.At(root.Path));
@@ -121,7 +122,8 @@ public sealed class RgbViewModelTests
             new CaseRgbEdit(true, string.Empty, [new CaseRgbDeviceEdit(0, "Direct")], 4000)
             {
                 Scenes = [new CaseRgbSceneEdit("Party", [new CaseRgbSceneDeviceEdit(0, "Static", "112233")])],
-            });
+            }
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
     }

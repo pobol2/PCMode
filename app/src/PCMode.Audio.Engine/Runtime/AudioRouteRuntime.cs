@@ -8,16 +8,14 @@ using PCMode.Audio.Engine.Timing;
 
 namespace PCMode.Audio.Engine.Runtime;
 
-public sealed class AudioRouteRuntime :
-    IDisposable
+public sealed class AudioRouteRuntime : IDisposable
 {
     /// <summary>
     /// A little over five milliseconds at 48 kHz. The first resumed sample is
     /// silence and the route reaches its configured level quickly enough that
     /// recovery does not sound like a volume change.
     /// </summary>
-    public const int RestartRampFrameCount =
-        256;
+    public const int RestartRampFrameCount = 256;
 
     private readonly IAudioOutputStream _output;
 
@@ -57,26 +55,19 @@ public sealed class AudioRouteRuntime :
 
     public AudioRoute Route { get; private set; }
 
-    public AudioFormat Format =>
-        _output.Format;
+    public AudioFormat Format => _output.Format;
 
     public int BlockFrameCapacity { get; }
 
     public int DelayFrameCount { get; }
 
-    public int DelaySampleCount =>
-        checked(
-            DelayFrameCount *
-            Format.ChannelCount);
+    public int DelaySampleCount => checked(DelayFrameCount * Format.ChannelCount);
 
-    public int BufferedFrameCount =>
-        _buffer.CountFrames;
+    public int BufferedFrameCount => _buffer.CountFrames;
 
-    public int BufferCapacityFrames =>
-        _buffer.CapacityFrames;
+    public int BufferCapacityFrames => _buffer.CapacityFrames;
 
-    public double CurrentResampleRatio { get; private set; } =
-        1.0;
+    public double CurrentResampleRatio { get; private set; } = 1.0;
 
     public double CurrentCorrectionPpm { get; private set; }
 
@@ -86,15 +77,11 @@ public sealed class AudioRouteRuntime :
 
     public bool IsResynchronizing { get; private set; }
 
-    public long ResyncCount =>
-        _synchronizer.ResyncCount;
+    public long ResyncCount => _synchronizer.ResyncCount;
 
-    public long UnderrunCount =>
-        _buffer.UnderrunCount +
-        _synchronizer.UnderrunCount;
+    public long UnderrunCount => _buffer.UnderrunCount + _synchronizer.UnderrunCount;
 
-    public long UnderrunFrameCount =>
-        _buffer.UnderrunFrameCount;
+    public long UnderrunFrameCount => _buffer.UnderrunFrameCount;
 
     /// <summary>
     /// Times <see cref="Process"/> found itself called after an abnormally
@@ -151,9 +138,7 @@ public sealed class AudioRouteRuntime :
     /// </summary>
     public AudioOutputDiagnostics OutputDiagnostics { get; private set; }
 
-    public bool IsOperational =>
-        _started &&
-        !_failed;
+    public bool IsOperational => _started && !_failed;
 
     public AudioRouteRuntime(
         AudioRoute route,
@@ -161,7 +146,8 @@ public sealed class AudioRouteRuntime :
         AudioProcessingChain processing,
         GainProcessor gain,
         ParametricEqProcessor parametricEq,
-        int blockFrameCapacity)
+        int blockFrameCapacity
+    )
         : this(
             route,
             output,
@@ -169,11 +155,9 @@ public sealed class AudioRouteRuntime :
             gain,
             parametricEq,
             blockFrameCapacity,
-            new AudioRouteHealthWriter(
-                route),
-            fadeInOnFirstStart: false)
-    {
-    }
+            new AudioRouteHealthWriter(route),
+            fadeInOnFirstStart: false
+        ) { }
 
     internal AudioRouteRuntime(
         AudioRoute route,
@@ -183,105 +167,65 @@ public sealed class AudioRouteRuntime :
         ParametricEqProcessor parametricEq,
         int blockFrameCapacity,
         AudioRouteHealthWriter health,
-        bool fadeInOnFirstStart = false)
+        bool fadeInOnFirstStart = false
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            route);
+        ArgumentNullException.ThrowIfNull(route);
 
-        ArgumentNullException.ThrowIfNull(
-            output);
+        ArgumentNullException.ThrowIfNull(output);
 
-        ArgumentNullException.ThrowIfNull(
-            processing);
+        ArgumentNullException.ThrowIfNull(processing);
 
-        ArgumentNullException.ThrowIfNull(
-            gain);
+        ArgumentNullException.ThrowIfNull(gain);
 
-        ArgumentNullException.ThrowIfNull(
-            parametricEq);
+        ArgumentNullException.ThrowIfNull(parametricEq);
 
-        ArgumentNullException.ThrowIfNull(
-            health);
+        ArgumentNullException.ThrowIfNull(health);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            blockFrameCapacity);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(blockFrameCapacity);
 
-        Route =
-            route;
+        Route = route;
 
-        _output =
-            output;
+        _output = output;
 
-        _processing =
-            processing;
+        _processing = processing;
 
-        _gain =
-            gain;
+        _gain = gain;
 
-        _parametricEq =
-            parametricEq;
+        _parametricEq = parametricEq;
 
-        _health =
-            health;
+        _health = health;
 
-        _fadeInOnFirstStart =
-            fadeInOnFirstStart;
+        _fadeInOnFirstStart = fadeInOnFirstStart;
 
-        BlockFrameCapacity =
-            blockFrameCapacity;
+        BlockFrameCapacity = blockFrameCapacity;
 
-        DelayFrameCount =
-            ConvertDelayToFrames(
-                route.Delay,
-                output.Format);
+        DelayFrameCount = ConvertDelayToFrames(route.Delay, output.Format);
 
-        _resampler =
-            new Resampler(
-                output.Format.ChannelCount);
+        _resampler = new Resampler(output.Format.ChannelCount);
 
-        _synchronizer =
-            new RouteSynchronizer(
-                output.Format.SampleRate);
+        _synchronizer = new RouteSynchronizer(output.Format.SampleRate);
 
-        int maximumOutputFrameCount =
-            Resampler.GetMaximumOutputFrameCount(
-                blockFrameCapacity,
-                RouteSynchronizer.MaximumResyncRatio);
+        int maximumOutputFrameCount = Resampler.GetMaximumOutputFrameCount(
+            blockFrameCapacity,
+            RouteSynchronizer.MaximumResyncRatio
+        );
 
-        int bufferCapacityFrames =
-            checked(
-                DelayFrameCount +
-                maximumOutputFrameCount);
+        int bufferCapacityFrames = checked(DelayFrameCount + maximumOutputFrameCount);
 
-        _buffer =
-            new AudioRingBuffer(
-                bufferCapacityFrames,
-                output.Format.ChannelCount);
+        _buffer = new AudioRingBuffer(bufferCapacityFrames, output.Format.ChannelCount);
 
-        int processingSampleCapacity =
-            checked(
-                blockFrameCapacity *
-                output.Format.ChannelCount);
+        int processingSampleCapacity = checked(blockFrameCapacity * output.Format.ChannelCount);
 
-        int outputSampleCapacity =
-            checked(
-                maximumOutputFrameCount *
-                output.Format.ChannelCount);
+        int outputSampleCapacity = checked(maximumOutputFrameCount * output.Format.ChannelCount);
 
-        _processingSamples =
-            new float[
-                processingSampleCapacity];
+        _processingSamples = new float[processingSampleCapacity];
 
-        _resampledSamples =
-            new float[
-                outputSampleCapacity];
+        _resampledSamples = new float[outputSampleCapacity];
 
-        _outputSamples =
-            new float[
-                outputSampleCapacity];
+        _outputSamples = new float[outputSampleCapacity];
 
-        _health.MarkPrepared(
-            output.Format);
+        _health.MarkPrepared(output.Format);
 
         ResetBuffer();
     }
@@ -297,8 +241,7 @@ public sealed class AudioRouteRuntime :
 
         if (_failed)
         {
-            throw new InvalidOperationException(
-                "A failed route runtime cannot be restarted.");
+            throw new InvalidOperationException("A failed route runtime cannot be restarted.");
         }
 
         _health.MarkStarting();
@@ -309,151 +252,95 @@ public sealed class AudioRouteRuntime :
 
             _output.Start();
 
-            _fadeInFramesRemaining =
-                _fadeInOnFirstStart ||
-                _hasStarted
-                    ? RestartRampFrameCount
-                    : 0;
+            _fadeInFramesRemaining = _fadeInOnFirstStart || _hasStarted ? RestartRampFrameCount : 0;
 
-            _started =
-                true;
+            _started = true;
 
-            _hasStarted =
-                true;
+            _hasStarted = true;
 
             _health.MarkRunning();
         }
         catch (Exception ex)
         {
-            _failed =
-                true;
+            _failed = true;
 
-            _health.MarkUnavailable(
-                ex);
+            _health.MarkUnavailable(ex);
 
             throw;
         }
     }
 
-    public void Process(
-        AudioBlock source)
+    public void Process(AudioBlock source)
     {
         ThrowIfDisposed();
 
-        if (!_started ||
-            _failed)
+        if (!_started || _failed)
         {
-            throw new InvalidOperationException(
-                "The route runtime is not operational.");
+            throw new InvalidOperationException("The route runtime is not operational.");
         }
 
         try
         {
-            if (source.Format !=
-                Format)
+            if (source.Format != Format)
             {
                 throw new NotSupportedException(
-                    "Adaptive clock resampling currently requires matching nominal " +
-                    "input/output sample rates and channel counts.");
+                    "Adaptive clock resampling currently requires matching nominal "
+                        + "input/output sample rates and channel counts."
+                );
             }
 
-            if (source.FrameCount >
-                BlockFrameCapacity)
+            if (source.FrameCount > BlockFrameCapacity)
             {
-                throw new ArgumentException(
-                    "The source block exceeds the route block capacity.",
-                    nameof(source));
+                throw new ArgumentException("The source block exceeds the route block capacity.", nameof(source));
             }
 
-            DetectProcessStall(
-                source.FrameCount);
+            DetectProcessStall(source.FrameCount);
 
-            AudioOutputClockSnapshot clock =
-                _output.GetClockSnapshot();
+            AudioOutputClockSnapshot clock = _output.GetClockSnapshot();
 
-            RouteSyncDecision decision =
-                _synchronizer.Update(
-                    source.FramePosition,
-                    clock);
+            RouteSyncDecision decision = _synchronizer.Update(source.FramePosition, clock);
 
-            CurrentResampleRatio =
-                decision.ResampleRatio;
+            CurrentResampleRatio = decision.ResampleRatio;
 
-            CurrentCorrectionPpm =
-                decision.CorrectionPpm;
+            CurrentCorrectionPpm = decision.CorrectionPpm;
 
-            EstimatedDriftPpm =
-                decision.EstimatedDriftPpm;
+            EstimatedDriftPpm = decision.EstimatedDriftPpm;
 
-            TimingErrorFrames =
-                decision.TimingErrorFrames;
+            TimingErrorFrames = decision.TimingErrorFrames;
 
-            IsResynchronizing =
-                decision.IsResynchronizing;
+            IsResynchronizing = decision.IsResynchronizing;
 
-            int sourceSampleCount =
-                checked(
-                    source.FrameCount *
-                    source.Format.ChannelCount);
+            int sourceSampleCount = checked(source.FrameCount * source.Format.ChannelCount);
 
-            Span<float> processingSamples =
-                _processingSamples.AsSpan(
-                    0,
-                    sourceSampleCount);
+            Span<float> processingSamples = _processingSamples.AsSpan(0, sourceSampleCount);
 
-            source.Samples.CopyTo(
-                processingSamples);
+            source.Samples.CopyTo(processingSamples);
 
-            var processingBlock =
-                new AudioBlock(
-                    processingSamples,
-                    Format,
-                    source.FramePosition);
+            var processingBlock = new AudioBlock(processingSamples, Format, source.FramePosition);
 
-            _processing.Process(
-                processingBlock);
+            _processing.Process(processingBlock);
 
-            ApplyRestartRamp(
-                processingSamples);
+            _health.ReportWaveform(processingSamples, Format.ChannelCount);
 
-            int resampledFrameCount =
-                _resampler.Process(
-                    processingSamples,
-                    decision.ResampleRatio,
-                    _resampledSamples);
+            ApplyRestartRamp(processingSamples);
 
-            int resampledSampleCount =
-                checked(
-                    resampledFrameCount *
-                    Format.ChannelCount);
+            int resampledFrameCount = _resampler.Process(processingSamples, decision.ResampleRatio, _resampledSamples);
 
-            ReadOnlySpan<float> resampledSamples =
-                _resampledSamples.AsSpan(
-                    0,
-                    resampledSampleCount);
+            int resampledSampleCount = checked(resampledFrameCount * Format.ChannelCount);
 
-            _buffer.Write(
-                resampledSamples);
+            ReadOnlySpan<float> resampledSamples = _resampledSamples.AsSpan(0, resampledSampleCount);
 
-            Span<float> outputSamples =
-                _outputSamples.AsSpan(
-                    0,
-                    resampledSampleCount);
+            _buffer.Write(resampledSamples);
 
-            _buffer.Read(
-                outputSamples);
+            Span<float> outputSamples = _outputSamples.AsSpan(0, resampledSampleCount);
 
-            var outputBlock =
-                new AudioBlock(
-                    outputSamples,
-                    Format,
-                    source.FramePosition);
+            _buffer.Read(outputSamples);
 
-            _output.Write(
-                outputBlock);
+            var outputBlock = new AudioBlock(outputSamples, Format, source.FramePosition);
 
-            OutputDiagnostics =
-                _output.GetDiagnostics();
+            _output.Write(outputBlock);
+
+            OutputDiagnostics = _output.GetDiagnostics();
 
             _health.ReportTiming(
                 TimingErrorFrames,
@@ -464,15 +351,14 @@ public sealed class AudioRouteRuntime :
                 ResyncCount,
                 StallRecoveryCount,
                 LongestProcessGapMilliseconds,
-                OutputDiagnostics);
+                OutputDiagnostics
+            );
         }
         catch (Exception ex)
         {
-            _failed =
-                true;
+            _failed = true;
 
-            _health.MarkFailed(
-                ex);
+            _health.MarkFailed(ex);
 
             throw;
         }
@@ -489,17 +375,11 @@ public sealed class AudioRouteRuntime :
     /// idempotency check see the calibrated value rather than the one this
     /// route was originally started with.
     /// </remarks>
-    public void SetGain(
-        float gainDb,
-        float volume,
-        bool muted)
+    public void SetGain(float gainDb, float volume, bool muted)
     {
         ThrowIfDisposed();
 
-        _gain.Reconfigure(
-            gainDb,
-            volume,
-            muted);
+        _gain.Reconfigure(gainDb, volume, muted);
 
         UpdateRoute(
             new AudioRoute(
@@ -508,9 +388,9 @@ public sealed class AudioRouteRuntime :
                 volume,
                 muted,
                 Route.Delay,
-                new AudioProcessingProfile(
-                    gainDb,
-                    Route.Processing.ParametricEq)));
+                new AudioProcessingProfile(gainDb, Route.Processing.ParametricEq)
+            )
+        );
     }
 
     /// <summary>
@@ -526,14 +406,11 @@ public sealed class AudioRouteRuntime :
     /// crossfade <see cref="ParametricEqProcessor.Reconfigure"/> already
     /// provides for changing bands on a route that already has some.
     /// </remarks>
-    public void SetParametricEq(
-        ParametricEqProfile? profile)
+    public void SetParametricEq(ParametricEqProfile? profile)
     {
         ThrowIfDisposed();
 
-        _parametricEq.Reconfigure(
-            profile ??
-            ParametricEqProfile.Flat);
+        _parametricEq.Reconfigure(profile ?? ParametricEqProfile.Flat);
 
         UpdateRoute(
             new AudioRoute(
@@ -542,19 +419,16 @@ public sealed class AudioRouteRuntime :
                 Route.Volume,
                 Route.Muted,
                 Route.Delay,
-                new AudioProcessingProfile(
-                    Route.Processing.GainDb,
-                    profile)));
+                new AudioProcessingProfile(Route.Processing.GainDb, profile)
+            )
+        );
     }
 
-    private void UpdateRoute(
-        AudioRoute route)
+    private void UpdateRoute(AudioRoute route)
     {
-        Route =
-            route;
+        Route = route;
 
-        _health.UpdateRoute(
-            route);
+        _health.UpdateRoute(route);
     }
 
     public void ResetBuffer()
@@ -563,8 +437,7 @@ public sealed class AudioRouteRuntime :
 
         _buffer.Reset();
 
-        _buffer.PrimeSilence(
-            DelayFrameCount);
+        _buffer.PrimeSilence(DelayFrameCount);
     }
 
     public void Stop()
@@ -580,8 +453,7 @@ public sealed class AudioRouteRuntime :
         {
             _output.Stop();
 
-            _started =
-                false;
+            _started = false;
 
             ResetRouteState();
 
@@ -592,16 +464,13 @@ public sealed class AudioRouteRuntime :
         }
         catch (Exception ex)
         {
-            _started =
-                false;
+            _started = false;
 
             ResetRouteState();
 
-            _failed =
-                true;
+            _failed = true;
 
-            _health.MarkFailed(
-                ex);
+            _health.MarkFailed(ex);
 
             throw;
         }
@@ -625,8 +494,7 @@ public sealed class AudioRouteRuntime :
         {
             _output.Dispose();
 
-            _disposed =
-                true;
+            _disposed = true;
         }
     }
 
@@ -636,40 +504,30 @@ public sealed class AudioRouteRuntime :
 
         _synchronizer.Reset();
 
-        CurrentResampleRatio =
-            1.0;
+        CurrentResampleRatio = 1.0;
 
-        CurrentCorrectionPpm =
-            0.0;
+        CurrentCorrectionPpm = 0.0;
 
-        EstimatedDriftPpm =
-            0.0;
+        EstimatedDriftPpm = 0.0;
 
-        TimingErrorFrames =
-            0.0;
+        TimingErrorFrames = 0.0;
 
-        IsResynchronizing =
-            false;
+        IsResynchronizing = false;
     }
 
     private void ResetRouteState()
     {
         ResetProcessingPipelineState();
 
-        _fadeInFramesRemaining =
-            0;
+        _fadeInFramesRemaining = 0;
 
-        _lastProcessTimestamp =
-            0;
+        _lastProcessTimestamp = 0;
 
-        StallRecoveryCount =
-            0;
+        StallRecoveryCount = 0;
 
-        LongestProcessGapMilliseconds =
-            0;
+        LongestProcessGapMilliseconds = 0;
 
-        OutputDiagnostics =
-            default;
+        OutputDiagnostics = default;
     }
 
     /// <summary>
@@ -699,41 +557,23 @@ public sealed class AudioRouteRuntime :
         ResetBuffer();
     }
 
-    private void DetectProcessStall(
-        int frameCount)
+    private void DetectProcessStall(int frameCount)
     {
-        long now =
-            Stopwatch.GetTimestamp();
+        long now = Stopwatch.GetTimestamp();
 
-        if (_lastProcessTimestamp !=
-            0)
+        if (_lastProcessTimestamp != 0)
         {
-            TimeSpan elapsed =
-                Stopwatch.GetElapsedTime(
-                    _lastProcessTimestamp,
-                    now);
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(_lastProcessTimestamp, now);
 
-            LongestProcessGapMilliseconds =
-                Math.Max(
-                    LongestProcessGapMilliseconds,
-                    elapsed.TotalMilliseconds);
+            LongestProcessGapMilliseconds = Math.Max(LongestProcessGapMilliseconds, elapsed.TotalMilliseconds);
 
-            TimeSpan expected =
-                TimeSpan.FromSeconds(
-                    frameCount /
-                    (double)Format.SampleRate);
+            TimeSpan expected = TimeSpan.FromSeconds(frameCount / (double)Format.SampleRate);
 
-            TimeSpan maximumContinuousGap =
-                TimeSpan.FromTicks(
-                    Math.Max(
-                        TimeSpan
-                            .FromMilliseconds(25)
-                            .Ticks,
-                        expected.Ticks *
-                        6));
+            TimeSpan maximumContinuousGap = TimeSpan.FromTicks(
+                Math.Max(TimeSpan.FromMilliseconds(25).Ticks, expected.Ticks * 6)
+            );
 
-            if (elapsed >
-                maximumContinuousGap)
+            if (elapsed > maximumContinuousGap)
             {
                 ResetProcessingPipelineState();
 
@@ -741,74 +581,49 @@ public sealed class AudioRouteRuntime :
             }
         }
 
-        _lastProcessTimestamp =
-            now;
+        _lastProcessTimestamp = now;
     }
 
-    private void ApplyRestartRamp(
-        Span<float> samples)
+    private void ApplyRestartRamp(Span<float> samples)
     {
         if (_fadeInFramesRemaining == 0)
         {
             return;
         }
 
-        int channels =
-            Format.ChannelCount;
+        int channels = Format.ChannelCount;
 
-        for (int frameStart = 0;
-             frameStart < samples.Length &&
-             _fadeInFramesRemaining > 0;
-             frameStart += channels)
+        for (int frameStart = 0; frameStart < samples.Length && _fadeInFramesRemaining > 0; frameStart += channels)
         {
-            float level =
-                1.0f -
-                (_fadeInFramesRemaining /
-                 (float)RestartRampFrameCount);
+            float level = 1.0f - (_fadeInFramesRemaining / (float)RestartRampFrameCount);
 
-            for (int channel = 0;
-                 channel < channels;
-                 channel++)
+            for (int channel = 0; channel < channels; channel++)
             {
-                samples[
-                    frameStart +
-                    channel] *=
-                        level;
+                samples[frameStart + channel] *= level;
             }
 
             _fadeInFramesRemaining--;
         }
     }
 
-    private static int ConvertDelayToFrames(
-        TimeSpan delay,
-        AudioFormat format)
+    private static int ConvertDelayToFrames(TimeSpan delay, AudioFormat format)
     {
-        double exactFrames =
-            delay.TotalSeconds *
-            format.SampleRate;
+        double exactFrames = delay.TotalSeconds * format.SampleRate;
 
-        if (!double.IsFinite(
-                exactFrames) ||
-            exactFrames >
-                int.MaxValue)
+        if (!double.IsFinite(exactFrames) || exactFrames > int.MaxValue)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(delay),
                 delay,
-                "Configured delay is too large for the route format.");
+                "Configured delay is too large for the route format."
+            );
         }
 
-        return checked(
-            (int)Math.Round(
-                exactFrames,
-                MidpointRounding.AwayFromZero));
+        return checked((int)Math.Round(exactFrames, MidpointRounding.AwayFromZero));
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

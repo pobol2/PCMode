@@ -1,8 +1,8 @@
 using PCMode.Engine;
-using PCMode.Tray.Elements.Displays;
-using PCMode.Tray.Elements.Displays.Sections;
 using PCMode.Tray.Elements;
 using PCMode.Tray.Elements.Configuration;
+using PCMode.Tray.Elements.Displays;
+using PCMode.Tray.Elements.Displays.Sections;
 using PCMode.Tray.Tests;
 
 namespace PCMode.Tray.Tests.Features.Displays;
@@ -77,9 +77,7 @@ public sealed class DisplaysViewModelTests
         viewModel.LayoutSection.AddMonitor();
         viewModel.LayoutSection.AddMonitor();
 
-        Assert.Equal(
-            ["Left", "Right"],
-            viewModel.LayoutSection.Rows.Select(row => row.MonitorName));
+        Assert.Equal(["Left", "Right"], viewModel.LayoutSection.Rows.Select(row => row.MonitorName));
 
         // Each row still offers its own choice, but never the other row's.
         Assert.Equal(["Left"], viewModel.LayoutSection.Rows[0].AvailableSelections);
@@ -150,10 +148,15 @@ public sealed class DisplaysViewModelTests
     /// only then links -- there is nowhere to write a link before that.
     /// </summary>
     private static void SetActivityDisplay(string root, string layoutName) =>
-        Assert.True(HierarchyStore.SaveResources(
-            root,
-            new NodeAddress("desk", "desktop"),
-            new Dictionary<string, ResourceEdit> { ["display"] = ResourceEdit.Of(layoutName) }).Success);
+        Assert.True(
+            HierarchyStore
+                .SaveResources(
+                    root,
+                    new NodeAddress("desk", "desktop"),
+                    new Dictionary<string, ResourceEdit> { ["display"] = ResourceEdit.Of(layoutName) }
+                )
+                .Success
+        );
 
     /// <summary>Starts a draft with one monitor -- the smallest saveable layout.</summary>
     private static void StartSaveableLayout(DisplaysViewModel viewModel, string name)
@@ -353,7 +356,10 @@ public sealed class DisplaysViewModelTests
         Assert.Null(problem);
         Assert.Contains("deleted", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
-            "Center", viewModel.LayoutSection.CursorPositionChoices, StringComparer.OrdinalIgnoreCase);
+            "Center",
+            viewModel.LayoutSection.CursorPositionChoices,
+            StringComparer.OrdinalIgnoreCase
+        );
     }
 
     [Fact]
@@ -388,7 +394,8 @@ public sealed class DisplaysViewModelTests
     /// <c>DisplayLayoutTests</c> already covers in isolation.
     /// </summary>
     private static (LayoutMonitorRow Left, LayoutMonitorRow Right) ArrangeTwoDifferentlySizedMonitors(
-        DisplaysViewModel viewModel)
+        DisplaysViewModel viewModel
+    )
     {
         viewModel.StartNewLayout("Test layout");
         viewModel.LayoutSection.AddMonitor();
@@ -398,9 +405,13 @@ public sealed class DisplaysViewModelTests
         LayoutMonitorRow right = viewModel.LayoutSection.Rows[1];
 
         left.SetDisplayDetails(
-            new DisplayMonitorInfo("Left", "FAKE-PATH-1", true, true, 0, 0, 2560, 1440, 60, [60], "Left"), null);
+            new DisplayMonitorInfo("Left", "FAKE-PATH-1", true, true, 0, 0, 2560, 1440, 60, [60], "Left"),
+            null
+        );
         right.SetDisplayDetails(
-            new DisplayMonitorInfo("Right", "FAKE-PATH-2", true, false, 0, 0, 1920, 1080, 60, [60], "Right"), null);
+            new DisplayMonitorInfo("Right", "FAKE-PATH-2", true, false, 0, 0, 1920, 1080, 60, [60], "Right"),
+            null
+        );
 
         // The sizes above were written straight onto the rows, so the
         // arrangement has to be re-projected from them before the drop points
@@ -471,7 +482,8 @@ public sealed class DisplaysViewModelTests
     [Fact]
     public void Ddc_and_television_sections_contain_one_card_for_every_selected_monitor()
     {
-        using var root = new TemporaryConfigurationRoot("""
+        using var root = new TemporaryConfigurationRoot(
+            """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}],
              "providers":{
@@ -524,7 +536,8 @@ public sealed class DisplaysViewModelTests
     [Fact]
     public void Monitor_control_type_follows_whichever_binding_is_actually_configured()
     {
-        using var root = new TemporaryConfigurationRoot("""
+        using var root = new TemporaryConfigurationRoot(
+            """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}],
              "providers":{

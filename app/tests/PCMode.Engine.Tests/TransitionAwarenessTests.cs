@@ -12,8 +12,7 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 public sealed class TransitionAwarenessTests
 {
-    private const string Document =
-        """
+    private const string Document = """
         {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
           {"id":"movie","name":"Movie","resources":{"display":"TVOnly","player":"Running"}}]}]}
         """;
@@ -43,7 +42,6 @@ public sealed class TransitionAwarenessTests
         var display = new FakeProvider("display", "TVOnly") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
 
-
         TransitionOutcome outcome = await Run(root, display, player);
 
         Assert.True(outcome.Succeeded, outcome.Message);
@@ -56,7 +54,6 @@ public sealed class TransitionAwarenessTests
         using var root = new TemporaryRoot();
         var display = new FakeProvider("display", "Desktop") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
-
 
         TransitionOutcome outcome = await Run(root, display, player, dryRun: true);
 
@@ -75,7 +72,6 @@ public sealed class TransitionAwarenessTests
         // an hour ago has just moved.
         var display = new FakeProvider("display", "Desktop") { Allowed = ["Desktop", "TVOnly"] };
         var player = new Listener("player", "Stopped");
-
 
         ModeEngine engine = Build(root, display, player);
 
@@ -97,11 +93,7 @@ public sealed class TransitionAwarenessTests
         // further along.
         var display = new FakeProvider("display", "Desktop") { Allowed = ["Desktop", "TVOnly"] };
 
-        var player = new Listener("player", "Stopped")
-        {
-            Deaf = new InvalidOperationException("it would not listen."),
-        };
-
+        var player = new Listener("player", "Stopped") { Deaf = new InvalidOperationException("it would not listen.") };
 
         TransitionOutcome outcome = await Run(root, display, player);
 
@@ -114,8 +106,8 @@ public sealed class TransitionAwarenessTests
         TemporaryRoot root,
         FakeProvider display,
         Listener player,
-        bool dryRun = false) =>
-        await Build(root, display, player).ApplyAsync("Movie", dryRun);
+        bool dryRun = false
+    ) => await Build(root, display, player).ApplyAsync("Movie", dryRun);
 
     private static ModeEngine Build(TemporaryRoot root, FakeProvider display, Listener player)
     {
@@ -126,7 +118,8 @@ public sealed class TransitionAwarenessTests
         return new ModeEngine(
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
-            providers);
+            providers
+        );
     }
 
     /// <summary>A resource that writes down what it was told, and when.</summary>

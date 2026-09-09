@@ -41,11 +41,7 @@ public enum AudioMappingState
 public sealed record AudioEndpointInfo(string Name, bool IsDefault, bool IsVirtualEndpoint = false);
 
 /// <summary>One configured logical name, and what it currently resolves to.</summary>
-public sealed record AudioDeviceMapping(
-    string LogicalName,
-    string EndpointName,
-    AudioMappingState State,
-    int Matches);
+public sealed record AudioDeviceMapping(string LogicalName, string EndpointName, AudioMappingState State, int Matches);
 
 /// <summary>Whether an Audio Target is configured, and if so what it is doing.</summary>
 public enum AudioTargetState
@@ -89,7 +85,8 @@ public sealed record AudioTargetRouteStatus(
     bool Required,
     string? ProfileName,
     AudioRouteHealthState? Runtime,
-    string? Problem);
+    string? Problem
+);
 
 /// <summary>One configured Audio Target as it stands.</summary>
 /// <param name="Routes">The routes in configuration order.</param>
@@ -101,7 +98,8 @@ public sealed record AudioTargetStatus(
     IReadOnlyList<AudioTargetRouteStatus> Routes,
     AudioTargetState State,
     string? Problem,
-    string? Detail);
+    string? Detail
+);
 
 /// <summary>
 /// What the audio provider can see: the smallest thing a settings UI needs.
@@ -127,7 +125,8 @@ public sealed record AudioSnapshot(
     IReadOnlyList<AudioEndpointInfo> Endpoints,
     IReadOnlyList<AudioDeviceMapping> Devices,
     IReadOnlyList<AudioTargetStatus> Targets,
-    AudioRuntimeStatus Runtime)
+    AudioRuntimeStatus Runtime
+)
 {
     /// <summary>
     /// Whether any logical device has been defined. Being unconfigured is not a

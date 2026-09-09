@@ -76,8 +76,9 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
 
     private readonly IDisplayDevices _devices;
 
-    private IReadOnlyDictionary<string, string> _monitors =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, string> _monitors = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>
     /// In configuration order, which is the order <see cref="Read"/> asks in, so
@@ -87,9 +88,7 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     private IReadOnlyList<DisplayLayout> _layouts = [];
 
     public DisplayProvider()
-        : this(new WindowsDisplayDevices())
-    {
-    }
+        : this(new WindowsDisplayDevices()) { }
 
     public DisplayProvider(IDisplayDevices devices)
     {
@@ -134,8 +133,7 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     /// declare requires nothing, which is every layout on a machine with no
     /// television.
     /// </remarks>
-    public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
-        Find(target)?.Requires ?? [];
+    public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) => Find(target)?.Requires ?? [];
 
     /// <summary>
     /// The slowest thing here, and the one most worth being sure about.
@@ -156,22 +154,22 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     /// another round of black screens for whoever is watching. It is worth doing
     /// when the first did not take, and not worth doing all afternoon.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 3,
-        RetryInterval = TimeSpan.FromSeconds(8),
-        PollInterval = TimeSpan.FromMilliseconds(500),
-        Settle = TimeSpan.FromMilliseconds(1500),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 3,
+            RetryInterval = TimeSpan.FromSeconds(8),
+            PollInterval = TimeSpan.FromMilliseconds(500),
+            Settle = TimeSpan.FromMilliseconds(1500),
+        };
 
     /// <summary>The configured layout names, in name order.</summary>
     public IReadOnlyList<string> LayoutNames =>
         [.. _layouts.Select(layout => layout.Name).Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>The configured logical monitor names, in name order.</summary>
-    public IReadOnlyList<string> MonitorNames =>
-        [.. _monitors.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> MonitorNames => [.. _monitors.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
     /// The configured layouts themselves, in name order -- for a graphical
@@ -220,8 +218,7 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
             else
             {
                 problem =
-                    $"'{SettingsPath}' does not understand '{property.Name}'. " +
-                    "It takes 'monitors' and 'layouts'.";
+                    $"'{SettingsPath}' does not understand '{property.Name}'. " + "It takes 'monitors' and 'layouts'.";
 
                 return false;
             }
@@ -249,8 +246,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         if (_layouts.Count == 0)
         {
             problem =
-                $"'{value.Trim()}' cannot be applied because no display layouts are defined. " +
-                $"Add one under '{LayoutsPath}'.";
+                $"'{value.Trim()}' cannot be applied because no display layouts are defined. "
+                + $"Add one under '{LayoutsPath}'.";
 
             return false;
         }
@@ -258,8 +255,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         if (Find(value) is null)
         {
             problem =
-                $"'{value.Trim()}' is not a display layout. " +
-                $"'{LayoutsPath}' defines: {string.Join(", ", LayoutNames)}.";
+                $"'{value.Trim()}' is not a display layout. "
+                + $"'{LayoutsPath}' defines: {string.Join(", ", LayoutNames)}.";
 
             return false;
         }
@@ -315,8 +312,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
 
     public void Apply(string value, CancellationToken cancellationToken)
     {
-        DisplayLayout layout = Find(value)
-            ?? throw new ArgumentException($"'{value}' is not a display layout.", nameof(value));
+        DisplayLayout layout =
+            Find(value) ?? throw new ArgumentException($"'{value}' is not a display layout.", nameof(value));
 
         string[] paths = [.. layout.Monitors.Select(monitor => _monitors[monitor])];
 
@@ -325,7 +322,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
             .. layout.Monitors.Select(monitor =>
                 layout.Refresh.TryGetValue(monitor, out double hz)
                     ? (int)Math.Round(hz, MidpointRounding.AwayFromZero)
-                    : 0),
+                    : 0
+            ),
         ];
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -377,7 +375,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
             _devices.Arrange(
                 paths,
                 [.. layout.Monitors.Select(monitor => expected[monitor].X)],
-                [.. layout.Monitors.Select(monitor => expected[monitor].Y)]);
+                [.. layout.Monitors.Select(monitor => expected[monitor].Y)]
+            );
 
             live = _devices.ActiveDisplays();
         }
@@ -424,10 +423,16 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                 Available: false,
                 exception.Message,
                 [],
-                [.. _monitors.Select(monitor =>
-                    new DisplayMonitorMapping(monitor.Key, monitor.Value, DisplayMappingState.Unknown))],
+                [
+                    .. _monitors.Select(monitor => new DisplayMonitorMapping(
+                        monitor.Key,
+                        monitor.Value,
+                        DisplayMappingState.Unknown
+                    )),
+                ],
                 LayoutNames,
-                CurrentLayout: null);
+                CurrentLayout: null
+            );
         }
 
         Dictionary<string, ActiveDisplay> activeByPath = ByPath(live);
@@ -445,32 +450,36 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         {
             activeByPath.TryGetValue(target.DevicePath, out ActiveDisplay? display);
 
-            monitors.Add(new DisplayMonitorInfo(
-                target.FriendlyName,
-                target.DevicePath,
-                display is not null,
-                display?.IsPrimary ?? false,
-                display?.X ?? 0,
-                display?.Y ?? 0,
-                display?.Width ?? 0,
-                display?.Height ?? 0,
-                display?.RefreshHz ?? 0,
-                supported.TryGetValue(target.DevicePath, out IReadOnlyList<int>? rates) ? rates : [],
-                logicalByPath.TryGetValue(target.DevicePath, out string? logical) ? logical : null));
+            monitors.Add(
+                new DisplayMonitorInfo(
+                    target.FriendlyName,
+                    target.DevicePath,
+                    display is not null,
+                    display?.IsPrimary ?? false,
+                    display?.X ?? 0,
+                    display?.Y ?? 0,
+                    display?.Width ?? 0,
+                    display?.Height ?? 0,
+                    display?.RefreshHz ?? 0,
+                    supported.TryGetValue(target.DevicePath, out IReadOnlyList<int>? rates) ? rates : [],
+                    logicalByPath.TryGetValue(target.DevicePath, out string? logical) ? logical : null
+                )
+            );
         }
 
-        var known = new HashSet<string>(
-            targets.Select(target => target.DevicePath),
-            StringComparer.OrdinalIgnoreCase);
+        var known = new HashSet<string>(targets.Select(target => target.DevicePath), StringComparer.OrdinalIgnoreCase);
 
         var mappings = new List<DisplayMonitorMapping>(_monitors.Count);
 
         foreach ((string logical, string path) in _monitors)
         {
-            mappings.Add(new DisplayMonitorMapping(
-                logical,
-                path,
-                known.Contains(path) ? DisplayMappingState.Ready : DisplayMappingState.Missing));
+            mappings.Add(
+                new DisplayMonitorMapping(
+                    logical,
+                    path,
+                    known.Contains(path) ? DisplayMappingState.Ready : DisplayMappingState.Missing
+                )
+            );
         }
 
         string? current = _layouts.FirstOrDefault(layout => Difference(layout, live) is null)?.Name;
@@ -483,7 +492,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         string.IsNullOrWhiteSpace(value)
             ? null
             : _layouts.FirstOrDefault(layout =>
-                string.Equals(layout.Name, value.Trim(), StringComparison.OrdinalIgnoreCase));
+                string.Equals(layout.Name, value.Trim(), StringComparison.OrdinalIgnoreCase)
+            );
 
     /// <summary>
     /// Everything that is not as the layout says, or null when nothing is.
@@ -532,8 +542,10 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                 return new LayoutDifference($"'{monitor}' is not showing a picture.", Waiting: true);
             }
 
-            if (layout.Refresh.TryGetValue(monitor, out double wanted) &&
-                Math.Abs(display.RefreshHz - wanted) > RefreshTolerance)
+            if (
+                layout.Refresh.TryGetValue(monitor, out double wanted)
+                && Math.Abs(display.RefreshHz - wanted) > RefreshTolerance
+            )
             {
                 // The monitor is up, so Windows has already chosen a mode for it,
                 // and this is the mode it chose. Reported as settled: an
@@ -542,9 +554,10 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                 // sentence this provider produces into a transition that
                 // eventually times out without saying why.
                 return new LayoutDifference(
-                    $"'{monitor}' is running at {Hz(display.RefreshHz)}Hz, not the {Hz(wanted)}Hz the " +
-                    "layout asks for. It may not support that rate at its current resolution.",
-                    Waiting: false);
+                    $"'{monitor}' is running at {Hz(display.RefreshHz)}Hz, not the {Hz(wanted)}Hz the "
+                        + "layout asks for. It may not support that rate at its current resolution.",
+                    Waiting: false
+                );
             }
         }
 
@@ -554,16 +567,17 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         {
             var wanted = new HashSet<string>(
                 layout.Monitors.Select(monitor => _monitors[monitor]),
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.OrdinalIgnoreCase
+            );
 
-            IEnumerable<string> extra = live
-                .Where(display => !wanted.Contains(display.DevicePath))
+            IEnumerable<string> extra = live.Where(display => !wanted.Contains(display.DevicePath))
                 .Select(display => $"'{display.FriendlyName}'");
 
             // A monitor being torn down is as gradual as one being brought up.
             return new LayoutDifference(
                 $"{string.Join(", ", extra)} is also showing a picture, and the layout does not include it.",
-                Waiting: true);
+                Waiting: true
+            );
         }
 
         return null;
@@ -573,7 +587,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     private LayoutDifference? ArrangementDifference(
         DisplayLayout layout,
         IReadOnlyList<ActiveDisplay> live,
-        IReadOnlyDictionary<string, (int X, int Y)> expected)
+        IReadOnlyDictionary<string, (int X, int Y)> expected
+    )
     {
         Dictionary<string, ActiveDisplay> activeByPath = ByPath(live);
 
@@ -585,11 +600,14 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
             if (display.X != x || display.Y != y)
             {
                 return new LayoutDifference(
-                    $"'{monitor}' is at ({display.X}, {display.Y}) rather than ({x}, {y})" +
-                    (string.Equals(monitor, layout.Primary, StringComparison.OrdinalIgnoreCase)
-                        ? ", so it is not the primary display."
-                        : "."),
-                    Waiting: false);
+                    $"'{monitor}' is at ({display.X}, {display.Y}) rather than ({x}, {y})"
+                        + (
+                            string.Equals(monitor, layout.Primary, StringComparison.OrdinalIgnoreCase)
+                                ? ", so it is not the primary display."
+                                : "."
+                        ),
+                    Waiting: false
+                );
             }
         }
 
@@ -616,9 +634,7 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     /// is present. That ordering is the point: a size is not knowable until
     /// Windows has picked a mode for the monitor.
     /// </remarks>
-    private Dictionary<string, (int Width, int Height)> Sizes(
-        DisplayLayout layout,
-        IReadOnlyList<ActiveDisplay> live)
+    private Dictionary<string, (int Width, int Height)> Sizes(DisplayLayout layout, IReadOnlyList<ActiveDisplay> live)
     {
         Dictionary<string, ActiveDisplay> activeByPath = ByPath(live);
 
@@ -648,16 +664,13 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     /// <summary>A rate as somebody would say it: 60, not 59.94021.</summary>
     private static string Hz(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
-    private static bool TryReadMonitors(
-        JsonElement element,
-        Dictionary<string, string> monitors,
-        out string? problem)
+    private static bool TryReadMonitors(JsonElement element, Dictionary<string, string> monitors, out string? problem)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"'{MonitorsPath}' must be an object mapping a name you choose to the exact " +
-                "device path of a monitor.";
+                $"'{MonitorsPath}' must be an object mapping a name you choose to the exact "
+                + "device path of a monitor.";
 
             return false;
         }
@@ -674,15 +687,14 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
 
             string named = monitor.Name.Trim();
 
-            if (monitor.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(monitor.Value.GetString()))
+            if (monitor.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(monitor.Value.GetString()))
             {
                 // An empty mapping is worse than a missing one: the logical name
                 // exists, so every layout using it validates, and the failure
                 // waits until a transition is already under way.
                 problem =
-                    $"'{MonitorsPath}.{named}' is empty. It needs the exact device path of a " +
-                    "monitor, which discovery reports.";
+                    $"'{MonitorsPath}.{named}' is empty. It needs the exact device path of a "
+                    + "monitor, which discovery reports.";
 
                 return false;
             }
@@ -707,8 +719,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                 // one would be indistinguishable from the same layout using the
                 // first, so nothing could say which of them the machine is in.
                 problem =
-                    $"'{MonitorsPath}' points both '{byPath[path]}' and '{named}' at the same " +
-                    "monitor. One monitor cannot be two.";
+                    $"'{MonitorsPath}' points both '{byPath[path]}' and '{named}' at the same "
+                    + "monitor. One monitor cannot be two.";
 
                 return false;
             }
@@ -722,7 +734,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
         JsonElement? element,
         Dictionary<string, string> monitors,
         out List<DisplayLayout>? layouts,
-        out string? problem)
+        out string? problem
+    )
     {
         layouts = null;
 
@@ -769,8 +782,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                         // machine, so it is refused now rather than at the moment
                         // a mode is selected.
                         problem =
-                            $"Display layout '{named}' names monitor '{monitor}', but " +
-                            $"'{MonitorsPath}' has no entry for it.";
+                            $"Display layout '{named}' names monitor '{monitor}', but "
+                            + $"'{MonitorsPath}' has no entry for it.";
 
                         return false;
                     }
@@ -782,8 +795,8 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
                     // pick one of them, and whichever it picked would make the
                     // other report as not current no matter what the machine did.
                     problem =
-                        $"'{LayoutsPath}' defines '{shapes[Shape(read)]}' and '{named}' as the same " +
-                        "arrangement, so nothing could say which of them the machine is in.";
+                        $"'{LayoutsPath}' defines '{shapes[Shape(read)]}' and '{named}' as the same "
+                        + "arrangement, so nothing could say which of them the machine is in.";
 
                     return false;
                 }
@@ -802,20 +815,23 @@ public sealed class DisplayProvider : IConfigurableProvider, IDependentProvider,
     /// layouts asking for the identical thing can be told apart from two that
     /// merely look similar.
     /// </summary>
-    private static string Shape(DisplayLayout layout) => string.Join(
-        '|',
-        string.Join(',', layout.Monitors.Order(StringComparer.OrdinalIgnoreCase)),
-        layout.Primary,
+    private static string Shape(DisplayLayout layout) =>
         string.Join(
-            ',',
-            layout.Placements
-                .Select(placement =>
-                    $"{placement.Key} {placement.Value.Direction} {placement.Value.Anchor} " +
-                    $"{placement.Value.Alignment} {placement.Value.Offset}")
-                .Order(StringComparer.OrdinalIgnoreCase)),
-        string.Join(
-            ',',
-            layout.Refresh
-                .Select(rate => $"{rate.Key} {Hz(rate.Value)}")
-                .Order(StringComparer.OrdinalIgnoreCase)));
+            '|',
+            string.Join(',', layout.Monitors.Order(StringComparer.OrdinalIgnoreCase)),
+            layout.Primary,
+            string.Join(
+                ',',
+                layout
+                    .Placements.Select(placement =>
+                        $"{placement.Key} {placement.Value.Direction} {placement.Value.Anchor} "
+                        + $"{placement.Value.Alignment} {placement.Value.Offset}"
+                    )
+                    .Order(StringComparer.OrdinalIgnoreCase)
+            ),
+            string.Join(
+                ',',
+                layout.Refresh.Select(rate => $"{rate.Key} {Hz(rate.Value)}").Order(StringComparer.OrdinalIgnoreCase)
+            )
+        );
 }

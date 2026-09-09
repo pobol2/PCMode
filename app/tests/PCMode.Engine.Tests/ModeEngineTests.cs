@@ -35,7 +35,8 @@ public sealed class ModeEngineTests
         root.Write(
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"broken","name":"Broken","resources":{"theme":"Dark","sound":"Quiet"}}]}]}
-            """);
+            """
+        );
 
         var theme = new FakeProvider("theme", "Light");
         var sound = new FakeProvider("sound");
@@ -57,7 +58,9 @@ public sealed class ModeEngineTests
     {
         // An empty plan is not a successful transition, and above all must not
         // record a mode: nothing about the machine would have changed.
-        using var world = new World("""{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"empty","name":"Empty","resources":{}}]}]}""");
+        using var world = new World(
+            """{"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"empty","name":"Empty","resources":{}}]}]}"""
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Empty");
 
@@ -80,7 +83,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Both");
 
@@ -110,7 +114,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"muddle","name":"Muddle","resources":{"screen":"Desktop","sound":"TV"}}]}]}
             """,
-            providers: [sound, screen]);
+            providers: [sound, screen]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Muddle");
 
@@ -140,7 +145,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"film","name":"Film","resources":{"sound":"TV"}}]}]}
             """,
-            providers: [sound, screen]);
+            providers: [sound, screen]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -179,7 +185,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"film","name":"Film","resources":{"sound":"TV"}}]}]}
             """,
-            providers: [sound, screen]);
+            providers: [sound, screen]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -211,7 +218,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"film","name":"Film","resources":{"sound":"TV"}}]}]}
             """,
-            providers: [sound, screen]);
+            providers: [sound, screen]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film", dryRun: true);
 
@@ -243,7 +251,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"film","name":"Film","resources":{"sound":"TV"}}]}]}
             """,
-            providers: [sound, screen]);
+            providers: [sound, screen]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film");
 
@@ -252,7 +261,8 @@ public sealed class ModeEngineTests
 
         Assert.Equal(
             TransitionStepStatus.AlreadyCorrect,
-            Assert.Single(outcome.Steps, step => step.Resource == "screen").Status);
+            Assert.Single(outcome.Steps, step => step.Resource == "screen").Status
+        );
     }
 
     // ---- execution ---------------------------------------------------------
@@ -282,7 +292,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         await world.Engine.ApplyAsync("Both");
 
@@ -323,10 +334,9 @@ public sealed class ModeEngineTests
     [Fact]
     public async Task Does_not_let_a_failed_read_stop_a_transition()
     {
-        using var world = new World(providers:
-        [
-            new FakeProvider("theme") { ReadThrows = true, Allowed = ["Light", "Dark"] },
-        ]);
+        using var world = new World(
+            providers: [new FakeProvider("theme") { ReadThrows = true, Allowed = ["Light", "Dark"] }]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Movie");
 
@@ -346,7 +356,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Both");
 
@@ -437,7 +448,8 @@ public sealed class ModeEngineTests
               {"id":"both","name":"Both","resources":{"first":"a","second":"b"}},
               {"id":"desktop","name":"Desktop","resources":{"first":"c"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         engine = world.Engine;
 
@@ -494,7 +506,8 @@ public sealed class ModeEngineTests
               {"id":"desktop","name":"Desktop","resources":{"first":"c"}},
               {"id":"movie","name":"Movie","resources":{"first":"d"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         engine = world.Engine;
 
@@ -564,11 +577,10 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
-        TransitionOutcome outcome = await world.Engine.ApplyAsync(
-            "Both",
-            cancellationToken: cancellation.Token);
+        TransitionOutcome outcome = await world.Engine.ApplyAsync("Both", cancellationToken: cancellation.Token);
 
         Assert.Equal(TransitionStatus.Uncertain, outcome.Status);
         Assert.Equal(["a"], first.Applied);
@@ -585,9 +597,7 @@ public sealed class ModeEngineTests
         using var world = new World();
         var seen = new List<TransitionStep>();
 
-        await world.Engine.ApplyAsync(
-            "Movie",
-            progress: new SynchronousProgress(seen.Add));
+        await world.Engine.ApplyAsync("Movie", progress: new SynchronousProgress(seen.Add));
 
         TransitionStep step = Assert.Single(seen);
 
@@ -616,7 +626,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         TransitionOutcome failed = await world.Engine.ApplyAsync("Both");
         Assert.Equal(TransitionStatus.Failed, failed.Status);
@@ -682,7 +693,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         TransitionOutcome applied = await world.Engine.ApplyAsync("Both");
         Assert.True(applied.Succeeded);
@@ -729,7 +741,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         Assert.True((await world.Engine.ApplyAsync("Both")).Succeeded);
 
@@ -759,7 +772,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"first":"a","second":"b"}}]}]}
             """,
-            providers: [first, second]);
+            providers: [first, second]
+        );
 
         Assert.True((await world.Engine.ApplyAsync("Both")).Succeeded);
         Assert.Equal("space/both", world.Engine.ReadCurrentTargetKey(out _));
@@ -788,7 +802,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"go","name":"Go","resources":{"launcher":"Running"}}]}]}
             """,
-            providers: [launcher]);
+            providers: [launcher]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Go");
 
@@ -806,7 +821,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"go","name":"Go","resources":{"launcher":"Running"}}]}]}
             """,
-            providers: [launcher]);
+            providers: [launcher]
+        );
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Go", dryRun: true);
 
@@ -823,7 +839,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"go","name":"Go","resources":{"launcher":"Running"}}]}]}
             """,
-            providers: [launcher]);
+            providers: [launcher]
+        );
 
         Assert.True((await world.Engine.ApplyAsync("Go")).Succeeded);
         Assert.Equal(["Running"], launcher.Applied);
@@ -845,7 +862,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"launcher":"Running","failing":"b"}}]}]}
             """,
-            providers: [launcher, failing]);
+            providers: [launcher, failing]
+        );
 
         TransitionOutcome failed = await world.Engine.ApplyAsync("Both");
         Assert.Equal(TransitionStatus.Failed, failed.Status);
@@ -870,7 +888,8 @@ public sealed class ModeEngineTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"id":"both","name":"Both","resources":{"failing":"a","launcher":"Running"}}]}]}
             """,
-            providers: [failing, launcher]);
+            providers: [failing, launcher]
+        );
 
         TransitionOutcome failed = await world.Engine.ApplyAsync("Both");
         Assert.Equal(TransitionStatus.Failed, failed.Status);
@@ -894,7 +913,8 @@ public sealed class ModeEngineTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"go","name":"Go","resources":{"launcher":"Running"}}]}]}
             """,
-            providers: [launcher]);
+            providers: [launcher]
+        );
 
         Assert.True((await world.Engine.ApplyAsync("Go")).Succeeded);
         Assert.True((await world.Engine.ApplyAsync("Go")).Succeeded);
@@ -934,9 +954,7 @@ public sealed class ModeEngineTests
         public IReadOnlyList<string> Applied => _applied;
 
         public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
-            Requires is not null && Requires.TryGetValue(target, out ResourceRequirement[]? required)
-                ? required
-                : [];
+            Requires is not null && Requires.TryGetValue(target, out ResourceRequirement[]? required) ? required : [];
 
         public bool IsValidValue(string value, out string? problem)
         {
@@ -977,8 +995,7 @@ public sealed class ModeEngineTests
     /// <summary>A configuration, a state file and an engine, all disposable.</summary>
     private sealed class World : IDisposable
     {
-        private const string DefaultDocument =
-            """
+        private const string DefaultDocument = """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}},
               {"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}
@@ -989,9 +1006,7 @@ public sealed class ModeEngineTests
             Root = new TemporaryRoot();
             Root.Write(document ?? DefaultDocument);
 
-            List<IModeResourceProvider> all = providers is null
-                ? [Theme]
-                : [.. providers];
+            List<IModeResourceProvider> all = providers is null ? [Theme] : [.. providers];
 
             if (providers is not null)
             {

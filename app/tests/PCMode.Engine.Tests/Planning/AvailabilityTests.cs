@@ -20,7 +20,8 @@ public sealed class AvailabilityTests
         TransitionPlan plan = Plan(
             Mode("Film", ("theme", "Dark", false), ("audio", "TV", true)),
             new FakeProvider("theme"),
-            new Fussy("audio", ResourceAvailability.Unavailable("there is no such sound card.")));
+            new Fussy("audio", ResourceAvailability.Unavailable("there is no such sound card."))
+        );
 
         Assert.Equal(["theme"], Keys(plan));
 
@@ -41,7 +42,8 @@ public sealed class AvailabilityTests
         TransitionPlan plan = Plan(
             Mode("Film", ("theme", "Dark", false), ("audio", "TV", true)),
             new FakeProvider("theme"),
-            new Fussy("audio", ResourceAvailability.Disabled("sound is muted by policy.")));
+            new Fussy("audio", ResourceAvailability.Disabled("sound is muted by policy."))
+        );
 
         Assert.Equal(AvailabilityState.Disabled, Assert.Single(plan.Omissions).Availability.State);
     }
@@ -56,7 +58,8 @@ public sealed class AvailabilityTests
         // for.
         TransitionPlan plan = Plan(
             Mode("Film", ("audio", "TV", true)),
-            new Fussy("audio", ResourceAvailability.Unknown("the television has not answered yet.")));
+            new Fussy("audio", ResourceAvailability.Unknown("the television has not answered yet."))
+        );
 
         Assert.Equal(["audio"], Keys(plan));
         Assert.Empty(plan.Omissions);
@@ -71,7 +74,8 @@ public sealed class AvailabilityTests
         // becomes "nobody knows", with the words, and the resource is attempted.
         TransitionPlan plan = Plan(
             Mode("Film", ("audio", "TV", true)),
-            new Fussy("audio") { Throws = new InvalidOperationException("Core Audio did not answer.") });
+            new Fussy("audio") { Throws = new InvalidOperationException("Core Audio did not answer.") }
+        );
 
         Assert.Equal(["audio"], Keys(plan));
 
@@ -86,8 +90,10 @@ public sealed class AvailabilityTests
     {
         Assert.Equal(
             AvailabilityState.Available,
-            Assert.Single(Plan(Mode("Film", ("theme", "Dark", false)), new FakeProvider("theme")).Steps)
-                .Availability.State);
+            Assert
+                .Single(Plan(Mode("Film", ("theme", "Dark", false)), new FakeProvider("theme")).Steps)
+                .Availability.State
+        );
     }
 
     // ---- required means required --------------------------------------------
@@ -97,7 +103,8 @@ public sealed class AvailabilityTests
     {
         string problem = Rejected(
             Mode("Film", ("audio", "TV", false)),
-            new Fussy("audio", ResourceAvailability.Unavailable("there is no such sound card.")));
+            new Fussy("audio", ResourceAvailability.Unavailable("there is no such sound card."))
+        );
 
         Assert.Contains("sound card", problem, StringComparison.Ordinal);
         Assert.Contains("'Film' sets it", problem, StringComparison.Ordinal);
@@ -118,7 +125,8 @@ public sealed class AvailabilityTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in.")));
+            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in."))
+        );
 
         Assert.Contains("not plugged in", problem, StringComparison.Ordinal);
         Assert.Contains("needed by audio 'TV'", problem, StringComparison.Ordinal);
@@ -143,7 +151,8 @@ public sealed class AvailabilityTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in.")));
+            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in."))
+        );
 
         Assert.Contains("not plugged in", problem, StringComparison.Ordinal);
     }
@@ -163,7 +172,8 @@ public sealed class AvailabilityTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in.")));
+            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in."))
+        );
 
         Assert.Contains("display", problem, StringComparison.Ordinal);
     }
@@ -187,7 +197,8 @@ public sealed class AvailabilityTests
                     ["TVOnly"] = [new ResourceRequirement("theme", "Dark")],
                 },
             },
-            new FakeProvider("theme"));
+            new FakeProvider("theme")
+        );
 
         Assert.Equal(["theme", "display"], Keys(plan));
         Assert.Equal("audio", Assert.Single(plan.Omissions).Key);
@@ -206,18 +217,18 @@ public sealed class AvailabilityTests
                 Needs = [new ResourceRequirement("theme", "Dark")],
             },
             new FakeProvider("cursor"),
-            new FakeProvider("theme"));
+            new FakeProvider("theme")
+        );
 
         Assert.Equal(["cursor"], Keys(plan));
 
-        Assert.Equal(
-            ["audio", "theme"],
-            plan.Omissions.Select(omitted => omitted.Key).Order(StringComparer.Ordinal));
+        Assert.Equal(["audio", "theme"], plan.Omissions.Select(omitted => omitted.Key).Order(StringComparer.Ordinal));
 
         Assert.Contains(
             "nothing left",
             Assert.Single(plan.Omissions, omitted => omitted.Key == "theme").Reason,
-            StringComparison.Ordinal);
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -236,14 +247,16 @@ public sealed class AvailabilityTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in.")));
+            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in."))
+        );
 
         Assert.Equal(["theme"], Keys(plan));
 
         Assert.Contains(
             "which was left out",
             Assert.Single(plan.Omissions, omitted => omitted.Key == "audio").Reason,
-            StringComparison.Ordinal);
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -255,7 +268,8 @@ public sealed class AvailabilityTests
         TransitionPlan plan = Plan(
             Mode("Film", ("audio", "TV", false), ("display", "TVOnly", true)),
             new FakeProvider("audio") { RunsAfter = ["display"] },
-            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in.")));
+            new Fussy("display", ResourceAvailability.Unavailable("that monitor is not plugged in."))
+        );
 
         Assert.Equal(["audio"], Keys(plan));
         Assert.Equal("display", Assert.Single(plan.Omissions).Key);
@@ -276,7 +290,8 @@ public sealed class AvailabilityTests
             new Fussy("audio", ResourceAvailability.Unavailable("no such device."))
             {
                 Needs = [new ResourceRequirement("display", "TVOnly")],
-            });
+            }
+        );
 
         Assert.Contains("Desktop", problem, StringComparison.Ordinal);
         Assert.Contains("TVOnly", problem, StringComparison.Ordinal);
@@ -288,7 +303,8 @@ public sealed class AvailabilityTests
         string problem = Rejected(
             Mode("Loop", ("audio", "TV", true), ("display", "TVOnly", true)),
             new Fussy("audio", ResourceAvailability.Unavailable("no such device.")) { After = ["display"] },
-            new FakeProvider("display") { RunsAfter = ["audio"] });
+            new FakeProvider("display") { RunsAfter = ["audio"] }
+        );
 
         Assert.Contains("cannot be ordered", problem, StringComparison.Ordinal);
     }
@@ -305,7 +321,8 @@ public sealed class AvailabilityTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"name":"Film","id":"film","resources":{
               "audio":{"value":"TV","optional":true},
               "display":{"value":"TVOnly","optional":true}}}]}]}
-            """);
+            """
+        );
 
         var audio = new Fussy("audio", ResourceAvailability.Unavailable("no such device."));
         var display = new Fussy("display", ResourceAvailability.Unavailable("not plugged in."));
@@ -316,7 +333,8 @@ public sealed class AvailabilityTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
 
         // A mode was recorded before this, and it is still the mode the machine
         // is in: nothing was changed, so nothing may be forgotten either.
@@ -348,7 +366,8 @@ public sealed class AvailabilityTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"name":"Film","id":"film","resources":{
               "theme":"Dark",
               "audio":{"value":"TV","optional":true}}}]}]}
-            """);
+            """
+        );
 
         var theme = new FakeProvider("theme", "Light");
         var audio = new Fussy("audio", ResourceAvailability.Unavailable("no active device is named 'TV'."));
@@ -359,7 +378,8 @@ public sealed class AvailabilityTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
 
         TransitionOutcome outcome = await engine.ApplyAsync("Film");
 
@@ -388,7 +408,8 @@ public sealed class AvailabilityTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"name":"Film","id":"film","resources":{
               "theme":"Dark",
               "audio":{"value":"TV","optional":true}}}]}]}
-            """);
+            """
+        );
 
         var theme = new FakeProvider("theme", "Light");
         var audio = new Fussy("audio", ResourceAvailability.Unavailable("no active device is named 'TV'."));
@@ -399,7 +420,8 @@ public sealed class AvailabilityTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
 
         TransitionOutcome outcome = await engine.ApplyAsync("Film", dryRun: true);
 
@@ -422,7 +444,8 @@ public sealed class AvailabilityTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[{"name":"Film","id":"film","resources":{
               "audio":{"value":"TV","optional":true}}}]}]}
-            """);
+            """
+        );
 
         var audio = new Fussy("audio") { Fails = new InvalidOperationException("the amplifier is off.") };
 
@@ -432,7 +455,8 @@ public sealed class AvailabilityTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
 
         TransitionOutcome outcome = await engine.ApplyAsync("Film");
 
@@ -445,7 +469,8 @@ public sealed class AvailabilityTests
 
     /// <summary>A resource with an opinion about whether it can be done at all.</summary>
     private sealed class Fussy(string key, ResourceAvailability? availability = null)
-        : IAvailableProvider, IDependentProvider
+        : IAvailableProvider,
+            IDependentProvider
     {
         private readonly List<string> _applied = [];
 
@@ -501,7 +526,8 @@ public sealed class AvailabilityTests
                 DisplayName = name,
                 DisplayPath = name,
                 Identity = new TargetIdentity("space", name.ToLowerInvariant(), null),
-            });
+            }
+        );
 
     private static IReadOnlyList<string> Keys(TransitionPlan plan) => [.. plan.Steps.Select(step => step.Key)];
 

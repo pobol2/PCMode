@@ -41,8 +41,10 @@ public static class DdcMonitorConfigurationStore
 
         JsonElement? section = null;
 
-        if (HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers &&
-            HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey) is JsonNode monitorsNode)
+        if (
+            HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers
+            && HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey) is JsonNode monitorsNode
+        )
         {
             using JsonDocument monitorsDocument = JsonDocument.Parse(monitorsNode.ToJsonString());
             section = monitorsDocument.RootElement.Clone();
@@ -65,15 +67,18 @@ public static class DdcMonitorConfigurationStore
         string trimmedAlias = alias.Trim();
         string trimmedPath = devicePath.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            JsonObject monitors = HardwareConfigurationStore.AsObject(providers, DdcMonitorCatalog.SectionKey);
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
+            {
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                JsonObject monitors = HardwareConfigurationStore.AsObject(providers, DdcMonitorCatalog.SectionKey);
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(monitors, trimmedAlias);
-            monitors.Add(trimmedAlias, trimmedPath);
-            return null;
-        });
+                HardwareConfigurationStore.RemoveCaseInsensitive(monitors, trimmedAlias);
+                monitors.Add(trimmedAlias, trimmedPath);
+                return null;
+            }
+        );
     }
 
     /// <summary>Renames a configured alias, keeping its device path.</summary>
@@ -89,30 +94,36 @@ public static class DdcMonitorConfigurationStore
             return ModeSaveOutcome.Ok;
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey) is not JsonObject monitors)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{oldAlias}' is not a configured DDC/CI monitor.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey)
+                        is not JsonObject monitors
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{oldAlias}' is not a configured DDC/CI monitor.");
+                }
+
+                JsonNode? existing = HardwareConfigurationStore.FindProperty(monitors, oldAlias);
+
+                if (existing is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{oldAlias}' is not a configured DDC/CI monitor.");
+                }
+
+                if (HardwareConfigurationStore.FindProperty(monitors, trimmedNew) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured DDC/CI monitor.");
+                }
+
+                monitors.Remove(FindKey(monitors, oldAlias)!);
+                monitors.Add(trimmedNew, existing.DeepClone());
+                return null;
             }
-
-            JsonNode? existing = HardwareConfigurationStore.FindProperty(monitors, oldAlias);
-
-            if (existing is null)
-            {
-                return ModeSaveOutcome.Failed($"'{oldAlias}' is not a configured DDC/CI monitor.");
-            }
-
-            if (HardwareConfigurationStore.FindProperty(monitors, trimmedNew) is not null)
-            {
-                return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured DDC/CI monitor.");
-            }
-
-            monitors.Remove(FindKey(monitors, oldAlias)!);
-            monitors.Add(trimmedNew, existing.DeepClone());
-            return null;
-        });
+        );
     }
 
     /// <summary>Removes a configured alias.</summary>
@@ -120,37 +131,44 @@ public static class DdcMonitorConfigurationStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(alias);
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey) is not JsonObject monitors)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{alias}' is not a configured DDC/CI monitor.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, DdcMonitorCatalog.SectionKey)
+                        is not JsonObject monitors
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{alias}' is not a configured DDC/CI monitor.");
+                }
+
+                string? key = FindKey(monitors, alias);
+
+                if (key is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{alias}' is not a configured DDC/CI monitor.");
+                }
+
+                monitors.Remove(key);
+
+                // Removing the last alias has to remove the section with it. An
+                // empty 'providers.ddcMonitors' builds no DDC/CI providers, so
+                // nothing reads it, and ModeConfiguration refuses a settings
+                // section nothing reads -- which would make the last monitor the
+                // one that could never be removed.
+                if (monitors.Count == 0)
+                {
+                    HardwareConfigurationStore.RemoveCaseInsensitive(providers, DdcMonitorCatalog.SectionKey);
+                }
+
+                return null;
             }
-
-            string? key = FindKey(monitors, alias);
-
-            if (key is null)
-            {
-                return ModeSaveOutcome.Failed($"'{alias}' is not a configured DDC/CI monitor.");
-            }
-
-            monitors.Remove(key);
-
-            // Removing the last alias has to remove the section with it. An
-            // empty 'providers.ddcMonitors' builds no DDC/CI providers, so
-            // nothing reads it, and ModeConfiguration refuses a settings
-            // section nothing reads -- which would make the last monitor the
-            // one that could never be removed.
-            if (monitors.Count == 0)
-            {
-                HardwareConfigurationStore.RemoveCaseInsensitive(providers, DdcMonitorCatalog.SectionKey);
-            }
-
-            return null;
-        });
+        );
     }
 
     private static string? FindKey(JsonObject obj, string name) =>
-        obj.Select(pair => pair.Key).FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        obj.Select(pair => pair.Key)
+            .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 }

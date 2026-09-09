@@ -6,5 +6,5 @@ public enum AudioEngineState
     Starting,
     Running,
     Stopping,
-    Failed
+    Failed,
 }

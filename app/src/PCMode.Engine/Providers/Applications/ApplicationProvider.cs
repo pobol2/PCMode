@@ -33,9 +33,13 @@ namespace PCMode.Engine;
 /// of this provider's own, and it can be cancelled. A provider that waited as
 /// well would be spending the same seconds twice.
 /// </remarks>
-public sealed class ApplicationProvider :
-    IConfigurableProvider, IDependentProvider, IConvergentProvider, IAvailableProvider, ITransitionAwareProvider,
-    IResourceObservabilityProvider
+public sealed class ApplicationProvider
+    : IConfigurableProvider,
+        IDependentProvider,
+        IConvergentProvider,
+        IAvailableProvider,
+        ITransitionAwareProvider,
+        IResourceObservabilityProvider
 {
     /// <summary>The value a mode writes to have this application running.</summary>
     public const string Running = ApplicationCatalog.Running;
@@ -93,7 +97,13 @@ public sealed class ApplicationProvider :
 
     public bool TryConfigure(JsonElement? settings, out string? problem)
     {
-        if (!ApplicationCatalog.TryRead(settings, out IReadOnlyDictionary<string, ApplicationDefinition> applications, out problem))
+        if (
+            !ApplicationCatalog.TryRead(
+                settings,
+                out IReadOnlyDictionary<string, ApplicationDefinition> applications,
+                out problem
+            )
+        )
         {
             return false;
         }
@@ -105,8 +115,8 @@ public sealed class ApplicationProvider :
             // an application that quietly kept settings from a document nobody is
             // using any more would be the hardest kind of wrong to see.
             problem =
-                $"'{ApplicationCatalog.SettingsPath}' no longer defines '{_definition.Name}', " +
-                "which this build was started with.";
+                $"'{ApplicationCatalog.SettingsPath}' no longer defines '{_definition.Name}', "
+                + "which this build was started with.";
 
             return false;
         }
@@ -212,7 +222,8 @@ public sealed class ApplicationProvider :
                 return _host.HandlesUriScheme(scheme)
                     ? ResourceAvailability.Available
                     : ResourceAvailability.Unavailable(
-                        $"nothing on this machine opens '{scheme}:' links, so {_definition.Name} does not look installed.");
+                        $"nothing on this machine opens '{scheme}:' links, so {_definition.Name} does not look installed."
+                    );
             }
 
             return _host.FileExists(start.Executable!)
@@ -224,7 +235,8 @@ public sealed class ApplicationProvider :
             // A lookup that failed has not established that the application is
             // missing, and only a definite no may drop a resource from a mode.
             return ResourceAvailability.Unknown(
-                $"whether {_definition.Name} is installed could not be checked. {exception.Message}");
+                $"whether {_definition.Name} is installed could not be checked. {exception.Message}"
+            );
         }
     }
 
@@ -250,10 +262,10 @@ public sealed class ApplicationProvider :
         }
 
         problem = _definition.CanStop
-            ? $"'{value}' is not something {_definition.Name} can be. " +
-              $"Use {ApplicationCatalog.Running} or {ApplicationCatalog.Stopped}."
-            : $"'{value}' is not something {_definition.Name} can be. " +
-              $"Launch-only applications support {ApplicationCatalog.Running} only.";
+            ? $"'{value}' is not something {_definition.Name} can be. "
+                + $"Use {ApplicationCatalog.Running} or {ApplicationCatalog.Stopped}."
+            : $"'{value}' is not something {_definition.Name} can be. "
+                + $"Launch-only applications support {ApplicationCatalog.Running} only.";
 
         return false;
     }
@@ -336,7 +348,8 @@ public sealed class ApplicationProvider :
             if (!_definition.CanStop)
             {
                 throw new InvalidOperationException(
-                    $"{_definition.Name} is launch-only. PCMode cannot stop it because no reliable runtime identity is configured.");
+                    $"{_definition.Name} is launch-only. PCMode cannot stop it because no reliable runtime identity is configured."
+                );
             }
 
             Stop(cancellationToken);
@@ -349,8 +362,7 @@ public sealed class ApplicationProvider :
             // a provider that trusted its caller would read a typo as one of the
             // two things it can do, and closing somebody's game because a mode
             // said "Runnning" is not a failure anybody would connect to the cause.
-            throw new ArgumentException(
-                $"'{value}' is not something {_definition.Name} can be.", nameof(value));
+            throw new ArgumentException($"'{value}' is not something {_definition.Name} can be.", nameof(value));
         }
 
         if (!_definition.CanObserve)
@@ -385,8 +397,9 @@ public sealed class ApplicationProvider :
                 if (!_host.WaitUntilStopped(_definition.ProcessName, _definition.StopWithin, cancellationToken))
                 {
                     throw new InvalidOperationException(
-                        $"{_definition.Name} needed restarting because " +
-                        $"{string.Join(" and ", _definition.RestartWhen)} changed, and it would not close.");
+                        $"{_definition.Name} needed restarting because "
+                            + $"{string.Join(" and ", _definition.RestartWhen)} changed, and it would not close."
+                    );
                 }
             }
 
@@ -498,10 +511,10 @@ public sealed class ApplicationProvider :
     }
 
     private static bool IsRunning(string value) =>
-        !string.IsNullOrWhiteSpace(value) &&
-        string.Equals(value.Trim(), ApplicationCatalog.Running, StringComparison.OrdinalIgnoreCase);
+        !string.IsNullOrWhiteSpace(value)
+        && string.Equals(value.Trim(), ApplicationCatalog.Running, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsStopped(string value) =>
-        !string.IsNullOrWhiteSpace(value) &&
-        string.Equals(value.Trim(), ApplicationCatalog.Stopped, StringComparison.OrdinalIgnoreCase);
+        !string.IsNullOrWhiteSpace(value)
+        && string.Equals(value.Trim(), ApplicationCatalog.Stopped, StringComparison.OrdinalIgnoreCase);
 }

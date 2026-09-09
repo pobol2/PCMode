@@ -138,10 +138,12 @@ public sealed record ConvergencePolicy
             return false;
         }
 
-        if (RetryInterval < TimeSpan.Zero ||
-            PollInterval < TimeSpan.Zero ||
-            Settle < TimeSpan.Zero ||
-            PostDispatchDelay < TimeSpan.Zero)
+        if (
+            RetryInterval < TimeSpan.Zero
+            || PollInterval < TimeSpan.Zero
+            || Settle < TimeSpan.Zero
+            || PostDispatchDelay < TimeSpan.Zero
+        )
         {
             problem = "it asks to wait for a negative length of time.";
             return false;

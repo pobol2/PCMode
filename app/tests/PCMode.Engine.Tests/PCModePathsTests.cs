@@ -19,7 +19,8 @@ public sealed class PCModePathsTests
         string expected = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PCMode",
-            "Native");
+            "Native"
+        );
 
         Assert.Equal(expected, PCModePaths.DefaultRoot);
     }
@@ -31,16 +32,19 @@ public sealed class PCModePathsTests
         // never in it.
         string shared = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            PCModePaths.FolderName);
+            PCModePaths.FolderName
+        );
 
         Assert.NotEqual(shared, PCModePaths.DefaultRoot);
         Assert.Equal(shared, Path.GetDirectoryName(PCModePaths.DefaultRoot));
 
-        foreach (string file in new[]
-                 {
-                     PCModePaths.ConfigurationFile(PCModePaths.DefaultRoot),
-                     PCModePaths.StateFile(PCModePaths.DefaultRoot),
-                 })
+        foreach (
+            string file in new[]
+            {
+                PCModePaths.ConfigurationFile(PCModePaths.DefaultRoot),
+                PCModePaths.StateFile(PCModePaths.DefaultRoot),
+            }
+        )
         {
             Assert.NotEqual(shared, Path.GetDirectoryName(file));
         }

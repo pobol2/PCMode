@@ -27,10 +27,10 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
     /// <summary>The pattern repeats every two seconds.</summary>
     private static readonly (double Start, double End, double Frequency)[] Pattern =
     [
-        (0.00, 0.04, 1500),   // click
-        (0.50, 0.54, 1500),   // click
-        (1.00, 1.35, 440),    // A
-        (1.45, 1.80, 660),    // and a fifth above it
+        (0.00, 0.04, 1500), // click
+        (0.50, 0.54, 1500), // click
+        (1.00, 1.35, 440), // A
+        (1.45, 1.80, 660), // and a fifth above it
     ];
 
     /// <summary>About -18 dBFS. Clearly audible, and not startling.</summary>
@@ -126,8 +126,16 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
                 _format = WaveFormat.Read(format, $"'{_name}'");
 
                 Check(
-                    _client.Initialize(ShareModeShared, StreamFlagsEventCallback | StreamFlagsNoPersist, 100 * 10_000, 0, format, nint.Zero),
-                    $"'{_name}'");
+                    _client.Initialize(
+                        ShareModeShared,
+                        StreamFlagsEventCallback | StreamFlagsNoPersist,
+                        100 * 10_000,
+                        0,
+                        format,
+                        nint.Zero
+                    ),
+                    $"'{_name}'"
+                );
             }
             finally
             {
@@ -138,7 +146,8 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
 
             Guid iid = AudioRenderClientIid;
             Check(_client.GetService(ref iid, out object? service), $"'{_name}'");
-            _render = service as IAudioRenderClient
+            _render =
+                service as IAudioRenderClient
                 ?? throw new InvalidOperationException($"'{_name}' did not provide a render stream.");
 
             Check(_client.GetBufferSize(out _bufferFrames), $"'{_name}'");
@@ -160,8 +169,7 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
             {
                 _ready.WaitOne(TimeSpan.FromMilliseconds(200));
 
-                if (_stopping.IsCancellationRequested ||
-                    _client!.GetCurrentPadding(out int padding) != 0)
+                if (_stopping.IsCancellationRequested || _client!.GetCurrentPadding(out int padding) != 0)
                 {
                     return;
                 }
@@ -261,9 +269,7 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
         {
             _ = _client?.Stop();
         }
-        catch (Exception)
-        {
-        }
+        catch (Exception) { }
 
         foreach (object? reference in new object?[] { _render, _client, _device, _enumerator })
         {
@@ -273,9 +279,7 @@ internal sealed unsafe class WasapiTestSignal : IDisposable
                 {
                     Marshal.ReleaseComObject(reference);
                 }
-                catch (Exception)
-                {
-                }
+                catch (Exception) { }
             }
         }
 

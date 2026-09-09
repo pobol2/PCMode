@@ -81,7 +81,8 @@ public sealed class AudioHostOwnership : IDisposable
         return new AudioHostOwnership(
             null,
             owned: false,
-            $"Another PCMode.Audio.Host already owns the pipe '{pipeName}' in this session.");
+            $"Another PCMode.Audio.Host already owns the pipe '{pipeName}' in this session."
+        );
     }
 
     public void Dispose()

@@ -9,10 +9,7 @@ public sealed class WasapiInteropTests
     [Fact]
     public void Keeps_loopback_capture_on_the_ordinary_shared_client()
     {
-        int captureFlags =
-            Wasapi.StreamFlagsLoopback |
-            Wasapi.StreamFlagsEventCallback |
-            Wasapi.StreamFlagsNoPersist;
+        int captureFlags = Wasapi.StreamFlagsLoopback | Wasapi.StreamFlagsEventCallback | Wasapi.StreamFlagsNoPersist;
 
         Assert.False(Wasapi.CanUseLowLatencySharedStream(captureFlags));
     }
@@ -23,9 +20,7 @@ public sealed class WasapiInteropTests
         int renderFlags = Wasapi.StreamFlagsEventCallback | Wasapi.StreamFlagsNoPersist;
 
         Assert.True(Wasapi.CanUseLowLatencySharedStream(renderFlags));
-        Assert.Equal(
-            Wasapi.StreamFlagsEventCallback,
-            Wasapi.LowLatencySharedStreamFlags(renderFlags));
+        Assert.Equal(Wasapi.StreamFlagsEventCallback, Wasapi.LowLatencySharedStreamFlags(renderFlags));
     }
 
     [Fact]
@@ -46,8 +41,7 @@ public sealed class WasapiInteropTests
         [
             .. interfaces
                 .SelectMany(type => type.GetMethods())
-                .Where(method =>
-                    !method.MethodImplementationFlags.HasFlag(MethodImplAttributes.PreserveSig))
+                .Where(method => !method.MethodImplementationFlags.HasFlag(MethodImplAttributes.PreserveSig))
                 .Select(method => $"{method.DeclaringType!.Name}.{method.Name}")
                 .Order(StringComparer.Ordinal),
         ];

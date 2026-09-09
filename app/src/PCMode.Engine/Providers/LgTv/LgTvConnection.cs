@@ -222,7 +222,8 @@ public sealed class LgTvConnection
         ILgTvCredentials credentials,
         TimeProvider? time = null,
         string? televisionName = null,
-        bool isDefault = true)
+        bool isDefault = true
+    )
     {
         ArgumentNullException.ThrowIfNull(network);
         ArgumentNullException.ThrowIfNull(credentials);
@@ -262,7 +263,13 @@ public sealed class LgTvConnection
     /// <summary>The latest observations made through this television's shared connection.</summary>
     public LgTvObservedState ObservedState
     {
-        get { lock (_observedStateLock) { return _observedState; } }
+        get
+        {
+            lock (_observedStateLock)
+            {
+                return _observedState;
+            }
+        }
     }
 
     /// <summary>
@@ -291,15 +298,18 @@ public sealed class LgTvConnection
     /// television is available for its power and not for its input would be a mode
     /// that half happens.
     /// </remarks>
-    internal ResourceAvailability Availability => _settings.Enabled
-        ? ResourceAvailability.Unknown(
-            _televisionName is null
-                ? "the television has not been contacted yet."
-                : $"'{_televisionName}' has not been contacted yet.")
-        : ResourceAvailability.Disabled(
-            _televisionName is null
-                ? $"no television is configured under '{LgTvSettings.SettingsPath}'."
-                : $"the television '{_televisionName}' is switched off in '{LgTvSettings.SettingsPath}'.");
+    internal ResourceAvailability Availability =>
+        _settings.Enabled
+            ? ResourceAvailability.Unknown(
+                _televisionName is null
+                    ? "the television has not been contacted yet."
+                    : $"'{_televisionName}' has not been contacted yet."
+            )
+            : ResourceAvailability.Disabled(
+                _televisionName is null
+                    ? $"no television is configured under '{LgTvSettings.SettingsPath}'."
+                    : $"the television '{_televisionName}' is switched off in '{LgTvSettings.SettingsPath}'."
+            );
 
     /// <summary>
     /// Takes this television's own settings out of the shared section.
@@ -333,8 +343,7 @@ public sealed class LgTvConnection
 
         if (configured is null)
         {
-            problem =
-                $"'{LgTvSettings.SettingsPath}' does not define television '{_televisionName}'.";
+            problem = $"'{LgTvSettings.SettingsPath}' does not define television '{_televisionName}'.";
             return false;
         }
 
@@ -366,37 +375,39 @@ public sealed class LgTvConnection
         try
         {
             Reached<LgTvPower> reached = await RunAsync(
-                allowPairing: false,
-                unreachableIsFine: true,
-                roundTrips: 1,
-                requestTimeout: ReadTimeout,
-                async (session, token) =>
-                {
-                    JsonElement payload = await session
-                        .RequestAsync("ssap://com.webos.service.tvpower/power/getPowerState", null, token)
-                        .ConfigureAwait(false);
-
-                    string? state = Text(payload, "state");
-
-                    if (string.IsNullOrWhiteSpace(state))
+                    allowPairing: false,
+                    unreachableIsFine: true,
+                    roundTrips: 1,
+                    requestTimeout: ReadTimeout,
+                    async (session, token) =>
                     {
-                        return LgTvPower.Unknown;
-                    }
+                        JsonElement payload = await session
+                            .RequestAsync("ssap://com.webos.service.tvpower/power/getPowerState", null, token)
+                            .ConfigureAwait(false);
 
-                    // A television part way through switching on reports where it is
-                    // going as well as where it is. Answering with the destination
-                    // would be reporting the transition finished at the moment there
-                    // is most reason to think it is not.
-                    if (!string.IsNullOrWhiteSpace(Text(payload, "processing")))
-                    {
-                        return LgTvPower.Unknown;
-                    }
+                        string? state = Text(payload, "state");
 
-                    return string.Equals(state, "Active", StringComparison.OrdinalIgnoreCase)
-                        ? LgTvPower.On
-                        : LgTvPower.Off;
-                },
-                cancellationToken).ConfigureAwait(false);
+                        if (string.IsNullOrWhiteSpace(state))
+                        {
+                            return LgTvPower.Unknown;
+                        }
+
+                        // A television part way through switching on reports where it is
+                        // going as well as where it is. Answering with the destination
+                        // would be reporting the transition finished at the moment there
+                        // is most reason to think it is not.
+                        if (!string.IsNullOrWhiteSpace(Text(payload, "processing")))
+                        {
+                            return LgTvPower.Unknown;
+                        }
+
+                        return string.Equals(state, "Active", StringComparison.OrdinalIgnoreCase)
+                            ? LgTvPower.On
+                            : LgTvPower.Off;
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             LgTvPower power = reached.Reach switch
             {
@@ -413,7 +424,8 @@ public sealed class LgTvConnection
                 case LgTvReach.Unreachable:
                     RecordPower(
                         LgTvObservationStatus.Unreachable,
-                        problem: $"The television at {_settings.Host} did not answer.");
+                        problem: $"The television at {_settings.Host} did not answer."
+                    );
                     break;
                 case LgTvReach.Answered when power == LgTvPower.On:
                     RecordPower(LgTvObservationStatus.Observed, TvPowerProvider.On);
@@ -424,7 +436,8 @@ public sealed class LgTvConnection
                 default:
                     RecordPower(
                         LgTvObservationStatus.Unknown,
-                        problem: "The television answered, but its power state is not settled or recognized.");
+                        problem: "The television answered, but its power state is not settled or recognized."
+                    );
                     break;
             }
 
@@ -452,49 +465,56 @@ public sealed class LgTvConnection
         try
         {
             Reached<string> reached = await RunAsync<string>(
-                allowPairing: false,
-                unreachableIsFine: true,
-                roundTrips: 1,
-                requestTimeout: ReadTimeout,
-                async (session, token) =>
-                {
-                    JsonElement payload = await session
-                        .RequestAsync("ssap://com.webos.applicationManager/getForegroundAppInfo", null, token)
-                        .ConfigureAwait(false);
-
-                    string? application = Text(payload, "appId");
-
-                    if (string.IsNullOrWhiteSpace(application))
+                    allowPairing: false,
+                    unreachableIsFine: true,
+                    roundTrips: 1,
+                    requestTimeout: ReadTimeout,
+                    async (session, token) =>
                     {
-                        return null;
-                    }
+                        JsonElement payload = await session
+                            .RequestAsync("ssap://com.webos.applicationManager/getForegroundAppInfo", null, token)
+                            .ConfigureAwait(false);
 
-                    // The television names its inputs as applications:
-                    // "com.webos.app.hdmi4". A television showing its own menu, or
-                    // anything streaming, is showing no input at all -- which is not
-                    // an error and not a failure, simply not one of the answers a
-                    // mode can ask for.
-                    Match hdmi = Regex.Match(
-                        application,
-                        @"hdmi[^1-9]*([1-9])",
-                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                        TimeSpan.FromSeconds(1));
+                        string? application = Text(payload, "appId");
 
-                    return hdmi.Success ? _settings.LogicalFor($"HDMI_{hdmi.Groups[1].Value}") : null;
+                        if (string.IsNullOrWhiteSpace(application))
+                        {
+                            return null;
+                        }
+
+                        // The television names its inputs as applications:
+                        // "com.webos.app.hdmi4". A television showing its own menu, or
+                        // anything streaming, is showing no input at all -- which is not
+                        // an error and not a failure, simply not one of the answers a
+                        // mode can ask for.
+                        Match hdmi = Regex.Match(
+                            application,
+                            @"hdmi[^1-9]*([1-9])",
+                            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                            TimeSpan.FromSeconds(1)
+                        );
+
+                        return hdmi.Success ? _settings.LogicalFor($"HDMI_{hdmi.Groups[1].Value}") : null;
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            RecordInput(
+                reached.Reach switch
+                {
+                    LgTvReach.Answered => LgTvObservationStatus.Observed,
+                    LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
+                    _ => LgTvObservationStatus.Unpaired,
                 },
-                cancellationToken).ConfigureAwait(false);
-
-            RecordInput(reached.Reach switch
-            {
-                LgTvReach.Answered => LgTvObservationStatus.Observed,
-                LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
-                _ => LgTvObservationStatus.Unpaired,
-            }, reached.Value, reached.Reach switch
-            {
-                LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
-                LgTvReach.NotAttempted => "This television has not been paired.",
-                _ => null,
-            });
+                reached.Value,
+                reached.Reach switch
+                {
+                    LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
+                    LgTvReach.NotAttempted => "This television has not been paired.",
+                    _ => null,
+                }
+            );
 
             // Null for anything that is not an answer, silence included. A television
             // that is off is not showing an input, and saying which one it would be
@@ -548,16 +568,18 @@ public sealed class LgTvConnection
         _ = Require();
 
         _ = await RunAsync(
-            allowPairing: true,
-            unreachableIsFine: true,
-            roundTrips: 1,
-            requestTimeout: RequestTimeout,
-            async (session, token) =>
-            {
-                await session.SendRequestAsync("ssap://system/turnOff", null, token).ConfigureAwait(false);
-                return (object?)null;
-            },
-            cancellationToken).ConfigureAwait(false);
+                allowPairing: true,
+                unreachableIsFine: true,
+                roundTrips: 1,
+                requestTimeout: RequestTimeout,
+                async (session, token) =>
+                {
+                    await session.SendRequestAsync("ssap://system/turnOff", null, token).ConfigureAwait(false);
+                    return (object?)null;
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>Switches the television to one of its inputs.</summary>
@@ -566,20 +588,22 @@ public sealed class LgTvConnection
         LgTvSettings settings = Require();
 
         Reached<bool> switched = await RunAsync(
-            allowPairing: true,
-            unreachableIsFine: false,
-            roundTrips: 1,
-            requestTimeout: RequestTimeout,
-            async (session, token) =>
-            {
-                JsonElement payload = await session
-                    .RequestAsync("ssap://tv/switchInput", new JsonObject { ["inputId"] = inputId }, token)
-                    .ConfigureAwait(false);
+                allowPairing: true,
+                unreachableIsFine: false,
+                roundTrips: 1,
+                requestTimeout: RequestTimeout,
+                async (session, token) =>
+                {
+                    JsonElement payload = await session
+                        .RequestAsync("ssap://tv/switchInput", new JsonObject { ["inputId"] = inputId }, token)
+                        .ConfigureAwait(false);
 
-                return !payload.TryGetProperty("returnValue", out JsonElement returned) ||
-                       returned.ValueKind != JsonValueKind.False;
-            },
-            cancellationToken).ConfigureAwait(false);
+                    return !payload.TryGetProperty("returnValue", out JsonElement returned)
+                        || returned.ValueKind != JsonValueKind.False;
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
 
         // Only an answer of "no" is a refusal. Not having been asked at all cannot
         // happen here -- this path may pair, so the one case that skips the
@@ -587,8 +611,7 @@ public sealed class LgTvConnection
         // already ruled that out.
         if (switched.Reach is LgTvReach.Answered && !switched.Value)
         {
-            throw new InvalidOperationException(
-                $"The television at {settings.Host} refused to switch to {inputId}.");
+            throw new InvalidOperationException($"The television at {settings.Host} refused to switch to {inputId}.");
         }
     }
 
@@ -613,31 +636,39 @@ public sealed class LgTvConnection
         try
         {
             Reached<string> reached = await RunAsync<string>(
-                allowPairing: false,
-                unreachableIsFine: true,
-                roundTrips: 1,
-                requestTimeout: ReadTimeout,
-                async (session, token) =>
+                    allowPairing: false,
+                    unreachableIsFine: true,
+                    roundTrips: 1,
+                    requestTimeout: ReadTimeout,
+                    async (session, token) =>
+                    {
+                        JsonElement settings = await session
+                            .GetSettingsAsync(LgTvProfile.PictureCategory, [LgTvProfile.PictureModeKey], token)
+                            .ConfigureAwait(false);
+
+                        return _settings.ProfileForPictureMode(
+                            Text(settings, LgTvProfile.PictureModeKey) ?? string.Empty
+                        );
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            RecordProfile(
+                reached.Reach switch
                 {
-                    JsonElement settings = await session
-                        .GetSettingsAsync(LgTvProfile.PictureCategory, [LgTvProfile.PictureModeKey], token)
-                        .ConfigureAwait(false);
-
-                    return _settings.ProfileForPictureMode(Text(settings, LgTvProfile.PictureModeKey) ?? string.Empty);
+                    LgTvReach.Answered => LgTvObservationStatus.Observed,
+                    LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
+                    _ => LgTvObservationStatus.Unpaired,
                 },
-                cancellationToken).ConfigureAwait(false);
-
-            RecordProfile(reached.Reach switch
-            {
-                LgTvReach.Answered => LgTvObservationStatus.Observed,
-                LgTvReach.Unreachable => LgTvObservationStatus.Unreachable,
-                _ => LgTvObservationStatus.Unpaired,
-            }, reached.Value, reached.Reach switch
-            {
-                LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
-                LgTvReach.NotAttempted => "This television has not been paired.",
-                _ => null,
-            });
+                reached.Value,
+                reached.Reach switch
+                {
+                    LgTvReach.Unreachable => $"The television at {_settings.Host} did not answer.",
+                    LgTvReach.NotAttempted => "This television has not been paired.",
+                    _ => null,
+                }
+            );
 
             // Null for anything that is not an answer. A television that is off is in
             // no picture mode at all.
@@ -689,19 +720,21 @@ public sealed class LgTvConnection
         }
 
         _ = await RunAsync<object>(
-            allowPairing: true,
-            unreachableIsFine: false,
-            roundTrips: 2,
-            requestTimeout: RequestTimeout,
-            async (session, token) =>
-            {
-                await session
-                    .WriteSettingsAsync(LgTvProfile.SignalCategory, profile.Signal, token)
-                    .ConfigureAwait(false);
+                allowPairing: true,
+                unreachableIsFine: false,
+                roundTrips: 2,
+                requestTimeout: RequestTimeout,
+                async (session, token) =>
+                {
+                    await session
+                        .WriteSettingsAsync(LgTvProfile.SignalCategory, profile.Signal, token)
+                        .ConfigureAwait(false);
 
-                return null;
-            },
-            cancellationToken).ConfigureAwait(false);
+                    return null;
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>Writes the picture mode, and anything written alongside it.</summary>
@@ -710,34 +743,39 @@ public sealed class LgTvConnection
         LgTvProfile profile = RequireProfile(profileName);
 
         _ = await RunAsync<object>(
-            allowPairing: true,
-            unreachableIsFine: false,
-            roundTrips: 4,
-            requestTimeout: RequestTimeout,
-            async (session, token) =>
-            {
-                // The picture mode goes first and alone. Selecting one loads that
-                // mode's own stored values, so anything written before it in the
-                // same breath is overwritten by the act of selecting it.
-                await session.WriteSettingsAsync(
-                    LgTvProfile.PictureCategory,
-                    [new LgTvSetting(LgTvProfile.PictureModeKey, profile.PictureMode)],
-                    token).ConfigureAwait(false);
-
-                if (profile.Settings.Count > 0)
+                allowPairing: true,
+                unreachableIsFine: false,
+                roundTrips: 4,
+                requestTimeout: RequestTimeout,
+                async (session, token) =>
                 {
-                    // Paced, because webOS drops settings that arrive while it is
-                    // still loading the mode that was just selected.
-                    await Task.Delay(SettingInterval, _time, token).ConfigureAwait(false);
-
+                    // The picture mode goes first and alone. Selecting one loads that
+                    // mode's own stored values, so anything written before it in the
+                    // same breath is overwritten by the act of selecting it.
                     await session
-                        .WriteSettingsAsync(LgTvProfile.PictureCategory, profile.Settings, token)
+                        .WriteSettingsAsync(
+                            LgTvProfile.PictureCategory,
+                            [new LgTvSetting(LgTvProfile.PictureModeKey, profile.PictureMode)],
+                            token
+                        )
                         .ConfigureAwait(false);
-                }
 
-                return null;
-            },
-            cancellationToken).ConfigureAwait(false);
+                    if (profile.Settings.Count > 0)
+                    {
+                        // Paced, because webOS drops settings that arrive while it is
+                        // still loading the mode that was just selected.
+                        await Task.Delay(SettingInterval, _time, token).ConfigureAwait(false);
+
+                        await session
+                            .WriteSettingsAsync(LgTvProfile.PictureCategory, profile.Settings, token)
+                            .ConfigureAwait(false);
+                    }
+
+                    return null;
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -760,7 +798,8 @@ public sealed class LgTvConnection
             roundTrips: 0,
             requestTimeout: RequestTimeout,
             (_, _) => Task.FromResult<object?>(null),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     /// <summary>
@@ -797,10 +836,12 @@ public sealed class LgTvConnection
             ?? throw new ArgumentException($"'{name}' is not a television profile.", nameof(name));
     }
 
-    private LgTvSettings Require() => _settings.Enabled
-        ? _settings
-        : throw new InvalidOperationException(
-            $"No television is configured. Add one under '{LgTvSettings.SettingsPath}'.");
+    private LgTvSettings Require() =>
+        _settings.Enabled
+            ? _settings
+            : throw new InvalidOperationException(
+                $"No television is configured. Add one under '{LgTvSettings.SettingsPath}'."
+            );
 
     /// <summary>
     /// Opens a socket, registers on it, does one thing, and closes it.
@@ -845,7 +886,8 @@ public sealed class LgTvConnection
         int roundTrips,
         TimeSpan requestTimeout,
         Func<Session, CancellationToken, Task<T?>> work,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (!_settings.Enabled)
         {
@@ -888,17 +930,22 @@ public sealed class LgTvConnection
         {
             await _gate.WaitAsync(gateBound.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (
-            gateDeadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
+            when (gateDeadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException(
-                "The television is already busy with another request.");
+            throw new InvalidOperationException("The television is already busy with another request.");
         }
 
         try
         {
             return await ConnectAndRunAsync(
-                    unreachableIsFine, roundTrips, requestTimeout, credential, work, cancellationToken)
+                    unreachableIsFine,
+                    roundTrips,
+                    requestTimeout,
+                    credential,
+                    work,
+                    cancellationToken
+                )
                 .ConfigureAwait(false);
         }
         finally
@@ -913,7 +960,8 @@ public sealed class LgTvConnection
         TimeSpan requestTimeout,
         LgTvCredential? credential,
         Func<Session, CancellationToken, Task<T?>> work,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         // A connection that has to be approved on the television's screen is
         // measuring a person; one that has a key is measuring a local network --
@@ -926,10 +974,9 @@ public sealed class LgTvConnection
         // write, which is how one unlucky poll could outlast the thing it was
         // polling for.
         using var deadline = new CancellationTokenSource(
-            credential is null
-                ? PairingTimeout
-                : ConnectTimeout + RegisterTimeout + (requestTimeout * roundTrips),
-            _time);
+            credential is null ? PairingTimeout : ConnectTimeout + RegisterTimeout + (requestTimeout * roundTrips),
+            _time
+        );
 
         using var bounded = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
 
@@ -942,11 +989,12 @@ public sealed class LgTvConnection
                     _settings.Host,
                     LgTvSettings.SecurePort,
                     credential?.CertificateFingerprint,
-                    bounded.Token)
+                    bounded.Token
+                )
                 .ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (
-            deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException)
+            when (deadline.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
             // Gave up waiting for it to answer. Not a cancellation as far as the
             // engine is concerned -- nobody called anything off -- so it must not
@@ -1000,15 +1048,16 @@ public sealed class LgTvConnection
                     _ = _credentials.TryWrite(
                         _settings.Host,
                         new LgTvCredential(issued, socket.CertificateFingerprint),
-                        out _);
+                        out _
+                    );
                 }
 
-                return new Reached<T>(
-                    LgTvReach.Answered, await work(session, bounded.Token).ConfigureAwait(false));
+                return new Reached<T>(LgTvReach.Answered, await work(session, bounded.Token).ConfigureAwait(false));
             }
-            catch (OperationCanceledException) when (
-                (deadline.IsCancellationRequested || registering?.IsCancellationRequested == true) &&
-                !cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException)
+                when ((deadline.IsCancellationRequested || registering?.IsCancellationRequested == true)
+                    && !cancellationToken.IsCancellationRequested
+                )
             {
                 // The television stopped answering part way through, and one of
                 // this operation's own deadlines is what ended it. Letting the
@@ -1021,11 +1070,10 @@ public sealed class LgTvConnection
                     return Unreachable<T>();
                 }
 
-                throw new InvalidOperationException(
-                    $"The television at {_settings.Host} stopped answering.");
+                throw new InvalidOperationException($"The television at {_settings.Host} stopped answering.");
             }
-            catch (Exception exception) when (
-                unreachableIsFine && IsSilence(exception) && !cancellationToken.IsCancellationRequested)
+            catch (Exception exception)
+                when (unreachableIsFine && IsSilence(exception) && !cancellationToken.IsCancellationRequested)
             {
                 // The socket dropped. For an operation that is content with
                 // silence this is the same answer as never having connected at
@@ -1058,9 +1106,9 @@ public sealed class LgTvConnection
         exception is WebSocketException or IOException or SocketException;
 
     private static string? Text(JsonElement element, string name) =>
-        element.ValueKind == JsonValueKind.Object &&
-        element.TryGetProperty(name, out JsonElement property) &&
-        property.ValueKind == JsonValueKind.String
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty(name, out JsonElement property)
+        && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
 
@@ -1100,8 +1148,15 @@ public sealed class LgTvConnection
             }
 
             await SendAsync(
-                new JsonObject { ["type"] = "register", ["id"] = RegisterId, ["payload"] = payload },
-                cancellationToken).ConfigureAwait(false);
+                    new JsonObject
+                    {
+                        ["type"] = "register",
+                        ["id"] = RegisterId,
+                        ["payload"] = payload,
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             while (true)
             {
@@ -1115,7 +1170,8 @@ public sealed class LgTvConnection
                 if (string.Equals(Text(message, "type"), "error", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"The television refused the connection: {Text(message, "error") ?? "no reason given"}.");
+                        $"The television refused the connection: {Text(message, "error") ?? "no reason given"}."
+                    );
                 }
 
                 // The television answers a registration twice: once to say it is
@@ -1126,9 +1182,11 @@ public sealed class LgTvConnection
                     continue;
                 }
 
-                if (message.TryGetProperty("payload", out JsonElement payloadElement) &&
-                    Text(payloadElement, "client-key") is string issued &&
-                    !string.IsNullOrWhiteSpace(issued))
+                if (
+                    message.TryGetProperty("payload", out JsonElement payloadElement)
+                    && Text(payloadElement, "client-key") is string issued
+                    && !string.IsNullOrWhiteSpace(issued)
+                )
                 {
                     return issued;
                 }
@@ -1140,7 +1198,8 @@ public sealed class LgTvConnection
                 }
 
                 throw new InvalidOperationException(
-                    "The television accepted the connection but issued no pairing key.");
+                    "The television accepted the connection but issued no pairing key."
+                );
             }
         }
 
@@ -1148,7 +1207,8 @@ public sealed class LgTvConnection
         public async Task<JsonElement> RequestAsync(
             string uri,
             JsonObject? payload,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             string id = await SendRequestAsync(uri, payload, cancellationToken).ConfigureAwait(false);
 
@@ -1164,7 +1224,8 @@ public sealed class LgTvConnection
                 if (string.Equals(Text(message, "type"), "error", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"The television refused {uri}: {Text(message, "error") ?? "no reason given"}.");
+                        $"The television refused {uri}: {Text(message, "error") ?? "no reason given"}."
+                    );
                 }
 
                 if (!message.TryGetProperty("payload", out JsonElement answer))
@@ -1183,22 +1244,21 @@ public sealed class LgTvConnection
         /// For the one command whose reply cannot be waited for: a television
         /// asked to switch off stops answering because it did what it was told.
         /// </remarks>
-        public async Task<string> SendRequestAsync(
-            string uri,
-            JsonObject? payload,
-            CancellationToken cancellationToken)
+        public async Task<string> SendRequestAsync(string uri, JsonObject? payload, CancellationToken cancellationToken)
         {
             string id = $"pcmode_{++_sent}";
 
             await SendAsync(
-                new JsonObject
-                {
-                    ["type"] = "request",
-                    ["id"] = id,
-                    ["uri"] = uri,
-                    ["payload"] = payload ?? [],
-                },
-                cancellationToken).ConfigureAwait(false);
+                    new JsonObject
+                    {
+                        ["type"] = "request",
+                        ["id"] = id,
+                        ["uri"] = uri,
+                        ["payload"] = payload ?? [],
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             return id;
         }
@@ -1207,7 +1267,8 @@ public sealed class LgTvConnection
         public async Task<JsonElement> GetSettingsAsync(
             string category,
             IReadOnlyList<string> keys,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             var payload = new JsonObject
             {
@@ -1218,8 +1279,10 @@ public sealed class LgTvConnection
             JsonElement answer = await RequestAsync("ssap://settings/getSystemSettings", payload, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!answer.TryGetProperty("settings", out JsonElement settings) ||
-                settings.ValueKind != JsonValueKind.Object)
+            if (
+                !answer.TryGetProperty("settings", out JsonElement settings)
+                || settings.ValueKind != JsonValueKind.Object
+            )
             {
                 throw new InvalidOperationException($"The television reported no '{category}' settings.");
             }
@@ -1258,7 +1321,8 @@ public sealed class LgTvConnection
         public async Task WriteSettingsAsync(
             string category,
             IReadOnlyList<LgTvSetting> settings,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+        )
         {
             if (settings.Count == 0)
             {
@@ -1274,53 +1338,56 @@ public sealed class LgTvConnection
 
             // Cloned per use: a node belongs to one parent, and the same
             // parameters are carried in three places in the one message.
-            JsonObject Parameters() => new()
-            {
-                ["category"] = category,
-                ["settings"] = values.DeepClone(),
-            };
+            JsonObject Parameters() => new() { ["category"] = category, ["settings"] = values.DeepClone() };
 
-            JsonObject Write() => new()
-            {
-                ["uri"] = SettingsService,
-                ["params"] = Parameters(),
-            };
+            JsonObject Write() => new() { ["uri"] = SettingsService, ["params"] = Parameters() };
 
             var alert = new JsonObject
             {
                 ["message"] = " ",
-                ["buttons"] = new JsonArray(new JsonObject
-                {
-                    ["label"] = string.Empty,
-                    ["onClick"] = SettingsService,
-                    ["params"] = Parameters(),
-                }),
+                ["buttons"] = new JsonArray(
+                    new JsonObject
+                    {
+                        ["label"] = string.Empty,
+                        ["onClick"] = SettingsService,
+                        ["params"] = Parameters(),
+                    }
+                ),
                 ["onclose"] = Write(),
                 ["onfail"] = Write(),
             };
 
             JsonElement created = await RequestAsync(
-                "ssap://system.notifications/createAlert", alert, cancellationToken).ConfigureAwait(false);
+                    "ssap://system.notifications/createAlert",
+                    alert,
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
-            if (created.TryGetProperty("returnValue", out JsonElement accepted) &&
-                accepted.ValueKind == JsonValueKind.False)
+            if (
+                created.TryGetProperty("returnValue", out JsonElement accepted)
+                && accepted.ValueKind == JsonValueKind.False
+            )
             {
                 throw new InvalidOperationException($"The television refused to change {Describe(settings)}.");
             }
 
             if (Text(created, "alertId") is not string alertId || string.IsNullOrWhiteSpace(alertId))
             {
-                throw new InvalidOperationException(
-                    $"The television did not say how to apply {Describe(settings)}.");
+                throw new InvalidOperationException($"The television did not say how to apply {Describe(settings)}.");
             }
 
             JsonElement closed = await RequestAsync(
-                "ssap://system.notifications/closeAlert",
-                new JsonObject { ["alertId"] = alertId },
-                cancellationToken).ConfigureAwait(false);
+                    "ssap://system.notifications/closeAlert",
+                    new JsonObject { ["alertId"] = alertId },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
-            if (closed.TryGetProperty("returnValue", out JsonElement applied) &&
-                applied.ValueKind == JsonValueKind.False)
+            if (
+                closed.TryGetProperty("returnValue", out JsonElement applied)
+                && applied.ValueKind == JsonValueKind.False
+            )
             {
                 throw new InvalidOperationException($"The television did not apply {Describe(settings)}.");
             }
@@ -1344,7 +1411,8 @@ public sealed class LgTvConnection
             catch (JsonException exception)
             {
                 throw new InvalidOperationException(
-                    $"The television sent something that is not JSON. {exception.Message}");
+                    $"The television sent something that is not JSON. {exception.Message}"
+                );
             }
         }
     }

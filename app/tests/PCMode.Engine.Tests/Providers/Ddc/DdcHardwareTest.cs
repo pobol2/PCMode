@@ -18,8 +18,8 @@ public sealed class DdcHardwareFactAttribute : FactAttribute
         if (!DdcHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_DDC_HARDWARE_TEST=1 to run it: it sends real DDC/CI commands " +
-                "to a real monitor and briefly changes its brightness.";
+                "Hardware check. Set PCMODE_DDC_HARDWARE_TEST=1 to run it: it sends real DDC/CI commands "
+                + "to a real monitor and briefly changes its brightness.";
         }
     }
 }
@@ -124,8 +124,9 @@ public sealed class DdcHardwareTest(Xunit.Abstractions.ITestOutputHelper output)
         if (chosen is null)
         {
             Assert.Fail(
-                "No connected monitor answered both a capability probe and a brightness read over DDC/CI. " +
-                "DDC/CI may be disabled in the monitor's own menu, or no monitor here supports it.");
+                "No connected monitor answered both a capability probe and a brightness read over DDC/CI. "
+                    + "DDC/CI may be disabled in the monitor's own menu, or no monitor here supports it."
+            );
             return;
         }
 
@@ -186,9 +187,9 @@ public sealed class DdcHardwareTest(Xunit.Abstractions.ITestOutputHelper output)
             return;
         }
 
-        string named = DdcInputProvider.KnownInputNames
-            .FirstOrDefault(pair => pair.Value == input.Current)
-            .Key ?? "not one this build names";
+        string named =
+            DdcInputProvider.KnownInputNames.FirstOrDefault(pair => pair.Value == input.Current).Key
+            ?? "not one this build names";
 
         Say($"Current input: 0x{input.Current:X2} ({named}). Not changed -- see this method's remarks.");
     }
@@ -199,10 +200,14 @@ public sealed class DdcHardwareTest(Xunit.Abstractions.ITestOutputHelper output)
             : string.Join(
                 ", ",
                 capabilities.Features.Values.Select(feature =>
-                    $"0x{(byte)feature.Code:X2}" +
-                    (feature.SupportedValues.Count > 0
-                        ? $" ({string.Join(" ", feature.SupportedValues.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)))})"
-                        : string.Empty)));
+                    $"0x{(byte)feature.Code:X2}"
+                    + (
+                        feature.SupportedValues.Count > 0
+                            ? $" ({string.Join(" ", feature.SupportedValues.Select(value => value.ToString("X2", CultureInfo.InvariantCulture)))})"
+                            : string.Empty
+                    )
+                )
+            );
 
     private void Say(string line)
     {

@@ -11,7 +11,7 @@ internal enum AudioRouteRuntimeHealthState
     Running,
     Stopped,
     Unavailable,
-    Failed
+    Failed,
 }
 
 internal sealed record AudioRouteRuntimeSnapshot(
@@ -28,10 +28,12 @@ internal sealed record AudioRouteRuntimeSnapshot(
     long StallRecoveryCount,
     double LongestProcessGapMilliseconds,
     AudioOutputDiagnostics OutputDiagnostics,
-    AudioFailure? LastFailure);
+    AudioFailure? LastFailure
+);
 
 internal sealed record AudioRuntimeSnapshot(
     AudioEngineState EngineState,
     AudioTarget? ActiveTarget,
     IReadOnlyList<AudioRouteRuntimeSnapshot> Routes,
-    AudioFailure? LastFailure);
+    AudioFailure? LastFailure
+);

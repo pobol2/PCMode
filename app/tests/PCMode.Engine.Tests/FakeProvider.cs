@@ -8,8 +8,10 @@ namespace PCMode.Engine.Tests;
 /// itself, one that blocks -- is a case a real machine will not produce on
 /// request. That is the whole reason the provider interface is an interface.
 /// </remarks>
-internal sealed class FakeProvider(string key, string? current = null) :
-    IDependentProvider, IAvailableProvider, IResourceObservabilityProvider
+internal sealed class FakeProvider(string key, string? current = null)
+    : IDependentProvider,
+        IAvailableProvider,
+        IResourceObservabilityProvider
 {
     private readonly List<string> _applied = [];
 
@@ -40,9 +42,7 @@ internal sealed class FakeProvider(string key, string? current = null) :
     public IReadOnlyList<string> RunsAfter { get; init; } = [];
 
     public IReadOnlyList<ResourceRequirement> RequirementsFor(string target) =>
-        Requires is not null && Requires.TryGetValue(target, out ResourceRequirement[]? required)
-            ? required
-            : [];
+        Requires is not null && Requires.TryGetValue(target, out ResourceRequirement[]? required) ? required : [];
 
     /// <summary>What Read reports. Null stands for "cannot tell".</summary>
     public string? Current { get; set; } = current;
@@ -85,9 +85,7 @@ internal sealed class FakeProvider(string key, string? current = null) :
         return true;
     }
 
-    public string? Read() => ReadThrows
-        ? throw new InvalidOperationException($"{Key} cannot be read.")
-        : Current;
+    public string? Read() => ReadThrows ? throw new InvalidOperationException($"{Key} cannot be read.") : Current;
 
     public void Apply(string value, CancellationToken cancellationToken)
     {

@@ -8,35 +8,28 @@ namespace PCMode.Audio.Windows.Endpoints;
 
 public sealed class CoreAudioEndpointCatalog
 {
-    public IReadOnlyList<CoreAudioEndpointSnapshot>
-        GetActiveRenderEndpoints()
+    public IReadOnlyList<CoreAudioEndpointSnapshot> GetActiveRenderEndpoints()
     {
         if (!OperatingSystem.IsWindows())
         {
             throw new PlatformNotSupportedException();
         }
 
-        var result =
-            new List<CoreAudioEndpointSnapshot>();
+        var result = new List<CoreAudioEndpointSnapshot>();
 
         IMMDeviceEnumerator? enumerator = null;
         IMMDeviceCollection? devices = null;
 
         try
         {
-            enumerator =
-                CoreAudioInterop.CreateEnumerator();
+            enumerator = CoreAudioInterop.CreateEnumerator();
 
             WasapiError.ThrowIfFailed(
-                enumerator.EnumAudioEndpoints(
-                    EDataFlow.Render,
-                    DeviceState.Active,
-                    out devices),
-                "IMMDeviceEnumerator.EnumAudioEndpoints");
+                enumerator.EnumAudioEndpoints(EDataFlow.Render, DeviceState.Active, out devices),
+                "IMMDeviceEnumerator.EnumAudioEndpoints"
+            );
 
-            WasapiError.ThrowIfFailed(
-                devices!.GetCount(out uint count),
-                "IMMDeviceCollection.GetCount");
+            WasapiError.ThrowIfFailed(devices!.GetCount(out uint count), "IMMDeviceCollection.GetCount");
 
             for (uint i = 0; i < count; i++)
             {
@@ -46,53 +39,28 @@ public sealed class CoreAudioEndpointCatalog
 
                 try
                 {
-                    WasapiError.ThrowIfFailed(
-                        devices!.Item(
-                            i,
-                            out device),
-                        "IMMDeviceCollection.Item");
+                    WasapiError.ThrowIfFailed(devices!.Item(i, out device), "IMMDeviceCollection.Item");
 
-                    string id =
-                        CoreAudioInterop.GetDeviceId(
-                            device!);
+                    string id = CoreAudioInterop.GetDeviceId(device!);
 
-                    string name =
-                        CoreAudioInterop.GetFriendlyName(
-                            device!);
+                    string name = CoreAudioInterop.GetFriendlyName(device!);
 
-                    Guid audioClientId =
-                        typeof(IAudioClient).GUID;
+                    Guid audioClientId = typeof(IAudioClient).GUID;
 
                     WasapiError.ThrowIfFailed(
-                        device!.Activate(
-                            ref audioClientId,
-                            ClsCtx.All,
-                            IntPtr.Zero,
-                            out object? clientObject),
-                        "IMMDevice.Activate(IAudioClient)");
+                        device!.Activate(ref audioClientId, ClsCtx.All, IntPtr.Zero, out object? clientObject),
+                        "IMMDevice.Activate(IAudioClient)"
+                    );
 
-                    audioClient =
-                        (IAudioClient)clientObject!;
+                    audioClient = (IAudioClient)clientObject!;
 
-                    WasapiError.ThrowIfFailed(
-                        audioClient.GetMixFormat(
-                            out formatPointer),
-                        "IAudioClient.GetMixFormat");
+                    WasapiError.ThrowIfFailed(audioClient.GetMixFormat(out formatPointer), "IAudioClient.GetMixFormat");
 
-                    WaveFormatInfo native =
-                        WaveFormatAdapter.Read(
-                            formatPointer);
+                    WaveFormatInfo native = WaveFormatAdapter.Read(formatPointer);
 
-                    AudioFormat format =
-                        WaveFormatAdapter.ToAudioFormat(
-                            native);
+                    AudioFormat format = WaveFormatAdapter.ToAudioFormat(native);
 
-                    result.Add(
-                        new CoreAudioEndpointSnapshot(
-                            new AudioEndpointId(id),
-                            name,
-                            format,
-                            native));
+                    result.Add(new CoreAudioEndpointSnapshot(new AudioEndpointId(id), name, format, native));
                 }
                 catch (NotSupportedException)
                 {
@@ -103,15 +71,12 @@ public sealed class CoreAudioEndpointCatalog
                 {
                     if (formatPointer != IntPtr.Zero)
                     {
-                        Marshal.FreeCoTaskMem(
-                            formatPointer);
+                        Marshal.FreeCoTaskMem(formatPointer);
                     }
 
-                    CoreAudioInterop.Release(
-                        audioClient);
+                    CoreAudioInterop.Release(audioClient);
 
-                    CoreAudioInterop.Release(
-                        device);
+                    CoreAudioInterop.Release(device);
                 }
             }
         }

@@ -32,7 +32,8 @@ public sealed class ConfigurationWorkspaceApplyTests
     {
         IConfigurationWorkspace workspace = ConfigurationWorkspace.For(
             root: null,
-            activate: () => RuntimeActivationOutcome.Ok("The updated configuration is now active."));
+            activate: () => RuntimeActivationOutcome.Ok("The updated configuration is now active.")
+        );
 
         string result = workspace.Apply("Saved.");
 
@@ -44,7 +45,8 @@ public sealed class ConfigurationWorkspaceApplyTests
     {
         IConfigurationWorkspace workspace = ConfigurationWorkspace.For(
             root: null,
-            activate: () => RuntimeActivationOutcome.Deferred("A transition is running."));
+            activate: () => RuntimeActivationOutcome.Deferred("A transition is running.")
+        );
 
         string result = workspace.Apply("Saved.");
 
@@ -56,7 +58,8 @@ public sealed class ConfigurationWorkspaceApplyTests
     {
         IConfigurationWorkspace workspace = ConfigurationWorkspace.For(
             root: null,
-            activate: () => RuntimeActivationOutcome.Failed("The saved configuration could not be activated."));
+            activate: () => RuntimeActivationOutcome.Failed("The saved configuration could not be activated.")
+        );
 
         string result = workspace.Apply("Saved.");
 
@@ -71,7 +74,8 @@ public sealed class ConfigurationWorkspaceApplyTests
         IConfigurationWorkspace workspace = ConfigurationWorkspace.For(
             root.Path,
             log,
-            activate: () => RuntimeActivationOutcome.Deferred("Busy."));
+            activate: () => RuntimeActivationOutcome.Deferred("Busy.")
+        );
 
         workspace.Apply("Saved.");
 
@@ -85,7 +89,8 @@ public sealed class ConfigurationWorkspaceApplyTests
             """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}]}
-            """);
+            """
+        );
 
         ModeEngine initial = EngineBootstrap.Create(root.Path);
         var runtime = new EngineRuntime(initial, root.Path);
@@ -100,7 +105,8 @@ public sealed class ConfigurationWorkspaceApplyTests
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}},
               {"id":"movie","name":"Movie","resources":{}}]}]}
-            """);
+            """
+        );
 
         string result = workspace.Apply("'Desk â€” Movie' saved.");
 
@@ -116,7 +122,8 @@ public sealed class ConfigurationWorkspaceApplyTests
             """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}]}
-            """);
+            """
+        );
 
         ModeEngine initial = EngineBootstrap.Create(root.Path);
         var runtime = new EngineRuntime(initial, root.Path);

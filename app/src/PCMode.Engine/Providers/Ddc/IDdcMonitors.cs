@@ -43,8 +43,7 @@ public sealed record DdcVcpCapability(DdcVcpCode Code, IReadOnlyList<uint> Suppo
 public sealed record DdcCapabilities(IReadOnlyDictionary<DdcVcpCode, DdcVcpCapability> Features)
 {
     /// <summary>No known feature. What a monitor that could not be read gets.</summary>
-    public static readonly DdcCapabilities None =
-        new(new Dictionary<DdcVcpCode, DdcVcpCapability>());
+    public static readonly DdcCapabilities None = new(new Dictionary<DdcVcpCode, DdcVcpCapability>());
 
     public bool Supports(DdcVcpCode code) => Features.ContainsKey(code);
 }

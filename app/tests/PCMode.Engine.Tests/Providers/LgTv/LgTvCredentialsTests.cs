@@ -39,8 +39,9 @@ public sealed class LgTvCredentialsTests
         // credential for a device on somebody's network does not go in it, and
         // does not go anywhere else in the clear either.
 
-        Assert.True(new ProtectedLgTvCredentials(root.Path)
-            .TryWrite(Host, new LgTvCredential("secret-key", "AABB"), out _));
+        Assert.True(
+            new ProtectedLgTvCredentials(root.Path).TryWrite(Host, new LgTvCredential("secret-key", "AABB"), out _)
+        );
 
         foreach (string file in Directory.EnumerateFiles(root.Path, "*", SearchOption.AllDirectories))
         {

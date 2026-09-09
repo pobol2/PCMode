@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Displays.Sections;
 
@@ -100,7 +100,8 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         Func<string?, TvPowerProvider?>? livePowerProvider = null,
         IConfigurationPrompts? prompts = null,
         Action? onLinkChanged = null,
-        Func<bool>? guardUnsavedChanges = null)
+        Func<bool>? guardUnsavedChanges = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(onChanged);
@@ -121,8 +122,14 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         ToggleEnabledCommand = new RelayCommand(() => Write(ToggleEnabled), () => HasAssociation);
         MakeDefaultCommand = new RelayCommand(() => Write(SetAsDefault), () => CanMakeDefault);
         PairCommand = new AsyncRelayCommand(async () => await PairAsync().ConfigureAwait(true), () => CanPair);
-        PowerOnCommand = new AsyncRelayCommand(async () => await SetPowerAsync(TvPowerProvider.On).ConfigureAwait(true), () => CanUsePowerControl);
-        PowerOffCommand = new AsyncRelayCommand(async () => await SetPowerAsync(TvPowerProvider.Off).ConfigureAwait(true), () => CanUsePowerControl);
+        PowerOnCommand = new AsyncRelayCommand(
+            async () => await SetPowerAsync(TvPowerProvider.On).ConfigureAwait(true),
+            () => CanUsePowerControl
+        );
+        PowerOffCommand = new AsyncRelayCommand(
+            async () => await SetPowerAsync(TvPowerProvider.Off).ConfigureAwait(true),
+            () => CanUsePowerControl
+        );
         AddInputCommand = new RelayCommand(AddInput, () => HasAssociation);
         RemoveInputCommand = new RelayCommand<TelevisionInputRow>(RemoveInput);
         AddProfileCommand = new RelayCommand(AddProfile, () => HasAssociation);
@@ -130,8 +137,16 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(HasAssociation) or nameof(HasMonitor) or nameof(HasLinkableTelevisions)
-                or nameof(CanPair) or nameof(CanUsePowerControl) or nameof(CanMakeDefault) or nameof(IsBusy))
+            if (
+                e.PropertyName
+                is nameof(HasAssociation)
+                    or nameof(HasMonitor)
+                    or nameof(HasLinkableTelevisions)
+                    or nameof(CanPair)
+                    or nameof(CanUsePowerControl)
+                    or nameof(CanMakeDefault)
+                    or nameof(IsBusy)
+            )
             {
                 RefreshCommands();
             }
@@ -192,7 +207,8 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
             "Add television",
             "Name the television this display is. Its address, inputs and picture profiles are configured here afterward.",
             SuggestedTelevisionName,
-            name => Write(() => CreateTelevision(name)));
+            name => Write(() => CreateTelevision(name))
+        );
     }
 
     private void PromptLink()
@@ -204,10 +220,10 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
         _prompts.PromptForName(
             "Link existing television",
-            "Name the configured television this display is: " +
-            string.Join(", ", LinkableTelevisions) + ".",
+            "Name the configured television this display is: " + string.Join(", ", LinkableTelevisions) + ".",
             LinkableTelevisions[0],
-            name => Write(() => LinkTelevision(name)));
+            name => Write(() => LinkTelevision(name))
+        );
     }
 
     private void PromptRename()
@@ -221,7 +237,8 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
             "Rename television",
             $"Rename '{current}'. PCMode refuses the change if it would leave the configuration invalid.",
             current,
-            name => Write(() => RenameTelevision(name)));
+            name => Write(() => RenameTelevision(name))
+        );
     }
 
     private void PromptDuplicate()
@@ -233,10 +250,11 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
         _prompts.PromptForName(
             "Duplicate television",
-            $"Name the copy of '{current}'. Connection settings, inputs and picture profiles are copied; " +
-            "the copy starts unlinked, so link it to whichever display it actually is.",
+            $"Name the copy of '{current}'. Connection settings, inputs and picture profiles are copied; "
+                + "the copy starts unlinked, so link it to whichever display it actually is.",
             $"{current} copy",
-            name => Write(() => DuplicateTelevision(name)));
+            name => Write(() => DuplicateTelevision(name))
+        );
     }
 
     private void ConfirmUnlink()
@@ -246,8 +264,10 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
             return;
         }
 
-        if (_televisionName is string current &&
-            _prompts.Confirm($"Unlink '{current}' from this display? It stays configured and can be linked again."))
+        if (
+            _televisionName is string current
+            && _prompts.Confirm($"Unlink '{current}' from this display? It stays configured and can be linked again.")
+        )
         {
             Write(UnlinkTelevision);
         }
@@ -260,8 +280,12 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
             return;
         }
 
-        if (_televisionName is string current &&
-            _prompts.Confirm($"Remove '{current}' from PCMode? The television itself and its pairing credentials are not changed."))
+        if (
+            _televisionName is string current
+            && _prompts.Confirm(
+                $"Remove '{current}' from PCMode? The television itself and its pairing credentials are not changed."
+            )
+        )
         {
             Write(DeleteTelevision);
         }
@@ -321,9 +345,9 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
     public string SuggestedTelevisionName => _monitorName ?? string.Empty;
 
     public bool IsDefaultTelevision =>
-        _televisionName is not null &&
-        _defaultTelevision is not null &&
-        string.Equals(_televisionName, _defaultTelevision, StringComparison.OrdinalIgnoreCase);
+        _televisionName is not null
+        && _defaultTelevision is not null
+        && string.Equals(_televisionName, _defaultTelevision, StringComparison.OrdinalIgnoreCase);
 
     public bool CanMakeDefault => HasAssociation && !IsDefaultTelevision && !IsBusy;
 
@@ -379,10 +403,13 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
     public bool HasMultipleInputs => Inputs.Count > 1;
 
-    public string PowerStateText => _powerActionText ?? DescribePowerState(
-        _enabled
-            ? _observedProvider?.ObservedState.Power ?? LgTvObservation.NotObserved
-            : new LgTvObservation(LgTvObservationStatus.Disabled));
+    public string PowerStateText =>
+        _powerActionText
+        ?? DescribePowerState(
+            _enabled
+                ? _observedProvider?.ObservedState.Power ?? LgTvObservation.NotObserved
+                : new LgTvObservation(LgTvObservationStatus.Disabled)
+        );
 
     public string? StatusMessage
     {
@@ -479,16 +506,26 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
                             return $"Choose which input '{profile.Name}' targets for its HDMI-specific advanced options.";
                         }
 
-                        if (!Inputs.Any(input =>
-                            string.Equals(input.Name.Trim(), profile.Input.Trim(), StringComparison.OrdinalIgnoreCase)))
+                        if (
+                            !Inputs.Any(input =>
+                                string.Equals(
+                                    input.Name.Trim(),
+                                    profile.Input.Trim(),
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        )
                         {
                             return $"'{profile.Name}' targets '{profile.Input}', which is not one of the configured inputs.";
                         }
                     }
                 }
 
-                if (profile.Signal.Concat(profile.Settings)
-                    .Any(row => string.IsNullOrWhiteSpace(row.Key) || string.IsNullOrWhiteSpace(row.Value)))
+                if (
+                    profile
+                        .Signal.Concat(profile.Settings)
+                        .Any(row => string.IsNullOrWhiteSpace(row.Key) || string.IsNullOrWhiteSpace(row.Value))
+                )
                 {
                     return $"'{profile.Name}' has an advanced setting with no name or value. Remove it instead of leaving it blank.";
                 }
@@ -538,11 +575,14 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         string? devicePath = monitor?.DevicePath;
         LgTvCatalog catalog = ReadCatalog();
 
-        if (string.Equals(devicePath, _devicePath, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(
+        if (
+            string.Equals(devicePath, _devicePath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(
                 ResolveTelevision(catalog, devicePath),
                 _televisionName,
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
             RefreshCatalogState(catalog);
             return;
@@ -595,12 +635,17 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
             SafeDisplayTarget: null,
             Inputs: [],
             Profiles: [],
-            DisplayMonitor: devicePath);
+            DisplayMonitor: devicePath
+        );
 
         LgTvCatalog before = ReadCatalog();
 
         ModeSaveOutcome outcome = LgTvConfigurationStore.Create(
-            _workspace.Root, trimmed, edit, makeDefault: before.Names.Count == 0);
+            _workspace.Root,
+            trimmed,
+            edit,
+            makeDefault: before.Names.Count == 0
+        );
 
         if (!outcome.Success)
         {
@@ -633,7 +678,13 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         }
 
         ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
-            _workspace.Root, trimmed, EditFrom(settings) with { DisplayMonitor = devicePath });
+            _workspace.Root,
+            trimmed,
+            EditFrom(settings) with
+            {
+                DisplayMonitor = devicePath,
+            }
+        );
 
         if (!outcome.Success)
         {
@@ -663,7 +714,13 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         }
 
         ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
-            _workspace.Root, name, EditFrom(settings) with { DisplayMonitor = null });
+            _workspace.Root,
+            name,
+            EditFrom(settings) with
+            {
+                DisplayMonitor = null,
+            }
+        );
 
         if (!outcome.Success)
         {
@@ -737,7 +794,13 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         if (catalog.SettingsFor(trimmed) is { } copy)
         {
             ModeSaveOutcome unlinked = LgTvConfigurationStore.Save(
-                _workspace.Root, trimmed, EditFrom(copy) with { DisplayMonitor = null });
+                _workspace.Root,
+                trimmed,
+                EditFrom(copy) with
+                {
+                    DisplayMonitor = null,
+                }
+            );
 
             if (!unlinked.Success)
             {
@@ -802,14 +865,14 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
         bool enabled = !_enabled;
 
-        ModeSaveOutcome outcome = LgTvConfigurationStore.Save(
-            _workspace.Root, name, BuildEdit(enabled));
+        ModeSaveOutcome outcome = LgTvConfigurationStore.Save(_workspace.Root, name, BuildEdit(enabled));
 
         if (!outcome.Success)
         {
-            return Warn(outcome.Problem ?? (enabled
-                ? "That television could not be enabled."
-                : "That television could not be disabled."));
+            return Warn(
+                outcome.Problem
+                    ?? (enabled ? "That television could not be enabled." : "That television could not be disabled.")
+            );
         }
 
         return Adopt(name, enabled ? $"'{name}' enabled." : $"'{name}' disabled.");
@@ -890,10 +953,11 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         try
         {
             (bool paired, string? pairingProblem) = await Task.Run(() =>
-            {
-                bool ok = connection.TryPair(out string? failure);
-                return (ok, failure);
-            }).ConfigureAwait(true);
+                {
+                    bool ok = connection.TryPair(out string? failure);
+                    return (ok, failure);
+                })
+                .ConfigureAwait(true);
 
             if (!paired)
             {
@@ -1031,10 +1095,9 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
             foreach (string inputName in settings?.InputNames ?? [])
             {
-                Inputs.Add(new TelevisionInputRow(
-                    inputName,
-                    settings!.InputIdFor(inputName) ?? string.Empty,
-                    OnRowChanged));
+                Inputs.Add(
+                    new TelevisionInputRow(inputName, settings!.InputIdFor(inputName) ?? string.Empty, OnRowChanged)
+                );
             }
 
             Profiles.Clear();
@@ -1049,7 +1112,12 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
                 string input = Inputs.Count > 1 ? profile.InputName ?? string.Empty : string.Empty;
 
                 var row = new TelevisionProfileRow(
-                    profileName, profile.PictureMode, input, CurrentInputNames, OnRowChanged);
+                    profileName,
+                    profile.PictureMode,
+                    input,
+                    CurrentInputNames,
+                    OnRowChanged
+                );
 
                 foreach (LgTvSetting setting in profile.Signal)
                 {
@@ -1130,8 +1198,10 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
         foreach (string name in catalog.Names)
         {
-            if (catalog.SettingsFor(name)?.DisplayMonitor is { } bound &&
-                string.Equals(bound, devicePath, StringComparison.OrdinalIgnoreCase))
+            if (
+                catalog.SettingsFor(name)?.DisplayMonitor is { } bound
+                && string.Equals(bound, devicePath, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return name;
             }
@@ -1140,40 +1210,54 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         return null;
     }
 
-    private LgTvEdit BuildEdit(bool? enabledOverride = null) => new(
-        enabledOverride ?? Enabled,
-        Host.Trim(),
-        MacAddress.Trim(),
-        string.IsNullOrWhiteSpace(SafeDisplayTarget) ? null : SafeDisplayTarget.Trim(),
-        [.. Inputs.Select(row => new LgTvInputEdit(row.Name.Trim(), row.Input.Trim()))],
-        [.. Profiles.Select(profile => new LgTvProfileEdit(
-            profile.Name.Trim(),
-            profile.PictureMode.Trim(),
-            string.IsNullOrWhiteSpace(profile.Input) ? null : profile.Input.Trim(),
-            [.. profile.Signal.Select(row => new LgTvSettingEdit(row.Key.Trim(), row.Value.Trim()))],
-            [.. profile.Settings.Select(row => new LgTvSettingEdit(row.Key.Trim(), row.Value.Trim()))]))],
-        _devicePath);
+    private LgTvEdit BuildEdit(bool? enabledOverride = null) =>
+        new(
+            enabledOverride ?? Enabled,
+            Host.Trim(),
+            MacAddress.Trim(),
+            string.IsNullOrWhiteSpace(SafeDisplayTarget) ? null : SafeDisplayTarget.Trim(),
+            [.. Inputs.Select(row => new LgTvInputEdit(row.Name.Trim(), row.Input.Trim()))],
+            [
+                .. Profiles.Select(profile => new LgTvProfileEdit(
+                    profile.Name.Trim(),
+                    profile.PictureMode.Trim(),
+                    string.IsNullOrWhiteSpace(profile.Input) ? null : profile.Input.Trim(),
+                    [.. profile.Signal.Select(row => new LgTvSettingEdit(row.Key.Trim(), row.Value.Trim()))],
+                    [.. profile.Settings.Select(row => new LgTvSettingEdit(row.Key.Trim(), row.Value.Trim()))]
+                )),
+            ],
+            _devicePath
+        );
 
     /// <summary>Round-trips a saved television's own body, for edits that change only its filing.</summary>
-    private static LgTvEdit EditFrom(LgTvSettings settings) => new(
-        settings.Enabled,
-        settings.Host,
-        settings.MacAddress,
-        settings.SafeDisplayTarget,
-        [.. settings.InputNames.Select(name => new LgTvInputEdit(name, settings.InputIdFor(name) ?? string.Empty))],
-        [.. settings.ProfileNames.Select(name =>
-        {
-            LgTvProfile profile = settings.ProfileFor(name)!;
+    private static LgTvEdit EditFrom(LgTvSettings settings) =>
+        new(
+            settings.Enabled,
+            settings.Host,
+            settings.MacAddress,
+            settings.SafeDisplayTarget,
+            [.. settings.InputNames.Select(name => new LgTvInputEdit(name, settings.InputIdFor(name) ?? string.Empty))],
+            [
+                .. settings.ProfileNames.Select(name =>
+                {
+                    LgTvProfile profile = settings.ProfileFor(name)!;
 
-            return new LgTvProfileEdit(
-                name,
-                profile.PictureMode,
-                profile.InputName,
-                [.. profile.Signal.Select(setting => new LgTvSettingEdit(
-                    LgTvProfile.WrittenSignalName(setting.Key) ?? setting.Key, setting.Value))],
-                [.. profile.Settings.Select(setting => new LgTvSettingEdit(setting.Key, setting.Value))]);
-        })],
-        settings.DisplayMonitor);
+                    return new LgTvProfileEdit(
+                        name,
+                        profile.PictureMode,
+                        profile.InputName,
+                        [
+                            .. profile.Signal.Select(setting => new LgTvSettingEdit(
+                                LgTvProfile.WrittenSignalName(setting.Key) ?? setting.Key,
+                                setting.Value
+                            )),
+                        ],
+                        [.. profile.Settings.Select(setting => new LgTvSettingEdit(setting.Key, setting.Value))]
+                    );
+                }),
+            ],
+            settings.DisplayMonitor
+        );
 
     /// <summary>The television's currently configured input names, live.</summary>
     private IReadOnlyList<string> CurrentInputNames() => [.. Inputs.Select(row => row.Name)];
@@ -1198,7 +1282,8 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
         }
 
         TvPowerProvider? named = providers.FirstOrDefault(provider =>
-            string.Equals(provider.TelevisionName, televisionName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(provider.TelevisionName, televisionName, StringComparison.OrdinalIgnoreCase)
+        );
 
         return named is not null
             ? (named, null)
@@ -1207,24 +1292,24 @@ public sealed class MonitorTelevisionSectionViewModel : ObservableObject, IConfi
 
     private void SelectObservedProvider()
     {
-        _observedProvider = _televisionName is { } name && _enabled
-            ? LoadProvider(name).Provider
-            : null;
+        _observedProvider = _televisionName is { } name && _enabled ? LoadProvider(name).Provider : null;
     }
 
-    internal static string DescribePowerState(LgTvObservation observation) => observation.Status switch
-    {
-        LgTvObservationStatus.Observed when string.Equals(
-            observation.Value, TvPowerProvider.On, StringComparison.OrdinalIgnoreCase) => "On.",
-        LgTvObservationStatus.Observed when string.Equals(
-            observation.Value, TvPowerProvider.Off, StringComparison.OrdinalIgnoreCase) => "Off.",
-        LgTvObservationStatus.Disabled => "This television is disabled.",
-        LgTvObservationStatus.Unpaired => "Not paired. Use Pair.",
-        LgTvObservationStatus.Unreachable => WithProblem("Unreachable.", observation.Problem),
-        LgTvObservationStatus.Unknown => WithProblem("Power state unknown.", observation.Problem),
-        LgTvObservationStatus.Error => WithProblem("Could not read power state.", observation.Problem),
-        _ => "Not checked yet.",
-    };
+    internal static string DescribePowerState(LgTvObservation observation) =>
+        observation.Status switch
+        {
+            LgTvObservationStatus.Observed
+                when string.Equals(observation.Value, TvPowerProvider.On, StringComparison.OrdinalIgnoreCase) => "On.",
+            LgTvObservationStatus.Observed
+                when string.Equals(observation.Value, TvPowerProvider.Off, StringComparison.OrdinalIgnoreCase) =>
+                "Off.",
+            LgTvObservationStatus.Disabled => "This television is disabled.",
+            LgTvObservationStatus.Unpaired => "Not paired. Use Pair.",
+            LgTvObservationStatus.Unreachable => WithProblem("Unreachable.", observation.Problem),
+            LgTvObservationStatus.Unknown => WithProblem("Power state unknown.", observation.Problem),
+            LgTvObservationStatus.Error => WithProblem("Could not read power state.", observation.Problem),
+            _ => "Not checked yet.",
+        };
 
     private static string WithProblem(string message, string? problem) =>
         string.IsNullOrWhiteSpace(problem) ? message : $"{message} {problem}";

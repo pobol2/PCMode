@@ -60,11 +60,7 @@ public enum ClsCtx : uint
     LocalServer = 0x4,
     RemoteServer = 0x10,
 
-    All =
-        InprocServer |
-        InprocHandler |
-        LocalServer |
-        RemoteServer,
+    All = InprocServer | InprocHandler | LocalServer | RemoteServer,
 }
 
 public enum StorageAccessMode : uint
@@ -135,7 +131,12 @@ public interface IMMDeviceCollection
 public interface IMMDevice
 {
     [PreserveSig]
-    int Activate(ref Guid interfaceId, ClsCtx clsCtx, nint activationParameters, [MarshalAs(UnmanagedType.IUnknown)] out object? instance);
+    int Activate(
+        ref Guid interfaceId,
+        ClsCtx clsCtx,
+        nint activationParameters,
+        [MarshalAs(UnmanagedType.IUnknown)] out object? instance
+    );
 
     [PreserveSig]
     int OpenPropertyStore(StorageAccessMode access, out IPropertyStore? properties);
@@ -170,9 +171,7 @@ public interface IPropertyStore
 
 [ComImport]
 [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
-public sealed class MMDeviceEnumeratorComObject
-{
-}
+public sealed class MMDeviceEnumeratorComObject { }
 
 /// <summary>Creates the enumerator and reads the two device properties every caller wants.</summary>
 [SupportedOSPlatform("windows")]
@@ -180,8 +179,7 @@ public static class CoreAudioEndpointInterop
 {
     private const ushort VtLpWStr = 31;
 
-    private static readonly PropertyKey FriendlyNameKey =
-        new(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14);
+    private static readonly PropertyKey FriendlyNameKey = new(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14);
 
     [DllImport("ole32.dll")]
     private static extern int PropVariantClear(ref PropVariant value);
@@ -203,7 +201,8 @@ public static class CoreAudioEndpointInterop
         if (hr != 0 || device is null)
         {
             throw new InvalidOperationException(
-                $"Windows could not open {what}. It may have been unplugged or disabled (0x{hr:X8}).");
+                $"Windows could not open {what}. It may have been unplugged or disabled (0x{hr:X8})."
+            );
         }
 
         return device;

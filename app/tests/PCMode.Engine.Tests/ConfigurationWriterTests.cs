@@ -129,8 +129,7 @@ public sealed class ConfigurationWriterTests
         ConfigurationWriter.WriteAtomically(path, "one");
         ConfigurationWriter.WriteAtomically(path, "two");
 
-        using (new FileStream(
-            ConfigurationWriter.BackupPath(path), FileMode.Open, FileAccess.Read, FileShare.None))
+        using (new FileStream(ConfigurationWriter.BackupPath(path), FileMode.Open, FileAccess.Read, FileShare.None))
         {
             bool found = ConfigurationWriter.TryReadBackup(path, out string? content);
 

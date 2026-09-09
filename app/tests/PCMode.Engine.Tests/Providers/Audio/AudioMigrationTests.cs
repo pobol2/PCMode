@@ -11,8 +11,7 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 public sealed class AudioMigrationTests
 {
-    private const string Devices =
-        """
+    private const string Devices = """
         "devices": {
           "Speakers": "Speakers (Realtek(R) Audio)",
           "Soundbar": "Digital Audio (HDMI)"
@@ -35,7 +34,8 @@ public sealed class AudioMigrationTests
               "gain": { "output": "Speakers", "value": 0.8 },
               "volumes": { "Soundbar": 0.4, "Speakers": 0.6 }
             }
-            """);
+            """
+        );
 
         Assert.Equal("Party", target.Name);
         Assert.Equal(["Soundbar", "Speakers"], target.Outputs);
@@ -67,7 +67,8 @@ public sealed class AudioMigrationTests
               "referenceVolume": 0.4,
               "mirrorVolume": 0.6
             }
-            """);
+            """
+        );
 
         // Including the name, which an unnamed group has always had.
         Assert.Equal("Party", target.Name);
@@ -92,7 +93,8 @@ public sealed class AudioMigrationTests
               "delay": { "output": "Speakers", "ms": 0 }
             }
             """,
-            asks: "Everywhere");
+            asks: "Everywhere"
+        );
 
         Assert.Equal("Everywhere", target.Name);
     }
@@ -103,16 +105,20 @@ public sealed class AudioMigrationTests
         // The old runtime allowed two seconds and a route allows one. A delay
         // that large was a mistake in a file, and refusing to start over it
         // would strand the machine.
-        Assert.True(AudioMigration.TryConvert(
-            Document(
-                """
-                "party": {
-                  "outputs": ["Soundbar", "Speakers"],
-                  "delay": { "output": "Speakers", "ms": 1800 }
-                }
-                """),
-            out string migrated,
-            out string? summary));
+        Assert.True(
+            AudioMigration.TryConvert(
+                Document(
+                    """
+                    "party": {
+                      "outputs": ["Soundbar", "Speakers"],
+                      "delay": { "output": "Speakers", "ms": 1800 }
+                    }
+                    """
+                ),
+                out string migrated,
+                out string? summary
+            )
+        );
 
         Assert.Contains("reduced", summary!, StringComparison.Ordinal);
         Assert.Equal(AudioTargetSettings.MaxDelayMs, Read(migrated).Routes[1].DelayMs);
@@ -126,7 +132,8 @@ public sealed class AudioMigrationTests
         string document = Document(
             """
             "targets": { "T": { "outputs": [ { "output": "Speakers" } ] } }
-            """);
+            """
+        );
 
         Assert.False(AudioMigration.TryConvert(document, out string migrated, out string? summary));
 
@@ -158,19 +165,29 @@ public sealed class AudioMigrationTests
     {
         // A half-conversion would be far worse than a refusal. The loader then
         // says what is wrong with the document, in its own words.
-        Assert.False(AudioMigration.TryConvert(
-            Document("""
-                "party": { "outputs": ["Soundbar", "Speakers"] }
-                """),
-            out _,
-            out _));
+        Assert.False(
+            AudioMigration.TryConvert(
+                Document(
+                    """
+                    "party": { "outputs": ["Soundbar", "Speakers"] }
+                    """
+                ),
+                out _,
+                out _
+            )
+        );
 
-        Assert.False(AudioMigration.TryConvert(
-            Document("""
-                "party": { "reference": "Soundbar" }
-                """),
-            out _,
-            out _));
+        Assert.False(
+            AudioMigration.TryConvert(
+                Document(
+                    """
+                    "party": { "reference": "Soundbar" }
+                    """
+                ),
+                out _,
+                out _
+            )
+        );
     }
 
     [Fact]
@@ -178,14 +195,18 @@ public sealed class AudioMigrationTests
     {
         // Converting on top of it would overwrite something somebody wrote
         // deliberately.
-        Assert.False(AudioMigration.TryConvert(
-            Document(
-                """
-                "party": { "reference": "Soundbar", "mirror": "Speakers", "delayMs": 10 },
-                "targets": { "Party": { "outputs": [ { "output": "Speakers" } ] } }
-                """),
-            out _,
-            out _));
+        Assert.False(
+            AudioMigration.TryConvert(
+                Document(
+                    """
+                    "party": { "reference": "Soundbar", "mirror": "Speakers", "delayMs": 10 },
+                    "targets": { "Party": { "outputs": [ { "output": "Speakers" } ] } }
+                    """
+                ),
+                out _,
+                out _
+            )
+        );
     }
 
     // ---- what a real start does with one -----------------------------------
@@ -232,8 +253,7 @@ public sealed class AudioMigrationTests
 
     // ---- helpers ------------------------------------------------------------
 
-    private const string Party =
-        """
+    private const string Party = """
         "party": {
           "outputs": ["Soundbar", "Speakers"],
           "delay": { "output": "Speakers", "ms": 68 },
@@ -250,14 +270,14 @@ public sealed class AudioMigrationTests
     /// </param>
     private static string Document(string audioSection, string asks = "Party") =>
         $$"""
-        {
-          "schemaVersion": 1,
-          "providers": { "audio": { {{Devices}}, {{audioSection}} } },
-          "spaces": [ { "id": "space", "name": "Space", "activities": [
-            { "id": "desktop", "name": "Desktop", "resources": { "audio": "{{asks}}" } }
-          ] } ]
-        }
-        """;
+            {
+              "schemaVersion": 1,
+              "providers": { "audio": { {{Devices}}, {{audioSection}} } },
+              "spaces": [ { "id": "space", "name": "Space", "activities": [
+                { "id": "desktop", "name": "Desktop", "resources": { "audio": "{{asks}}" } }
+              ] } ]
+            }
+            """;
 
     private static AudioTargetSettings Convert(string party, string asks = "Party")
     {

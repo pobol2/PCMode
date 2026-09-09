@@ -3,10 +3,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using PCMode.Engine;
-using PCMode.Tray.Platform.Native;
+using PCMode.Tray.Elements;
 using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Platform.Logging;
-using PCMode.Tray.Elements;
+using PCMode.Tray.Platform.Native;
 
 namespace PCMode.Tray.Elements.Diagnostics;
 
@@ -61,12 +61,20 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
         _runtime = runtime;
         _log = log;
 
-        ApplicationVersion = Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "Unknown";
+        ApplicationVersion =
+            Assembly
+                .GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion
+            ?? "Unknown";
 
         ConfigurationPath = PCModePaths.ConfigurationFile(workspace.Root ?? PCModePaths.DefaultRoot);
         StatePath = PCModePaths.StateFile(workspace.Root ?? PCModePaths.DefaultRoot);
         LogFolder = PCModePaths.LogFolder(workspace.Root ?? PCModePaths.DefaultRoot);
+
+        RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+        DryRunCommand = new AsyncRelayCommand(DryRunAsync, () => CanDryRun);
+        OpenLogFolderCommand = new RelayCommand(OpenLogFolder, () => _log is not null);
     }
 
     public string ApplicationVersion { get; }
@@ -80,6 +88,12 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
     public string LogFolder { get; }
 
     public ObservableCollection<DryRunTargetRow> Targets { get; } = [];
+
+    public System.Windows.Input.ICommand RefreshCommand { get; }
+
+    public System.Windows.Input.ICommand DryRunCommand { get; }
+
+    public System.Windows.Input.ICommand OpenLogFolderCommand { get; }
 
     public ObservableCollection<ProviderRow> Providers { get; } = [];
 
@@ -104,6 +118,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
             {
                 OnPropertyChanged(nameof(CanDryRun));
                 OnPropertyChanged(nameof(EngineStatusText));
+                (DryRunCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -118,6 +133,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
             if (SetProperty(ref _selectedDryRunTargetKey, value))
             {
                 OnPropertyChanged(nameof(CanDryRun));
+                (DryRunCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -172,9 +188,8 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
                 Targets.Add(new DryRunTargetRow(target.Key, target.DisplayPath));
             }
 
-            SelectedDryRunTargetKey = keep is not null && Targets.Any(target => target.Key == keep)
-                ? keep
-                : Targets.FirstOrDefault()?.Key;
+            SelectedDryRunTargetKey =
+                keep is not null && Targets.Any(target => target.Key == keep) ? keep : Targets.FirstOrDefault()?.Key;
         }
 
         Providers.Clear();
@@ -185,9 +200,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
         }
 
         IReadOnlyList<string> lines = _log?.ReadRecentLines(80) ?? [];
-        RecentLogText = lines.Count == 0
-            ? "No log entries yet."
-            : string.Join(Environment.NewLine, lines);
+        RecentLogText = lines.Count == 0 ? "No log entries yet." : string.Join(Environment.NewLine, lines);
 
         return Task.CompletedTask;
     }
@@ -248,8 +261,7 @@ public sealed class DiagnosticsViewModel : ObservableObject, IPageLifecycle
             ShellFolderOpener.Open(_log.Folder);
             _workspace.Note(LogCategory, "Opened the log folder.");
         }
-        catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or Win32Exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception)
         {
             StatusMessage = $"Could not open the log folder. {exception.Message}";
             _workspace.Fault(LogCategory, "Could not open the log folder.", exception);

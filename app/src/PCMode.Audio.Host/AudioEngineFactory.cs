@@ -8,40 +8,25 @@ namespace PCMode.Audio.Host;
 
 public sealed class AudioEngineFactory
 {
-    private readonly HostOptions
-        _options;
+    private readonly HostOptions _options;
 
-    public AudioEngineFactory(
-        HostOptions options)
+    public AudioEngineFactory(HostOptions options)
     {
-        ArgumentNullException.ThrowIfNull(
-            options);
+        ArgumentNullException.ThrowIfNull(options);
 
-        _options =
-            options;
+        _options = options;
     }
 
     public IAudioEngine Create()
     {
-        IAudioInputStreamFactory
-            inputFactory =
-                _options.UsesDevelopmentInput
-                    ? new DevelopmentInputFactory(
-                        new AudioEndpointId(
-                            _options
-                                .DevelopmentSourceEndpointId!))
-                    : new DriverInputFactory();
+        IAudioInputStreamFactory inputFactory = _options.UsesDevelopmentInput
+            ? new DevelopmentInputFactory(new AudioEndpointId(_options.DevelopmentSourceEndpointId!))
+            : new DriverInputFactory();
 
-        return new AudioEngine(
-            inputFactory,
-            new WasapiOutputFactory(),
-            blockFrameCapacity:
-                480);
+        return new AudioEngine(inputFactory, new WasapiOutputFactory(), blockFrameCapacity: 480);
     }
 
-    private sealed class
-        DriverInputFactory :
-        IAudioInputStreamFactory
+    private sealed class DriverInputFactory : IAudioInputStreamFactory
     {
         public IAudioInputStream Create()
         {
@@ -50,23 +35,17 @@ public sealed class AudioEngineFactory
             // device expects -- without this cushion, the processing
             // thread's wait for the next burst delays its write to the
             // real device by the same amount, which is audible as stutter.
-            return new JitterBufferedAudioInput(
-                new DriverAudioInput());
+            return new JitterBufferedAudioInput(new DriverAudioInput());
         }
     }
 
-    private sealed class
-        DevelopmentInputFactory :
-        IAudioInputStreamFactory
+    private sealed class DevelopmentInputFactory : IAudioInputStreamFactory
     {
-        private readonly AudioEndpointId
-            _sourceId;
+        private readonly AudioEndpointId _sourceId;
 
-        public DevelopmentInputFactory(
-            AudioEndpointId sourceId)
+        public DevelopmentInputFactory(AudioEndpointId sourceId)
         {
-            _sourceId =
-                sourceId;
+            _sourceId = sourceId;
         }
 
         public IAudioInputStream Create()
@@ -74,23 +53,15 @@ public sealed class AudioEngineFactory
             // Loopback capture is subject to the same scheduling and
             // buffer-availability jitter as any other WASAPI stream, so it
             // gets the same cushion for consistency with the driver path.
-            return new JitterBufferedAudioInput(
-                new WasapiLoopbackInput(
-                    _sourceId));
+            return new JitterBufferedAudioInput(new WasapiLoopbackInput(_sourceId));
         }
     }
 
-    private sealed class
-        WasapiOutputFactory :
-        IAudioOutputStreamFactory
+    private sealed class WasapiOutputFactory : IAudioOutputStreamFactory
     {
-        public IAudioOutputStream Create(
-            AudioEndpointId endpointId,
-            AudioFormat requestedFormat)
+        public IAudioOutputStream Create(AudioEndpointId endpointId, AudioFormat requestedFormat)
         {
-            return new WasapiRenderOutput(
-                endpointId,
-                requestedFormat);
+            return new WasapiRenderOutput(endpointId, requestedFormat);
         }
     }
 }

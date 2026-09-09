@@ -53,7 +53,8 @@ public static class EngineBootstrap
     public static IReadOnlyList<IModeResourceProvider> ProductionProviders(
         string? root = null,
         string? document = null,
-        IAudioRuntime? audio = null)
+        IAudioRuntime? audio = null
+    )
     {
         string profileRoot = root ?? PCModePaths.DefaultRoot;
 
@@ -151,16 +152,12 @@ public static class EngineBootstrap
     /// that can manage without them. Nothing is ever sent, because a connection
     /// whose settings are not enabled does not open a socket at all.
     /// </remarks>
-    public static IReadOnlyList<IModeResourceProvider> TelevisionProviders(
-        string document,
-        string root)
+    public static IReadOnlyList<IModeResourceProvider> TelevisionProviders(string document, string root)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
 
-        LgTvDeclarations declared = document.Length == 0
-            ? LgTvDeclarations.None
-            : LgTvCatalog.DeclarationsIn(document);
+        LgTvDeclarations declared = document.Length == 0 ? LgTvDeclarations.None : LgTvCatalog.DeclarationsIn(document);
 
         if (declared.Names.Count == 0)
         {
@@ -185,19 +182,21 @@ public static class EngineBootstrap
 
         return providers;
 
-        static LgTvConnection Connect(string root, string? televisionName, bool isDefault) => new(
-            new WebSocketLgTvNetwork(),
-            new ProtectedLgTvCredentials(root),
-            televisionName: televisionName,
-            isDefault: isDefault);
+        static LgTvConnection Connect(string root, string? televisionName, bool isDefault) =>
+            new(
+                new WebSocketLgTvNetwork(),
+                new ProtectedLgTvCredentials(root),
+                televisionName: televisionName,
+                isDefault: isDefault
+            );
 
         static IEnumerable<IModeResourceProvider> Set(LgTvConnection television) =>
-        [
-            new TvPowerProvider(television),
-            new TvInputProvider(television),
-            new TvSignalProvider(television),
-            new TvProfileProvider(television),
-        ];
+            [
+                new TvPowerProvider(television),
+                new TvInputProvider(television),
+                new TvSignalProvider(television),
+                new TvProfileProvider(television),
+            ];
     }
 
     /// <summary>
@@ -222,7 +221,8 @@ public static class EngineBootstrap
     public static IReadOnlyList<IModeResourceProvider> ApplicationProviders(
         string document,
         IProcessHost host,
-        IReadOnlyList<IModeResourceProvider> taken)
+        IReadOnlyList<IModeResourceProvider> taken
+    )
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(host);
@@ -250,9 +250,10 @@ public static class EngineBootstrap
             if (reserved.TryGetValue(name, out IModeResourceProvider? owner))
             {
                 throw new ModeConfigurationException(
-                    $"'{ApplicationCatalog.SettingsPath}' calls an application '{name}', which is already " +
-                    $"{owner.DisplayName}. Give it another name: a mode setting '{name}' could otherwise " +
-                    "mean either of them.");
+                    $"'{ApplicationCatalog.SettingsPath}' calls an application '{name}', which is already "
+                        + $"{owner.DisplayName}. Give it another name: a mode setting '{name}' could otherwise "
+                        + "mean either of them."
+                );
             }
 
             if (!seen.Add(name))
@@ -262,19 +263,23 @@ public static class EngineBootstrap
                 // with one key would leave the engine's own lookup keeping
                 // whichever it saw last.
                 throw new ModeConfigurationException(
-                    $"'{ApplicationCatalog.SettingsPath}' defines '{name}' more than once.");
+                    $"'{ApplicationCatalog.SettingsPath}' defines '{name}' more than once."
+                );
             }
 
             // A provisional definition, replaced by the checked one the moment
             // the document is validated. Nothing reads it before then.
-            applications.Add(new ApplicationProvider(
-                new ApplicationDefinition
-                {
-                    Name = name,
-                    Observation = ApplicationObservation.ForProcess(name),
-                    Start = new LaunchCommand { Executable = name },
-                },
-                host));
+            applications.Add(
+                new ApplicationProvider(
+                    new ApplicationDefinition
+                    {
+                        Name = name,
+                        Observation = ApplicationObservation.ForProcess(name),
+                        Start = new LaunchCommand { Executable = name },
+                    },
+                    host
+                )
+            );
         }
 
         return applications;

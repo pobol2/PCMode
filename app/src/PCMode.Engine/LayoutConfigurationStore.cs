@@ -26,7 +26,8 @@ public sealed record LayoutMonitorEdit(
     string? Anchor,
     double? RefreshHz,
     string? Alignment = null,
-    int? Offset = null);
+    int? Offset = null
+);
 
 /// <summary>
 /// Creates, renames and deletes display layouts in the same configuration file
@@ -72,7 +73,8 @@ public static class LayoutConfigurationStore
         string? root,
         string layoutName,
         IReadOnlyList<LayoutMonitorEdit> monitors,
-        IReadOnlyDictionary<string, string>? requires = null)
+        IReadOnlyDictionary<string, string>? requires = null
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(layoutName);
         ArgumentNullException.ThrowIfNull(monitors);
@@ -89,85 +91,94 @@ public static class LayoutConfigurationStore
             return ModeSaveOutcome.Failed("Exactly one included monitor must be primary.");
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            JsonObject display = HardwareConfigurationStore.AsObject(providers, "display");
-            JsonObject layouts = HardwareConfigurationStore.AsObject(display, "layouts");
-
-            var body = new JsonObject
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                ["monitors"] = new JsonArray([.. monitors.Select(monitor => JsonValue.Create(monitor.Monitor))]),
-                ["primary"] = monitors.First(monitor => monitor.Primary).Monitor,
-            };
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                JsonObject display = HardwareConfigurationStore.AsObject(providers, "display");
+                JsonObject layouts = HardwareConfigurationStore.AsObject(display, "layouts");
 
-            var placement = new JsonArray();
-
-            foreach (LayoutMonitorEdit monitor in monitors.Where(monitor => !monitor.Primary))
-            {
-                if (string.IsNullOrWhiteSpace(monitor.Direction) || string.IsNullOrWhiteSpace(monitor.Anchor))
+                var body = new JsonObject
                 {
-                    return ModeSaveOutcome.Failed(
-                        $"'{monitor.Monitor}' needs a placement relative to another included monitor.");
+                    ["monitors"] = new JsonArray([.. monitors.Select(monitor => JsonValue.Create(monitor.Monitor))]),
+                    ["primary"] = monitors.First(monitor => monitor.Primary).Monitor,
+                };
+
+                var placement = new JsonArray();
+
+                foreach (LayoutMonitorEdit monitor in monitors.Where(monitor => !monitor.Primary))
+                {
+                    if (string.IsNullOrWhiteSpace(monitor.Direction) || string.IsNullOrWhiteSpace(monitor.Anchor))
+                    {
+                        return ModeSaveOutcome.Failed(
+                            $"'{monitor.Monitor}' needs a placement relative to another included monitor."
+                        );
+                    }
+
+                    string entry = $"{monitor.Monitor} {monitor.Direction} {monitor.Anchor}";
+
+                    // "Start" and 0 are exactly what an entry without either token
+                    // already means, so a layout nobody has dragged off its default
+                    // alignment still round-trips through this store byte-for-byte.
+                    bool hasAlignment =
+                        !string.IsNullOrWhiteSpace(monitor.Alignment)
+                        && !string.Equals(monitor.Alignment, "Start", StringComparison.OrdinalIgnoreCase);
+                    bool hasOffset = monitor.Offset is not (null or 0);
+
+                    if (hasAlignment || hasOffset)
+                    {
+                        entry += $" {monitor.Alignment ?? "Start"}";
+                    }
+
+                    if (hasOffset)
+                    {
+                        entry +=
+                            $" {(monitor.Offset!.Value >= 0 ? "+" : string.Empty)}"
+                            + monitor.Offset.Value.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    placement.Add(JsonValue.Create(entry));
                 }
 
-                string entry = $"{monitor.Monitor} {monitor.Direction} {monitor.Anchor}";
-
-                // "Start" and 0 are exactly what an entry without either token
-                // already means, so a layout nobody has dragged off its default
-                // alignment still round-trips through this store byte-for-byte.
-                bool hasAlignment = !string.IsNullOrWhiteSpace(monitor.Alignment) &&
-                    !string.Equals(monitor.Alignment, "Start", StringComparison.OrdinalIgnoreCase);
-                bool hasOffset = monitor.Offset is not (null or 0);
-
-                if (hasAlignment || hasOffset)
+                if (placement.Count > 0)
                 {
-                    entry += $" {monitor.Alignment ?? "Start"}";
+                    body["placement"] = placement;
                 }
 
-                if (hasOffset)
+                var refresh = new JsonArray();
+
+                foreach (LayoutMonitorEdit monitor in monitors.Where(monitor => monitor.RefreshHz is not null))
                 {
-                    entry += $" {(monitor.Offset!.Value >= 0 ? "+" : string.Empty)}" +
-                        monitor.Offset.Value.ToString(CultureInfo.InvariantCulture);
+                    refresh.Add(
+                        JsonValue.Create(
+                            $"{monitor.Monitor} {monitor.RefreshHz!.Value.ToString(CultureInfo.InvariantCulture)}"
+                        )
+                    );
                 }
 
-                placement.Add(JsonValue.Create(entry));
-            }
-
-            if (placement.Count > 0)
-            {
-                body["placement"] = placement;
-            }
-
-            var refresh = new JsonArray();
-
-            foreach (LayoutMonitorEdit monitor in monitors.Where(monitor => monitor.RefreshHz is not null))
-            {
-                refresh.Add(JsonValue.Create(
-                    $"{monitor.Monitor} {monitor.RefreshHz!.Value.ToString(CultureInfo.InvariantCulture)}"));
-            }
-
-            if (refresh.Count > 0)
-            {
-                body["refresh"] = refresh;
-            }
-
-            if (requires is { Count: > 0 })
-            {
-                var requiresObject = new JsonObject();
-
-                foreach ((string key, string target) in requires)
+                if (refresh.Count > 0)
                 {
-                    requiresObject[key] = target;
+                    body["refresh"] = refresh;
                 }
 
-                body[TargetRequirements.FieldName] = requiresObject;
-            }
+                if (requires is { Count: > 0 })
+                {
+                    var requiresObject = new JsonObject();
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(layouts, trimmed);
-            layouts.Add(trimmed, body);
-            return null;
-        });
+                    foreach ((string key, string target) in requires)
+                    {
+                        requiresObject[key] = target;
+                    }
+
+                    body[TargetRequirements.FieldName] = requiresObject;
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(layouts, trimmed);
+                layouts.Add(trimmed, body);
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -180,34 +191,41 @@ public static class LayoutConfigurationStore
 
         string trimmedNew = newName.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, "display") is not JsonObject display ||
-                HardwareConfigurationStore.FindProperty(display, "layouts") is not JsonObject layouts)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{oldName}' is not a configured display layout.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, "display") is not JsonObject display
+                    || HardwareConfigurationStore.FindProperty(display, "layouts") is not JsonObject layouts
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{oldName}' is not a configured display layout.");
+                }
+
+                JsonNode? existing = HardwareConfigurationStore.FindProperty(layouts, oldName);
+
+                if (existing is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{oldName}' is not a configured display layout.");
+                }
+
+                if (
+                    !string.Equals(oldName, trimmedNew, StringComparison.OrdinalIgnoreCase)
+                    && HardwareConfigurationStore.FindProperty(layouts, trimmedNew) is not null
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured display layout.");
+                }
+
+                layouts.Remove(FindKey(layouts, oldName)!);
+                layouts.Add(trimmedNew, existing.DeepClone());
+
+                RenameModeReferences(document, DisplayProvider.ResourceKey, oldName, trimmedNew);
+                return null;
             }
-
-            JsonNode? existing = HardwareConfigurationStore.FindProperty(layouts, oldName);
-
-            if (existing is null)
-            {
-                return ModeSaveOutcome.Failed($"'{oldName}' is not a configured display layout.");
-            }
-
-            if (!string.Equals(oldName, trimmedNew, StringComparison.OrdinalIgnoreCase) &&
-                HardwareConfigurationStore.FindProperty(layouts, trimmedNew) is not null)
-            {
-                return ModeSaveOutcome.Failed($"'{trimmedNew}' is already a configured display layout.");
-            }
-
-            layouts.Remove(FindKey(layouts, oldName)!);
-            layouts.Add(trimmedNew, existing.DeepClone());
-
-            RenameModeReferences(document, DisplayProvider.ResourceKey, oldName, trimmedNew);
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -218,37 +236,44 @@ public static class LayoutConfigurationStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers ||
-                HardwareConfigurationStore.FindProperty(providers, "display") is not JsonObject display ||
-                HardwareConfigurationStore.FindProperty(display, "layouts") is not JsonObject layouts)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{name}' is not a configured display layout.");
+                if (
+                    HardwareConfigurationStore.FindProperty(document, "providers") is not JsonObject providers
+                    || HardwareConfigurationStore.FindProperty(providers, "display") is not JsonObject display
+                    || HardwareConfigurationStore.FindProperty(display, "layouts") is not JsonObject layouts
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{name}' is not a configured display layout.");
+                }
+
+                string? key = FindKey(layouts, name);
+
+                if (key is null)
+                {
+                    return ModeSaveOutcome.Failed($"'{name}' is not a configured display layout.");
+                }
+
+                IReadOnlyList<string> referencing = ModesReferencing(document, DisplayProvider.ResourceKey, name);
+
+                if (referencing.Count > 0)
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{name}' is used by {string.Join(", ", referencing)}. Change those first."
+                    );
+                }
+
+                layouts.Remove(key);
+                return null;
             }
-
-            string? key = FindKey(layouts, name);
-
-            if (key is null)
-            {
-                return ModeSaveOutcome.Failed($"'{name}' is not a configured display layout.");
-            }
-
-            IReadOnlyList<string> referencing = ModesReferencing(document, DisplayProvider.ResourceKey, name);
-
-            if (referencing.Count > 0)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{name}' is used by {string.Join(", ", referencing)}. Change those first.");
-            }
-
-            layouts.Remove(key);
-            return null;
-        });
+        );
     }
 
     private static string? FindKey(JsonObject obj, string name) =>
-        obj.Select(pair => pair.Key).FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        obj.Select(pair => pair.Key)
+            .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Every level of the hierarchy whose <paramref name="resourceKey"/> names
@@ -261,14 +286,18 @@ public static class LayoutConfigurationStore
         foreach ((string label, JsonObject resources) in ResourceHolders.In(document))
         {
             JsonNode? resource = HardwareConfigurationStore.FindProperty(resources, resourceKey);
-            string? referencedValue = resource is JsonValue scalar && scalar.TryGetValue(out string? text)
-                ? text
-                : resource is JsonObject wrapper && HardwareConfigurationStore.FindProperty(wrapper, "value") is JsonValue wrapped &&
-                  wrapped.TryGetValue(out string? wrappedText)
+            string? referencedValue =
+                resource is JsonValue scalar && scalar.TryGetValue(out string? text) ? text
+                : resource is JsonObject wrapper
+                && HardwareConfigurationStore.FindProperty(wrapper, "value") is JsonValue wrapped
+                && wrapped.TryGetValue(out string? wrappedText)
                     ? wrappedText
-                    : null;
+                : null;
 
-            if (referencedValue is not null && string.Equals(referencedValue, value, StringComparison.OrdinalIgnoreCase))
+            if (
+                referencedValue is not null
+                && string.Equals(referencedValue, value, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 referencing.Add($"'{label}'");
             }
@@ -294,15 +323,20 @@ public static class LayoutConfigurationStore
 
             JsonNode? resource = resources[actualKey];
 
-            if (resource is JsonValue scalar && scalar.TryGetValue(out string? text) &&
-                string.Equals(text, oldName, StringComparison.OrdinalIgnoreCase))
+            if (
+                resource is JsonValue scalar
+                && scalar.TryGetValue(out string? text)
+                && string.Equals(text, oldName, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 resources[actualKey] = newName;
             }
-            else if (resource is JsonObject wrapper &&
-                     HardwareConfigurationStore.FindProperty(wrapper, "value") is JsonValue wrapped &&
-                     wrapped.TryGetValue(out string? wrappedText) &&
-                     string.Equals(wrappedText, oldName, StringComparison.OrdinalIgnoreCase))
+            else if (
+                resource is JsonObject wrapper
+                && HardwareConfigurationStore.FindProperty(wrapper, "value") is JsonValue wrapped
+                && wrapped.TryGetValue(out string? wrappedText)
+                && string.Equals(wrappedText, oldName, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 wrapper["value"] = newName;
             }

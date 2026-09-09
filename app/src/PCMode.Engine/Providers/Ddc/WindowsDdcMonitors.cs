@@ -54,11 +54,18 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
 
     public IReadOnlyList<string> KnownDevicePaths(TimeSpan within)
     {
-        return RunBounded(
-            within,
-            static () => (IReadOnlyList<string>)
-                [.. EnumerateMonitorHandles().Select(monitor => monitor.DevicePath).Distinct(StringComparer.OrdinalIgnoreCase)],
-            out IReadOnlyList<string>? result) == BoundedOutcome.Completed
+        return
+            RunBounded(
+                within,
+                static () =>
+                    (IReadOnlyList<string>)
+                        [
+                            .. EnumerateMonitorHandles()
+                                .Select(monitor => monitor.DevicePath)
+                                .Distinct(StringComparer.OrdinalIgnoreCase),
+                        ],
+                out IReadOnlyList<string>? result
+            ) == BoundedOutcome.Completed
             ? result!
             : [];
     }
@@ -67,8 +74,9 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(devicePath);
 
-        return RunBounded(within, () => ReadCapabilitiesCore(devicePath), out DdcCapabilities? result) ==
-               BoundedOutcome.Completed
+        return
+            RunBounded(within, () => ReadCapabilitiesCore(devicePath), out DdcCapabilities? result)
+            == BoundedOutcome.Completed
             ? result
             : null;
     }
@@ -77,8 +85,8 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(devicePath);
 
-        return RunBounded(within, () => GetVcpCore(devicePath, code), out DdcVcpValue? result) ==
-               BoundedOutcome.Completed
+        return
+            RunBounded(within, () => GetVcpCore(devicePath, code), out DdcVcpValue? result) == BoundedOutcome.Completed
             ? result
             : null;
     }
@@ -88,19 +96,26 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
         ArgumentException.ThrowIfNullOrWhiteSpace(devicePath);
 
         BoundedOutcome outcome = RunBounded(
-            within, () => SetVcpCore(devicePath, code, value), out bool? found, out Exception? failure);
+            within,
+            () => SetVcpCore(devicePath, code, value),
+            out bool? found,
+            out Exception? failure
+        );
 
         switch (outcome)
         {
             case BoundedOutcome.TimedOut:
                 throw new InvalidOperationException(
-                    $"The monitor did not respond to VCP 0x{(byte)code:X2} within " +
-                    $"{within.TotalSeconds.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}s. " +
-                    "It may be asleep, disconnected, or not DDC/CI compliant.");
+                    $"The monitor did not respond to VCP 0x{(byte)code:X2} within "
+                        + $"{within.TotalSeconds.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}s. "
+                        + "It may be asleep, disconnected, or not DDC/CI compliant."
+                );
 
             case BoundedOutcome.Failed:
                 throw new InvalidOperationException(
-                    $"DDC/CI could not set VCP 0x{(byte)code:X2}. {failure!.Message}", failure);
+                    $"DDC/CI could not set VCP 0x{(byte)code:X2}. {failure!.Message}",
+                    failure
+                );
 
             default:
                 if (found != true)
@@ -290,17 +305,17 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
         if (!EnumDisplayDevices(info.DeviceName, 0, ref monitorDevice, EddGetDeviceInterfaceName))
         {
             trace =
-                $"GetMonitorInfo -> adapter '{info.DeviceName}'. " +
-                $"EnumDisplayDevices(adapter, 0, EDD_GET_DEVICE_INTERFACE_NAME) failed " +
-                $"(error {Marshal.GetLastWin32Error()}).";
+                $"GetMonitorInfo -> adapter '{info.DeviceName}'. "
+                + $"EnumDisplayDevices(adapter, 0, EDD_GET_DEVICE_INTERFACE_NAME) failed "
+                + $"(error {Marshal.GetLastWin32Error()}).";
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(monitorDevice.DeviceID))
         {
             trace =
-                $"GetMonitorInfo -> adapter '{info.DeviceName}'. " +
-                "EnumDisplayDevices with EDD_GET_DEVICE_INTERFACE_NAME succeeded but returned an empty DeviceID.";
+                $"GetMonitorInfo -> adapter '{info.DeviceName}'. "
+                + "EnumDisplayDevices with EDD_GET_DEVICE_INTERFACE_NAME succeeded but returned an empty DeviceID.";
             return false;
         }
 
@@ -340,7 +355,9 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
         }
         else if (lines.Count == 0)
         {
-            lines.Add("EnumDisplayMonitors succeeded but its callback was never invoked -- Windows reports no monitors at all.");
+            lines.Add(
+                "EnumDisplayMonitors succeeded but its callback was never invoked -- Windows reports no monitors at all."
+            );
         }
 
         return lines;
@@ -361,8 +378,7 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
     /// <paramref name="within"/> for it. See the class remarks for why a thread
     /// rather than a cancellation token.
     /// </summary>
-    private static BoundedOutcome RunBounded<T>(
-        TimeSpan within, Func<T> work, out T? result, out Exception? failure)
+    private static BoundedOutcome RunBounded<T>(TimeSpan within, Func<T> work, out T? result, out Exception? failure)
     {
         T? captured = default;
         Exception? caught = null;
@@ -455,39 +471,57 @@ public sealed class WindowsDdcMonitors : IDdcMonitors
     }
 
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EnumDisplayMonitors(
-        nint hdc, nint lprcClip, MonitorEnumProc lpfnEnum, nint dwData);
+    private static extern bool EnumDisplayMonitors(nint hdc, nint lprcClip, MonitorEnumProc lpfnEnum, nint dwData);
 
     [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool GetMonitorInfo(nint hMonitor, ref MonitorInfoEx lpmi);
 
     [DllImport("user32.dll", EntryPoint = "EnumDisplayDevicesW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool EnumDisplayDevices(
-        string lpDevice, uint iDevNum, ref DisplayDeviceW lpDisplayDevice, uint dwFlags);
+        string lpDevice,
+        uint iDevNum,
+        ref DisplayDeviceW lpDisplayDevice,
+        uint dwFlags
+    );
 
     [DllImport("dxva2.dll")]
     private static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(
-        nint hMonitor, out uint pdwNumberOfPhysicalMonitors);
+        nint hMonitor,
+        out uint pdwNumberOfPhysicalMonitors
+    );
 
     [DllImport("dxva2.dll", CharSet = CharSet.Unicode)]
     private static extern bool GetPhysicalMonitorsFromHMONITOR(
-        nint hMonitor, uint dwPhysicalMonitorArraySize, [Out] PhysicalMonitor[] pPhysicalMonitorArray);
+        nint hMonitor,
+        uint dwPhysicalMonitorArraySize,
+        [Out] PhysicalMonitor[] pPhysicalMonitorArray
+    );
 
     [DllImport("dxva2.dll")]
     private static extern bool DestroyPhysicalMonitor(nint hMonitor);
 
     [DllImport("dxva2.dll")]
     private static extern bool GetVCPFeatureAndVCPFeatureReply(
-        nint hMonitor, byte bVCPCode, nint pvct, out uint pdwCurrentValue, out uint pdwMaximumValue);
+        nint hMonitor,
+        byte bVCPCode,
+        nint pvct,
+        out uint pdwCurrentValue,
+        out uint pdwMaximumValue
+    );
 
     [DllImport("dxva2.dll")]
     private static extern bool SetVCPFeature(nint hMonitor, byte bVCPCode, uint dwNewValue);
 
     [DllImport("dxva2.dll")]
     private static extern bool GetCapabilitiesStringLength(
-        nint hMonitor, out uint pdwCapabilitiesStringLengthInCharacters);
+        nint hMonitor,
+        out uint pdwCapabilitiesStringLengthInCharacters
+    );
 
     [DllImport("dxva2.dll", CharSet = CharSet.Ansi)]
     private static extern bool CapabilitiesRequestAndCapabilitiesReply(
-        nint hMonitor, [Out] byte[] pszASCIICapabilitiesString, uint dwCapabilitiesStringLengthInCharacters);
+        nint hMonitor,
+        [Out] byte[] pszASCIICapabilitiesString,
+        uint dwCapabilitiesStringLengthInCharacters
+    );
 }

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -38,5 +37,4 @@
     <ProjectReference Include="..\..\src\PCMode.Audio.Client\PCMode.Audio.Client.csproj" />
     <ProjectReference Include="..\..\src\PCMode.Audio.Protocol\PCMode.Audio.Protocol.csproj" />
   </ItemGroup>
-
 </Project>

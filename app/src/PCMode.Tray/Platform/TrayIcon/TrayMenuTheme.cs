@@ -1,6 +1,6 @@
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Forms;
+using System.Windows.Media;
 using DrawingColor = System.Drawing.Color;
 
 namespace PCMode.Tray.Platform.TrayIcon;
@@ -22,7 +22,8 @@ public static class TrayMenuTheme
             Pressed: Read(resources, "SurfaceHoverBrush"),
             Selected: Read(resources, "SurfaceHoverBrush"),
             Accent: Read(resources, "AccentBrush"),
-            AccentText: Read(resources, "AccentTextBrush"));
+            AccentText: Read(resources, "AccentTextBrush")
+        );
 
         menu.BackColor = colors.Background;
         menu.ForeColor = colors.Text;
@@ -50,7 +51,8 @@ public static class TrayMenuTheme
         DrawingColor Pressed,
         DrawingColor Selected,
         DrawingColor Accent,
-        DrawingColor AccentText);
+        DrawingColor AccentText
+    );
 
     private sealed class TrayMenuRenderer(TrayMenuColors colors)
         : ToolStripProfessionalRenderer(new TrayMenuColorTable(colors))
@@ -73,7 +75,8 @@ public static class TrayMenuTheme
                 e.ImageRectangle,
                 MenuGlyph.Checkmark,
                 colors.AccentText,
-                DrawingColor.Transparent);
+                DrawingColor.Transparent
+            );
         }
     }
 

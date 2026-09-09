@@ -82,9 +82,9 @@ internal static class ResourceHolders
     }
 
     private static string NameOf(JsonObject holder) =>
-        HardwareConfigurationStore.FindProperty(holder, "name") is JsonValue value &&
-        value.TryGetValue(out string? name) &&
-        !string.IsNullOrWhiteSpace(name)
+        HardwareConfigurationStore.FindProperty(holder, "name") is JsonValue value
+        && value.TryGetValue(out string? name)
+        && !string.IsNullOrWhiteSpace(name)
             ? name
             : "?";
 }

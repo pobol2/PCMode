@@ -24,8 +24,15 @@ public sealed class LayoutConfigurationStoreTests
             "Dual",
             [
                 new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
-                new LayoutMonitorEdit("Desk Right", Primary: false, Direction: "RightOf", Anchor: "Desk Left", RefreshHz: 144),
-            ]);
+                new LayoutMonitorEdit(
+                    "Desk Right",
+                    Primary: false,
+                    Direction: "RightOf",
+                    Anchor: "Desk Left",
+                    RefreshHz: 144
+                ),
+            ]
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -53,7 +60,8 @@ public sealed class LayoutConfigurationStoreTests
             [
                 new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
                 new LayoutMonitorEdit("Desk Right", Primary: false, Direction: null, Anchor: null, RefreshHz: null),
-            ]);
+            ]
+        );
 
         Assert.False(outcome.Success);
 
@@ -68,7 +76,8 @@ public sealed class LayoutConfigurationStoreTests
     public void Renaming_a_layout_updates_every_mode_that_names_it()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "display": { "monitors": { "Desk Left": "\\\\?\\DISPLAY#1" }, "layouts": { "Solo": { "monitors": ["Desk Left"] } } } },
@@ -76,7 +85,8 @@ public sealed class LayoutConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "display": "Solo" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = LayoutConfigurationStore.Rename(root.Path, "Solo", "Just Left");
         Assert.True(outcome.Success, outcome.Problem);
@@ -98,10 +108,9 @@ public sealed class LayoutConfigurationStoreTests
         ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
             root.Path,
             "Dual",
-            [
-                new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
-            ],
-            requires: new Dictionary<string, string> { ["tvPower"] = "On" });
+            [new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null)],
+            requires: new Dictionary<string, string> { ["tvPower"] = "On" }
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -129,10 +138,9 @@ public sealed class LayoutConfigurationStoreTests
         ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
             root.Path,
             "Dual",
-            [
-                new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
-            ],
-            requires: new Dictionary<string, string> { ["cursor"] = "Center" });
+            [new LayoutMonitorEdit("Desk Left", Primary: true, Direction: null, Anchor: null, RefreshHz: null)],
+            requires: new Dictionary<string, string> { ["cursor"] = "Center" }
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains("cursor", outcome.Problem, StringComparison.OrdinalIgnoreCase);
@@ -148,7 +156,8 @@ public sealed class LayoutConfigurationStoreTests
     public void Deleting_a_layout_still_referenced_by_a_mode_is_refused()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "display": { "monitors": { "Desk Left": "\\\\?\\DISPLAY#1" }, "layouts": { "Solo": { "monitors": ["Desk Left"] } } } },
@@ -156,7 +165,8 @@ public sealed class LayoutConfigurationStoreTests
                 { "id": "desktop", "name": "Desktop", "resources": { "display": "Solo" } }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = LayoutConfigurationStore.Delete(root.Path, "Solo");
 

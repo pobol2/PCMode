@@ -20,7 +20,8 @@ $ErrorActionPreference = "Stop"
 $script:Failures = 0
 $script:Warnings = 0
 
-function Write-Step {
+function Write-Step
+{
     param([string]$Text)
 
     Write-Host ""
@@ -29,33 +30,38 @@ function Write-Step {
     Write-Host "============================================================"
 }
 
-function Pass {
+function Pass
+{
     param([string]$Text)
 
     Write-Host "[PASS] $Text" -ForegroundColor Green
 }
 
-function Warn {
+function Warn
+{
     param([string]$Text)
 
     $script:Warnings++
     Write-Host "[WARN] $Text" -ForegroundColor Yellow
 }
 
-function Fail {
+function Fail
+{
     param([string]$Text)
 
     $script:Failures++
     Write-Host "[FAIL] $Text" -ForegroundColor Red
 }
 
-function Require {
+function Require
+{
     param(
         [bool]$Condition,
         [string]$Message
     )
 
-    if (-not $Condition) {
+    if (-not $Condition)
+    {
         Fail $Message
         throw $Message
     }
@@ -63,7 +69,8 @@ function Require {
     Pass $Message
 }
 
-function Get-PCModeDevice {
+function Get-PCModeDevice
+{
 
     $matches = @()
 
@@ -71,25 +78,27 @@ function Get-PCModeDevice {
         Get-CimInstance `
             -ClassName Win32_PnPEntity `
             -ErrorAction SilentlyContinue |
-        Where-Object {
-            @($_.HardwareID) |
             Where-Object {
-                $_ -ieq "ROOT\PCMODEAUDIO"
-            }
-        }
+                @($_.HardwareID) |
+                    Where-Object {
+                        $_ -ieq "ROOT\PCMODEAUDIO"
+                    }
+                }
     )
 
-    foreach ($cimDevice in $cimDevices) {
+    foreach ($cimDevice in $cimDevices)
+    {
 
         $pnpDevice =
-            Get-PnpDevice `
-                -InstanceId $cimDevice.PNPDeviceID `
-                -ErrorAction SilentlyContinue
+        Get-PnpDevice `
+            -InstanceId $cimDevice.PNPDeviceID `
+            -ErrorAction SilentlyContinue
 
-        if ($pnpDevice) {
+        if ($pnpDevice)
+        {
             $matches += $pnpDevice
-        }
-        else {
+        } else
+        {
             # Keep enough information for diagnostics even if
             # Get-PnpDevice cannot materialize this particular instance.
             $matches += [PSCustomObject]@{
@@ -104,7 +113,8 @@ function Get-PCModeDevice {
     return @($matches)
 }
 
-function Find-MSBuild {
+function Find-MSBuild
+{
     # The 32-bit MSBuild host cannot load this WDK's driver-validation tools
     # (InfVerif, ApiValidator): this WDK version only ships x64/arm64 builds
     # of them, so a 32-bit MSBuild process fails looking for an x86 one that
@@ -115,28 +125,32 @@ function Find-MSBuild {
         ${env:ProgramFiles(x86)} `
         "Microsoft Visual Studio\Installer\vswhere.exe"
 
-    if (Test-Path $vswhere) {
+    if (Test-Path $vswhere)
+    {
         $amd64 = (
             & $vswhere `
                 -latest `
                 -products * `
                 -requires Microsoft.Component.MSBuild `
                 -find "MSBuild\**\Bin\amd64\MSBuild.exe" |
-            Select-Object -First 1
+                Select-Object -First 1
         )
 
-        if (-not [string]::IsNullOrWhiteSpace($amd64)) {
+        if (-not [string]::IsNullOrWhiteSpace($amd64))
+        {
             return $amd64
         }
     }
 
     $command = Get-Command msbuild.exe -ErrorAction SilentlyContinue
 
-    if ($command) {
+    if ($command)
+    {
         return $command.Source
     }
 
-    if (-not (Test-Path $vswhere)) {
+    if (-not (Test-Path $vswhere))
+    {
         return $null
     }
 
@@ -146,14 +160,16 @@ function Find-MSBuild {
             -products * `
             -requires Microsoft.Component.MSBuild `
             -find "MSBuild\**\Bin\MSBuild.exe" |
-        Select-Object -First 1
+            Select-Object -First 1
     )
 }
 
-function Find-DevCon {
+function Find-DevCon
+{
     $command = Get-Command devcon.exe -ErrorAction SilentlyContinue
 
-    if ($command) {
+    if ($command)
+    {
         return $command.Source
     }
 
@@ -161,7 +177,8 @@ function Find-DevCon {
         ${env:ProgramFiles(x86)} `
         "Windows Kits\10\Tools"
 
-    if (-not (Test-Path $toolsRoot)) {
+    if (-not (Test-Path $toolsRoot))
+    {
         return $null
     }
 
@@ -172,36 +189,40 @@ function Find-DevCon {
             -File `
             -Filter "devcon.exe" `
             -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.FullName -match '\\x64\\devcon\.exe$'
-        }
+            Where-Object {
+                $_.FullName -match '\\x64\\devcon\.exe$'
+            }
     )
 
-    if ($candidates.Count -eq 0) {
+    if ($candidates.Count -eq 0)
+    {
         return $null
     }
 
     # Prefer the newest file rather than relying on lexicographic version ordering.
     return (
         $candidates |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -ExpandProperty FullName -First 1
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -ExpandProperty FullName -First 1
     )
 }
 
-function Normalize-DriverPath {
+function Normalize-DriverPath
+{
     param([string]$Path)
 
-    if ([string]::IsNullOrWhiteSpace($Path)) {
+    if ([string]::IsNullOrWhiteSpace($Path))
+    {
         return $null
     }
 
     $normalized = $Path.Trim('"')
 
-    if ($normalized.StartsWith("\SystemRoot", [StringComparison]::OrdinalIgnoreCase)) {
+    if ($normalized.StartsWith("\SystemRoot", [StringComparison]::OrdinalIgnoreCase))
+    {
         $normalized =
-            $env:SystemRoot +
-            $normalized.Substring("\SystemRoot".Length)
+        $env:SystemRoot +
+        $normalized.Substring("\SystemRoot".Length)
     }
 
     $normalized = $normalized -replace '^\\\?\?\\', ''
@@ -209,7 +230,8 @@ function Normalize-DriverPath {
     return $normalized
 }
 
-try {
+try
+{
 
     # -------------------------------------------------------------------------
     # 1. Environment
@@ -220,29 +242,30 @@ try {
     $Root = [IO.Path]::GetFullPath($Root)
 
     Require `
-        (Test-Path $Root) `
+    (Test-Path $Root) `
         "PCMode root exists: $Root"
 
     $identity =
-        [Security.Principal.WindowsIdentity]::GetCurrent()
+    [Security.Principal.WindowsIdentity]::GetCurrent()
 
     $principal =
-        [Security.Principal.WindowsPrincipal]$identity
+    [Security.Principal.WindowsPrincipal]$identity
 
     $isAdmin =
-        $principal.IsInRole(
-            [Security.Principal.WindowsBuiltInRole]::Administrator
-        )
+    $principal.IsInRole(
+        [Security.Principal.WindowsBuiltInRole]::Administrator
+    )
 
-    if ($Install -or $Stop) {
+    if ($Install -or $Stop)
+    {
         Require `
             $isAdmin `
             "PowerShell is running as Administrator."
-    }
-    elseif ($isAdmin) {
+    } elseif ($isAdmin)
+    {
         Pass "PowerShell is running as Administrator."
-    }
-    else {
+    } else
+    {
         Warn "PowerShell is not running as Administrator. Build-only mode is still usable."
     }
 
@@ -250,14 +273,15 @@ try {
     # 1b. Stop-only mode
     # -------------------------------------------------------------------------
 
-    if ($Stop) {
+    if ($Stop)
+    {
 
         Write-Step "1b. Stopping PCMode audio driver"
 
         $devconExe = Find-DevCon
 
         Require `
-            (-not [string]::IsNullOrWhiteSpace($devconExe)) `
+        (-not [string]::IsNullOrWhiteSpace($devconExe)) `
             "DevCon x64 was found."
 
         Write-Host "DevCon:"
@@ -265,11 +289,13 @@ try {
 
         $devices = Get-PCModeDevice
 
-        if ($devices.Count -eq 0) {
+        if ($devices.Count -eq 0)
+        {
             Pass "No ROOT\PCMODEAUDIO device is installed. Nothing to stop."
-        }
-        else {
-            if ($devices.Count -gt 1) {
+        } else
+        {
+            if ($devices.Count -gt 1)
+            {
                 Warn "Multiple ROOT\PCMODEAUDIO devices exist. Disabling all of them."
             }
 
@@ -289,18 +315,21 @@ try {
                     -ErrorAction SilentlyContinue
             )
 
-            if ($running.Count -eq 0) {
+            if ($running.Count -eq 0)
+            {
                 Pass "No relevant PCMode processes are currently running."
-            }
-            elseif ($DontStopProcesses) {
+            } elseif ($DontStopProcesses)
+            {
                 Warn "Relevant PCMode processes are still running; disabling live may fail."
 
-                foreach ($p in $running) {
+                foreach ($p in $running)
+                {
                     Write-Host "    $($p.ProcessName) PID=$($p.Id)"
                 }
-            }
-            else {
-                foreach ($p in $running) {
+            } else
+            {
+                foreach ($p in $running)
+                {
                     Write-Host "Stopping $($p.ProcessName) PID=$($p.Id)"
                     Stop-Process -Id $p.Id -Force
                 }
@@ -320,23 +349,26 @@ try {
             # afterward no matter what happens in between.
             $audioServicesStopped = $false
 
-            try {
+            try
+            {
                 Stop-Service -Name Audiosrv -Force -ErrorAction Stop
                 Stop-Service -Name AudioEndpointBuilder -Force -ErrorAction Stop
 
                 $audioServicesStopped = $true
 
                 Pass "Windows Audio services were stopped."
-            }
-            catch {
+            } catch
+            {
                 Warn "Could not stop Windows Audio services: $($_.Exception.Message)"
             }
 
-            try {
+            try
+            {
                 $stillRunning = @()
                 $devconExitCode = 0
 
-                for ($attempt = 1; $attempt -le 3; $attempt++) {
+                for ($attempt = 1; $attempt -le 3; $attempt++)
+                {
 
                     & $devconExe disable "ROOT\PCMODEAUDIO*"
 
@@ -346,28 +378,31 @@ try {
 
                     $stillRunning = @(
                         $devices |
-                        Where-Object {
-                            $_.Status -eq "OK"
-                        }
+                            Where-Object {
+                                $_.Status -eq "OK"
+                            }
                     )
 
-                    if ($stillRunning.Count -eq 0) {
+                    if ($stillRunning.Count -eq 0)
+                    {
                         break
                     }
 
                     Write-Host "    Attempt $attempt/3: device still reports Status=OK. Retrying..."
                     Start-Sleep -Seconds 1
                 }
-            }
-            finally {
-                if ($audioServicesStopped) {
-                    try {
+            } finally
+            {
+                if ($audioServicesStopped)
+                {
+                    try
+                    {
                         Start-Service -Name AudioEndpointBuilder -ErrorAction Stop
                         Start-Service -Name Audiosrv -ErrorAction Stop
 
                         Pass "Windows Audio services were restarted."
-                    }
-                    catch {
+                    } catch
+                    {
                         Fail "Windows Audio services could not be restarted: $($_.Exception.Message)"
                     }
                 }
@@ -378,10 +413,11 @@ try {
             # reboot", which are different outcomes. Whether the device's own
             # reported Status actually changed is what answers whether it is
             # stopped.
-            if ($stillRunning.Count -eq 0) {
+            if ($stillRunning.Count -eq 0)
+            {
                 Pass "PCMode audio driver is stopped."
-            }
-            else {
+            } else
+            {
                 Fail "PCMode audio driver could not be disabled live (DevCon exit code $devconExitCode)."
 
                 Write-Host ""
@@ -395,7 +431,8 @@ try {
         Write-Host "Failures : $script:Failures"
         Write-Host "Warnings : $script:Warnings"
 
-        if ($script:Failures -eq 0) {
+        if ($script:Failures -eq 0)
+        {
             Write-Host "SUCCESS" -ForegroundColor Green
             exit 0
         }
@@ -420,13 +457,15 @@ try {
     )
 
     Require `
-        ($projects.Count -gt 0) `
+    ($projects.Count -gt 0) `
         "PCMode.Audio.VirtualEndpoint.vcxproj was found."
 
-    if ($projects.Count -gt 1) {
+    if ($projects.Count -gt 1)
+    {
         Fail "Multiple PCMode.Audio.VirtualEndpoint projects were found."
 
-        foreach ($p in $projects) {
+        foreach ($p in $projects)
+        {
             Write-Host "    $($p.FullName)"
         }
 
@@ -440,13 +479,14 @@ try {
     Write-Host "    $($project.FullName)"
 
     Require `
-        ($project.FullName.StartsWith(
+    ($project.FullName.StartsWith(
             $Root,
             [StringComparison]::OrdinalIgnoreCase
         )) `
         "Driver belongs to the current PCMode repository."
 
-    if ($project.FullName -match "PCMode\.AudioLab") {
+    if ($project.FullName -match "PCMode\.AudioLab")
+    {
         Fail "Driver project belongs to old PCMode.AudioLab tree."
         throw "Old AudioLab driver project detected."
     }
@@ -482,15 +522,15 @@ try {
     )
 
     Require `
-        ($cppFiles.Count -gt 0) `
+    ($cppFiles.Count -gt 0) `
         "Native .cpp source files exist."
 
     Require `
-        ($headerFiles.Count -gt 0) `
+    ($headerFiles.Count -gt 0) `
         "Native .h source files exist."
 
     Require `
-        ($inxFiles.Count -gt 0) `
+    ($inxFiles.Count -gt 0) `
         "Driver .inx file exists."
 
     Write-Host "CPP files : $($cppFiles.Count)"
@@ -506,7 +546,7 @@ try {
     $msbuildExe = Find-MSBuild
 
     Require `
-        (-not [string]::IsNullOrWhiteSpace($msbuildExe)) `
+    (-not [string]::IsNullOrWhiteSpace($msbuildExe)) `
         "MSBuild was located."
 
     Write-Host "MSBuild:"
@@ -529,18 +569,21 @@ try {
             -ErrorAction SilentlyContinue
     )
 
-    if ($running.Count -eq 0) {
+    if ($running.Count -eq 0)
+    {
         Pass "No relevant PCMode processes are currently running."
-    }
-    elseif ($DontStopProcesses) {
+    } elseif ($DontStopProcesses)
+    {
         Warn "Relevant PCMode processes are still running."
 
-        foreach ($p in $running) {
+        foreach ($p in $running)
+        {
             Write-Host "    $($p.ProcessName) PID=$($p.Id)"
         }
-    }
-    else {
-        foreach ($p in $running) {
+    } else
+    {
+        foreach ($p in $running)
+        {
             Write-Host "Stopping $($p.ProcessName) PID=$($p.Id)"
             Stop-Process -Id $p.Id -Force
         }
@@ -556,20 +599,21 @@ try {
 
     $x64 = Join-Path $driverDir "x64"
 
-    if (Test-Path $x64) {
+    if (Test-Path $x64)
+    {
         Remove-Item `
             $x64 `
             -Recurse `
             -Force
 
         Pass "Deleted previous x64 build directory."
-    }
-    else {
+    } else
+    {
         Pass "No previous x64 directory existed."
     }
 
     Require `
-        (-not (Test-Path $x64)) `
+    (-not (Test-Path $x64)) `
         "Old native build output is gone."
 
     # -------------------------------------------------------------------------
@@ -580,7 +624,8 @@ try {
 
     Push-Location $driverDir
 
-    try {
+    try
+    {
         & $msbuildExe `
             $project.FullName `
             /t:Rebuild `
@@ -589,13 +634,13 @@ try {
             /p:Platform=x64
 
         $buildExitCode = $LASTEXITCODE
-    }
-    finally {
+    } finally
+    {
         Pop-Location
     }
 
     Require `
-        ($buildExitCode -eq 0) `
+    ($buildExitCode -eq 0) `
         "Native x64 Debug driver build succeeded."
 
     # -------------------------------------------------------------------------
@@ -610,14 +655,14 @@ try {
             -Recurse `
             -File `
             -Filter "PCMode.Audio.VirtualEndpoint.inf" |
-        Where-Object {
-            $_.FullName -match '\\x64\\Debug\\PCMode\.Audio\.VirtualEndpoint\\'
-        } |
-        Sort-Object LastWriteTime -Descending
+            Where-Object {
+                $_.FullName -match '\\x64\\Debug\\PCMode\.Audio\.VirtualEndpoint\\'
+            } |
+            Sort-Object LastWriteTime -Descending
     )
 
     Require `
-        ($infCandidates.Count -gt 0) `
+    ($infCandidates.Count -gt 0) `
         "Generated PCMode.Audio.VirtualEndpoint.inf exists."
 
     $inf = $infCandidates[0]
@@ -639,15 +684,15 @@ try {
         Select-Object -First 1
 
     Require `
-        ($null -ne $sys) `
+    ($null -ne $sys) `
         "Generated SYS exists."
 
     Require `
-        ($null -ne $cat) `
+    ($null -ne $cat) `
         "Generated CAT exists."
 
     Require `
-        (Test-Path $inf.FullName) `
+    (Test-Path $inf.FullName) `
         "Generated INF exists."
 
     Write-Host ""
@@ -664,13 +709,15 @@ try {
 
     $now = Get-Date
 
-    foreach ($file in @($sys, $cat, $inf)) {
+    foreach ($file in @($sys, $cat, $inf))
+    {
         $age = $now - $file.LastWriteTime
 
-        if ($age.TotalMinutes -le 10) {
+        if ($age.TotalMinutes -le 10)
+        {
             Pass "$($file.Name) was generated recently ($($file.LastWriteTime))."
-        }
-        else {
+        } else
+        {
             Warn "$($file.Name) timestamp looks old: $($file.LastWriteTime)"
         }
     }
@@ -703,19 +750,20 @@ try {
 
     $devices = Get-PCModeDevice
 
-    if ($devices.Count -eq 0) {
+    if ($devices.Count -eq 0)
+    {
         Warn "No ROOT\PCMODEAUDIO device is currently installed."
         $device = $null
-    }
-    elseif ($devices.Count -gt 1) {
+    } elseif ($devices.Count -gt 1)
+    {
         Fail "Multiple ROOT\PCMODEAUDIO devices exist."
 
         $devices |
             Format-Table Status, Class, FriendlyName, InstanceId
 
         throw "Duplicate PCMode root devices detected."
-    }
-    else {
+    } else
+    {
         $device = $devices[0]
 
         Pass "Exactly one device with Hardware ID ROOT\PCMODEAUDIO exists."
@@ -723,10 +771,11 @@ try {
         $device |
             Format-List Status, Class, FriendlyName, InstanceId
 
-        if ($device.Status -eq "OK") {
+        if ($device.Status -eq "OK")
+        {
             Pass "Installed PCMode device reports Status=OK."
-        }
-        else {
+        } else
+        {
             Warn "Installed device reports Status=$($device.Status)."
         }
     }
@@ -735,20 +784,22 @@ try {
     # 12. Install / update
     # -------------------------------------------------------------------------
 
-    if ($Install) {
+    if ($Install)
+    {
 
         Write-Step "12. Installing/updating freshly built driver"
 
         $devconExe = Find-DevCon
 
         Require `
-            (-not [string]::IsNullOrWhiteSpace($devconExe)) `
+        (-not [string]::IsNullOrWhiteSpace($devconExe)) `
             "DevCon x64 was found."
 
         Write-Host "DevCon:"
         Write-Host "    $devconExe"
 
-        if ($device) {
+        if ($device)
+        {
 
             Write-Host ""
             Write-Host "Updating existing PCMode audio endpoint..."
@@ -761,10 +812,10 @@ try {
             $devconExitCode = $LASTEXITCODE
 
             Require `
-                ($devconExitCode -eq 0) `
+            ($devconExitCode -eq 0) `
                 "DevCon updated PCMode audio endpoint."
-        }
-        else {
+        } else
+        {
 
             Write-Host ""
             Write-Host "No PCMode audio endpoint exists."
@@ -778,7 +829,7 @@ try {
             $devconExitCode = $LASTEXITCODE
 
             Require `
-                ($devconExitCode -eq 0) `
+            ($devconExitCode -eq 0) `
                 "DevCon created and installed PCMode audio endpoint."
         }
 
@@ -787,7 +838,8 @@ try {
 
         $devices = @()
 
-        for ($attempt = 1; $attempt -le 5; $attempt++) {
+        for ($attempt = 1; $attempt -le 5; $attempt++)
+        {
 
             # Ask Windows to rescan the PnP device tree using the DevCon
             # instance we already successfully used for installation.
@@ -800,12 +852,14 @@ try {
             Write-Host `
                 "    Attempt $attempt/5: found $($devices.Count) PCMode device(s)"
 
-            if ($devices.Count -eq 1) {
+            if ($devices.Count -eq 1)
+            {
                 break
             }
         }
 
-        if ($devices.Count -eq 0) {
+        if ($devices.Count -eq 0)
+        {
 
             Write-Host ""
             Write-Host "Get-PnpDevice did not find ROOT\PCMODEAUDIO."
@@ -820,16 +874,17 @@ try {
             throw "PCMode device enumeration failed."
         }
 
-        if ($devices.Count -gt 1) {
+        if ($devices.Count -gt 1)
+        {
 
             Write-Host ""
 
             $devices |
                 Format-Table `
                     Status,
-                    Class,
-                    FriendlyName,
-                    InstanceId `
+                Class,
+                FriendlyName,
+                InstanceId `
                     -AutoSize
 
             Fail "Multiple ROOT\PCMODEAUDIO devices exist after installation."
@@ -843,12 +898,12 @@ try {
         $device |
             Format-List `
                 Status,
-                Class,
-                FriendlyName,
-                InstanceId
+            Class,
+            FriendlyName,
+            InstanceId
 
         Require `
-            ($device.Status -eq "OK") `
+        ($device.Status -eq "OK") `
             "PCMode device is healthy after installation."
 
         $device = $devices[0]
@@ -857,10 +912,10 @@ try {
             Format-List Status, Class, FriendlyName, InstanceId
 
         Require `
-            ($device.Status -eq "OK") `
+        ($device.Status -eq "OK") `
             "PCMode device is healthy after installation."
-    }
-    else {
+    } else
+    {
         Write-Step "12. Driver installation skipped"
 
         Warn "Run with -Install to install/update the freshly built driver."
@@ -872,35 +927,37 @@ try {
 
     Write-Step "13. Checking installed driver"
 
-    if (-not $device) {
+    if (-not $device)
+    {
         Warn "Installed-driver verification skipped because ROOT\PCMODEAUDIO does not exist."
-    }
-    else {
-        try {
+    } else
+    {
+        try
+        {
             $serviceProperty =
-                Get-PnpDeviceProperty `
-                    -InstanceId $device.InstanceId `
-                    -KeyName DEVPKEY_Device_Service `
-                    -ErrorAction Stop
+            Get-PnpDeviceProperty `
+                -InstanceId $device.InstanceId `
+                -KeyName DEVPKEY_Device_Service `
+                -ErrorAction Stop
 
             $serviceName = $serviceProperty.Data
 
             Require `
-                (-not [string]::IsNullOrWhiteSpace($serviceName)) `
+            (-not [string]::IsNullOrWhiteSpace($serviceName)) `
                 "PCMode device has an associated driver service."
 
             Write-Host "Driver service:"
             Write-Host "    $serviceName"
 
             $systemDriver =
-                Get-CimInstance Win32_SystemDriver |
+            Get-CimInstance Win32_SystemDriver |
                 Where-Object {
                     $_.Name -eq $serviceName
                 } |
                 Select-Object -First 1
 
             Require `
-                ($null -ne $systemDriver) `
+            ($null -ne $systemDriver) `
                 "Driver service exists in Win32_SystemDriver."
 
             Write-Host ""
@@ -908,31 +965,32 @@ try {
             $systemDriver |
                 Format-List Name, State, StartMode, PathName
 
-            if ($systemDriver.State -eq "Running") {
+            if ($systemDriver.State -eq "Running")
+            {
                 Pass "Kernel driver service is running."
-            }
-            else {
+            } else
+            {
                 Warn "Kernel driver service state is '$($systemDriver.State)'."
             }
 
             $loadedPath =
-                Normalize-DriverPath $systemDriver.PathName
+            Normalize-DriverPath $systemDriver.PathName
 
             Require `
-                (-not [string]::IsNullOrWhiteSpace($loadedPath)) `
+            (-not [string]::IsNullOrWhiteSpace($loadedPath)) `
                 "Installed SYS path could be resolved."
 
             Write-Host "Installed SYS:"
             Write-Host "    $loadedPath"
 
             Require `
-                (Test-Path $loadedPath) `
+            (Test-Path $loadedPath) `
                 "Installed SYS exists on disk."
 
             $installedHash =
-                Get-FileHash `
-                    $loadedPath `
-                    -Algorithm SHA256
+            Get-FileHash `
+                $loadedPath `
+                -Algorithm SHA256
 
             Write-Host ""
             Write-Host "Built hash:"
@@ -941,10 +999,11 @@ try {
             Write-Host "Installed hash:"
             Write-Host "    $($installedHash.Hash)"
 
-            if ($builtHash.Hash -eq $installedHash.Hash) {
+            if ($builtHash.Hash -eq $installedHash.Hash)
+            {
                 Pass "Installed SYS exactly matches freshly built SYS."
-            }
-            else {
+            } else
+            {
                 Fail "Installed SYS DOES NOT match freshly built SYS."
 
                 Write-Host ""
@@ -952,35 +1011,36 @@ try {
                 Write-Host "A reboot or Driver Store cleanup may be required."
             }
 
-            try {
+            try
+            {
                 $infProperty =
-                    Get-PnpDeviceProperty `
-                        -InstanceId $device.InstanceId `
-                        -KeyName DEVPKEY_Device_DriverInfPath `
-                        -ErrorAction Stop
+                Get-PnpDeviceProperty `
+                    -InstanceId $device.InstanceId `
+                    -KeyName DEVPKEY_Device_DriverInfPath `
+                    -ErrorAction Stop
 
                 $versionProperty =
-                    Get-PnpDeviceProperty `
-                        -InstanceId $device.InstanceId `
-                        -KeyName DEVPKEY_Device_DriverVersion `
-                        -ErrorAction Stop
+                Get-PnpDeviceProperty `
+                    -InstanceId $device.InstanceId `
+                    -KeyName DEVPKEY_Device_DriverVersion `
+                    -ErrorAction Stop
 
                 $dateProperty =
-                    Get-PnpDeviceProperty `
-                        -InstanceId $device.InstanceId `
-                        -KeyName DEVPKEY_Device_DriverDate `
-                        -ErrorAction Stop
+                Get-PnpDeviceProperty `
+                    -InstanceId $device.InstanceId `
+                    -KeyName DEVPKEY_Device_DriverDate `
+                    -ErrorAction Stop
 
                 Write-Host ""
                 Write-Host "Installed INF     : $($infProperty.Data)"
                 Write-Host "Installed version : $($versionProperty.Data)"
                 Write-Host "Installed date    : $($dateProperty.Data)"
-            }
-            catch {
+            } catch
+            {
                 Warn "Could not read all installed driver metadata: $($_.Exception.Message)"
             }
-        }
-        catch {
+        } catch
+        {
             Fail "Installed-driver verification failed: $($_.Exception.Message)"
         }
     }
@@ -989,7 +1049,8 @@ try {
     # 14. Managed DriverClient
     # -------------------------------------------------------------------------
 
-    if ($TestManaged) {
+    if ($TestManaged)
+    {
 
         Write-Step "14. Building/testing managed DriverClient"
 
@@ -1002,7 +1063,7 @@ try {
             "app\tests\PCMode.Audio.DriverClient.Tests\PCMode.Audio.DriverClient.Tests.csproj"
 
         Require `
-            (Test-Path $clientProject) `
+        (Test-Path $clientProject) `
             "Managed DriverClient project exists."
 
         & dotnet build $clientProject
@@ -1010,23 +1071,24 @@ try {
         $clientBuildExitCode = $LASTEXITCODE
 
         Require `
-            ($clientBuildExitCode -eq 0) `
+        ($clientBuildExitCode -eq 0) `
             "PCMode.Audio.DriverClient builds successfully."
 
-        if (Test-Path $clientTests) {
+        if (Test-Path $clientTests)
+        {
             & dotnet test $clientTests
 
             $clientTestExitCode = $LASTEXITCODE
 
             Require `
-                ($clientTestExitCode -eq 0) `
+            ($clientTestExitCode -eq 0) `
                 "PCMode.Audio.DriverClient tests pass."
-        }
-        else {
+        } else
+        {
             Warn "DriverClient test project was not found."
         }
-    }
-    else {
+    } else
+    {
         Write-Step "14. Managed DriverClient tests skipped"
 
         Write-Host "Use -TestManaged to build and test DriverClient."
@@ -1059,13 +1121,15 @@ try {
 
     Write-Host ""
 
-    if ($script:Failures -eq 0) {
+    if ($script:Failures -eq 0)
+    {
         Write-Host "SUCCESS" -ForegroundColor Green
 
-        if ($script:Warnings -eq 0) {
+        if ($script:Warnings -eq 0)
+        {
             Write-Host "Driver rebuild and verification completed without warnings."
-        }
-        else {
+        } else
+        {
             Write-Host "Driver rebuild completed with $script:Warnings warning(s)." `
                 -ForegroundColor Yellow
         }
@@ -1077,8 +1141,8 @@ try {
     Write-Host "$script:Failures failure(s) detected."
 
     exit 1
-}
-catch {
+} catch
+{
 
     Write-Host ""
     Write-Host "============================================================"

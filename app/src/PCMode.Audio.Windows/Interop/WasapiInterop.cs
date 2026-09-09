@@ -5,7 +5,7 @@ namespace PCMode.Audio.Windows.Interop;
 internal enum AudioClientShareMode
 {
     Shared = 0,
-    Exclusive = 1
+    Exclusive = 1,
 }
 
 [Flags]
@@ -15,7 +15,7 @@ internal enum AudioClientStreamFlags : uint
     Loopback = 0x00020000,
     EventCallback = 0x00040000,
     SrcDefaultQuality = 0x08000000,
-    AutoConvertPcm = 0x80000000
+    AutoConvertPcm = 0x80000000,
 }
 
 [Flags]
@@ -24,7 +24,7 @@ internal enum AudioClientBufferFlags : uint
     None = 0,
     DataDiscontinuity = 0x1,
     Silent = 0x2,
-    TimestampError = 0x4
+    TimestampError = 0x4,
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -60,7 +60,8 @@ internal interface IAudioClient
         long bufferDuration,
         long periodicity,
         IntPtr format,
-        IntPtr audioSessionGuid);
+        IntPtr audioSessionGuid
+    );
 
     [PreserveSig]
     int GetBufferSize(out uint bufferFrames);
@@ -72,18 +73,13 @@ internal interface IAudioClient
     int GetCurrentPadding(out uint paddingFrames);
 
     [PreserveSig]
-    int IsFormatSupported(
-        AudioClientShareMode shareMode,
-        IntPtr format,
-        out IntPtr closestMatch);
+    int IsFormatSupported(AudioClientShareMode shareMode, IntPtr format, out IntPtr closestMatch);
 
     [PreserveSig]
     int GetMixFormat(out IntPtr deviceFormat);
 
     [PreserveSig]
-    int GetDevicePeriod(
-        out long defaultPeriod,
-        out long minimumPeriod);
+    int GetDevicePeriod(out long defaultPeriod, out long minimumPeriod);
 
     [PreserveSig]
     int Start();
@@ -98,10 +94,7 @@ internal interface IAudioClient
     int SetEventHandle(IntPtr eventHandle);
 
     [PreserveSig]
-    int GetService(
-        ref Guid interfaceId,
-        [MarshalAs(UnmanagedType.IUnknown)]
-        out object service);
+    int GetService(ref Guid interfaceId, [MarshalAs(UnmanagedType.IUnknown)] out object service);
 }
 
 [ComImport]
@@ -115,14 +108,14 @@ internal interface IAudioCaptureClient
         out uint frameCount,
         out AudioClientBufferFlags flags,
         out ulong devicePosition,
-        out ulong qpcPosition);
+        out ulong qpcPosition
+    );
 
     [PreserveSig]
     int ReleaseBuffer(uint frameCount);
 
     [PreserveSig]
-    int GetNextPacketSize(
-        out uint frameCount);
+    int GetNextPacketSize(out uint frameCount);
 }
 
 [ComImport]
@@ -131,14 +124,10 @@ internal interface IAudioCaptureClient
 internal interface IAudioRenderClient
 {
     [PreserveSig]
-    int GetBuffer(
-        uint frameCount,
-        out IntPtr data);
+    int GetBuffer(uint frameCount, out IntPtr data);
 
     [PreserveSig]
-    int ReleaseBuffer(
-        uint frameCount,
-        AudioClientBufferFlags flags);
+    int ReleaseBuffer(uint frameCount, AudioClientBufferFlags flags);
 }
 
 [ComImport]
@@ -147,15 +136,11 @@ internal interface IAudioRenderClient
 internal interface IAudioClock
 {
     [PreserveSig]
-    int GetFrequency(
-        out ulong frequency);
+    int GetFrequency(out ulong frequency);
 
     [PreserveSig]
-    int GetPosition(
-        out ulong devicePosition,
-        out ulong qpcPosition);
+    int GetPosition(out ulong devicePosition, out ulong qpcPosition);
 
     [PreserveSig]
-    int GetCharacteristics(
-        out uint characteristics);
+    int GetCharacteristics(out uint characteristics);
 }

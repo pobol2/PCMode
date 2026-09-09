@@ -46,6 +46,9 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
 
     public AudioRuntimeStatus Refresh() => Read();
 
+    public Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<AudioRouteWaveform>>([]);
+
     public void Apply(AudioTarget target, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -66,7 +69,8 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
         bool muted,
         TimeSpan delay,
         AudioProcessingProfile processing,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(processing);
         cancellationToken.ThrowIfCancellationRequested();
@@ -101,9 +105,7 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
         _running = null;
     }
 
-    public void Dispose()
-    {
-    }
+    public void Dispose() { }
 
     private AudioRuntimeStatus Read()
     {
@@ -119,7 +121,8 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
             SourceEndpointId: "driver:PCMode.Audio.VirtualEndpoint",
             EngineState: _running is null ? AudioEngineRuntimeState.Stopped : AudioEngineRuntimeState.Running,
             ActiveTargetId: _running?.Id,
-            ActiveTargetName: _running?.Name);
+            ActiveTargetName: _running?.Name
+        );
 
         return new AudioRuntimeStatus(true, null, status, EngineHealth());
     }
@@ -144,30 +147,33 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
                 _ => AudioRouteHealthState.Failed,
             };
 
-            routes.Add(new AudioRouteHealth(
-                route.EndpointId,
-                route.Requirement,
-                state,
-                AudioEndpointState.Active,
-                new AudioFormat(48000, 2),
-                route.Delay,
-                clockOffsetFrames: 0,
-                driftCorrectionPpm: 0,
-                resampleRatio: 1,
-                isResynchronizing: false,
-                underrunCount: 0,
-                resyncCount: 0,
-                stallRecoveryCount: 0,
-                longestProcessGapMilliseconds: 0,
-                outputRecoveryFadeCount: 0,
-                outputEndpointDryCount: 0,
-                longestOutputSubmitGapMilliseconds: 0,
-                longestOutputWriteMilliseconds: 0,
-                longestOutputBufferWaitMilliseconds: 0,
-                route.Processing,
-                state is AudioRouteHealthState.Failed or AudioRouteHealthState.Unavailable
-                    ? new AudioFailure("Endpoint", "That output was unplugged.", 0, DateTimeOffset.UnixEpoch)
-                    : null));
+            routes.Add(
+                new AudioRouteHealth(
+                    route.EndpointId,
+                    route.Requirement,
+                    state,
+                    AudioEndpointState.Active,
+                    new AudioFormat(48000, 2),
+                    route.Delay,
+                    clockOffsetFrames: 0,
+                    driftCorrectionPpm: 0,
+                    resampleRatio: 1,
+                    isResynchronizing: false,
+                    underrunCount: 0,
+                    resyncCount: 0,
+                    stallRecoveryCount: 0,
+                    longestProcessGapMilliseconds: 0,
+                    outputRecoveryFadeCount: 0,
+                    outputEndpointDryCount: 0,
+                    longestOutputSubmitGapMilliseconds: 0,
+                    longestOutputWriteMilliseconds: 0,
+                    longestOutputBufferWaitMilliseconds: 0,
+                    route.Processing,
+                    state is AudioRouteHealthState.Failed or AudioRouteHealthState.Unavailable
+                        ? new AudioFailure("Endpoint", "That output was unplugged.", 0, DateTimeOffset.UnixEpoch)
+                        : null
+                )
+            );
         }
 
         return new AudioEngineHealth(
@@ -181,6 +187,8 @@ internal sealed class FakeAudioRuntime : IAudioRuntime
             new AudioInputHealth(
                 AudioInputKind.VirtualEndpointDriver,
                 AudioInputHealthState.Running,
-                new AudioFormat(48000, 2)));
+                new AudioFormat(48000, 2)
+            )
+        );
     }
 }

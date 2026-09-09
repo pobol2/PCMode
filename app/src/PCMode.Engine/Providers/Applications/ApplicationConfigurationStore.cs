@@ -33,7 +33,8 @@ public sealed record ApplicationEdit(
     IReadOnlyList<string> RestartWhen,
     ReadinessEdit? Ready,
     int StartWithinMs,
-    int StopWithinMs);
+    int StopWithinMs
+);
 
 /// <summary>
 /// Creates, edits and removes applications in the same configuration file
@@ -88,7 +89,8 @@ public static class ApplicationConfigurationStore
         if (edit.ObservationKind == ApplicationObservationKind.Process && process.Length == 0)
         {
             return ModeSaveOutcome.Failed(
-                "Give the process name Windows reports for it, without '.exe', or choose Launch only.");
+                "Give the process name Windows reports for it, without '.exe', or choose Launch only."
+            );
         }
 
         if (edit.ObservationKind is not (ApplicationObservationKind.Process or ApplicationObservationKind.None))
@@ -106,34 +108,36 @@ public static class ApplicationConfigurationStore
             return ModeSaveOutcome.Failed(stopProblem);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            JsonObject applications = HardwareConfigurationStore.AsObject(providers, ApplicationCatalog.SectionKey);
-
-            bool renaming = previousName is not null &&
-                !string.Equals(previousName, name, StringComparison.OrdinalIgnoreCase);
-
-            if (previousName is null &&
-                HardwareConfigurationStore.FindProperty(applications, name) is not null)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{name}' is already a configured application.");
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                JsonObject applications = HardwareConfigurationStore.AsObject(providers, ApplicationCatalog.SectionKey);
+
+                bool renaming =
+                    previousName is not null && !string.Equals(previousName, name, StringComparison.OrdinalIgnoreCase);
+
+                if (previousName is null && HardwareConfigurationStore.FindProperty(applications, name) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"'{name}' is already a configured application.");
+                }
+
+                if (renaming)
+                {
+                    HardwareConfigurationStore.RemoveCaseInsensitive(applications, previousName!);
+
+                    // What a mode holds is this key itself, not a value naming it --
+                    // see the class remarks. A value rename would leave every mode
+                    // that used to ask for this application asking for nothing.
+                    LayoutConfigurationStore.RenameResourceKey(document, previousName!, name);
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(applications, name);
+                applications.Add(name, BuildBody(edit));
+                return null;
             }
-
-            if (renaming)
-            {
-                HardwareConfigurationStore.RemoveCaseInsensitive(applications, previousName!);
-
-                // What a mode holds is this key itself, not a value naming it --
-                // see the class remarks. A value rename would leave every mode
-                // that used to ask for this application asking for nothing.
-                LayoutConfigurationStore.RenameResourceKey(document, previousName!, name);
-            }
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(applications, name);
-            applications.Add(name, BuildBody(edit));
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -146,23 +150,29 @@ public static class ApplicationConfigurationStore
 
         string trimmed = name.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (FindApplicationsSection(document) is not JsonObject applications ||
-                HardwareConfigurationStore.FindProperty(applications, trimmed) is null)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{trimmed}' is not a configured application.");
-            }
+                if (
+                    FindApplicationsSection(document) is not JsonObject applications
+                    || HardwareConfigurationStore.FindProperty(applications, trimmed) is null
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{trimmed}' is not a configured application.");
+                }
 
-            if (LayoutConfigurationStore.ModesReferencingKey(document, trimmed) is { Count: > 0 } referencing)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{trimmed}' is used by {string.Join(", ", referencing)}. Change those first.");
-            }
+                if (LayoutConfigurationStore.ModesReferencingKey(document, trimmed) is { Count: > 0 } referencing)
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{trimmed}' is used by {string.Join(", ", referencing)}. Change those first."
+                    );
+                }
 
-            HardwareConfigurationStore.RemoveCaseInsensitive(applications, trimmed);
-            return null;
-        });
+                HardwareConfigurationStore.RemoveCaseInsensitive(applications, trimmed);
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -191,10 +201,7 @@ public static class ApplicationConfigurationStore
 
     private static JsonObject BuildBody(ApplicationEdit edit)
     {
-        var body = new JsonObject
-        {
-            ["start"] = BuildCommand(edit.Start),
-        };
+        var body = new JsonObject { ["start"] = BuildCommand(edit.Start) };
 
         if (edit.ObservationKind == ApplicationObservationKind.Process)
         {
@@ -225,8 +232,9 @@ public static class ApplicationConfigurationStore
 
         if (edit.ObservationKind == ApplicationObservationKind.Process && edit.RestartWhen.Count > 0)
         {
-            body["restartWhen"] = new JsonArray(
-                [.. edit.RestartWhen.Select(key => (JsonNode)JsonValue.Create(key.Trim())!)]);
+            body["restartWhen"] = new JsonArray([
+                .. edit.RestartWhen.Select(key => (JsonNode)JsonValue.Create(key.Trim())!),
+            ]);
         }
 
         if (edit.ObservationKind == ApplicationObservationKind.Process && edit.Ready is ReadinessEdit ready)
@@ -280,8 +288,9 @@ public static class ApplicationConfigurationStore
         return new JsonObject
         {
             ["executable"] = executable,
-            ["arguments"] = new JsonArray(
-                [.. command.Arguments.Select(argument => (JsonNode)JsonValue.Create(argument)!)]),
+            ["arguments"] = new JsonArray([
+                .. command.Arguments.Select(argument => (JsonNode)JsonValue.Create(argument)!),
+            ]),
         };
     }
 

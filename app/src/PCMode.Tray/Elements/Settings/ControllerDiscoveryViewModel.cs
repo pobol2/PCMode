@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Settings;
 
@@ -15,12 +15,13 @@ public sealed class ControllerStatusRow(HardwareItem item)
 
     public bool HasDetails => Details.Count > 0;
 
-    public StatusLevel StatusState => item.Status switch
-    {
-        HardwareItemStatus.Ok => StatusLevel.Ok,
-        HardwareItemStatus.Error => StatusLevel.Error,
-        _ => StatusLevel.Neutral,
-    };
+    public StatusLevel StatusState =>
+        item.Status switch
+        {
+            HardwareItemStatus.Ok => StatusLevel.Ok,
+            HardwareItemStatus.Error => StatusLevel.Error,
+            _ => StatusLevel.Neutral,
+        };
 }
 
 /// <summary>Live XInput slot status shown beside the setting that enables controller input.</summary>
@@ -37,7 +38,8 @@ public sealed class ControllerDiscoveryViewModel : ObservableObject
 
     public ControllerDiscoveryViewModel(
         IConfigurationWorkspace workspace,
-        IGamepadCapabilitiesSource? controllers = null)
+        IGamepadCapabilitiesSource? controllers = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
 
@@ -105,9 +107,7 @@ public sealed class ControllerDiscoveryViewModel : ObservableObject
             Problem = result.Problem;
             int connected = result.Items.Count(item => item.Status == HardwareItemStatus.Ok);
 
-            StatusMessage = result.Problem is null
-                ? $"{connected} controller(s) connected."
-                : null;
+            StatusMessage = result.Problem is null ? $"{connected} controller(s) connected." : null;
         }
         catch (Exception exception)
         {

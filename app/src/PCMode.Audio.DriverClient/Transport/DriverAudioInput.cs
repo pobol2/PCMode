@@ -6,25 +6,17 @@ using PCMode.Audio.Engine.Contracts;
 
 namespace PCMode.Audio.DriverClient.Transport;
 
-public sealed class DriverAudioInput :
-    IAudioInputStream,
-    IAudioInputDiscontinuitySource
+public sealed class DriverAudioInput : IAudioInputStream, IAudioInputDiscontinuitySource
 {
-    private const int
-        ReconnectDelayMilliseconds =
-            100;
+    private const int ReconnectDelayMilliseconds = 100;
 
-    private readonly IDriverConnection
-        _connection;
+    private readonly IDriverConnection _connection;
 
-    private readonly bool
-        _disposeConnection;
+    private readonly bool _disposeConnection;
 
-    private readonly DriverSharedBuffer
-        _staging;
+    private readonly DriverSharedBuffer _staging;
 
-    private readonly float[]
-        _conversionBuffer;
+    private readonly float[] _conversionBuffer;
 
     private bool _started;
 
@@ -42,57 +34,33 @@ public sealed class DriverAudioInput :
 
     public AudioFormat Format { get; }
 
-    public long DiscontinuityGeneration =>
-        Interlocked.Read(
-            ref _discontinuityGeneration);
+    public long DiscontinuityGeneration => Interlocked.Read(ref _discontinuityGeneration);
 
     public DriverAudioInput()
-        : this(
-            new DriverConnection(
-                claimPcmTransport:
-                    true),
-            disposeConnection:
-                true)
+        : this(new DriverConnection(claimPcmTransport: true), disposeConnection: true) { }
+
+    internal DriverAudioInput(IDriverConnection connection, bool disposeConnection = false)
     {
-    }
+        ArgumentNullException.ThrowIfNull(connection);
 
-    internal DriverAudioInput(
-        IDriverConnection connection,
-        bool disposeConnection = false)
-    {
-        ArgumentNullException.ThrowIfNull(
-            connection);
+        _connection = connection;
 
-        _connection =
-            connection;
-
-        _disposeConnection =
-            disposeConnection;
+        _disposeConnection = disposeConnection;
 
         _connection.Connect();
 
-        Format =
-            _connection.PreferredFormat;
+        Format = _connection.PreferredFormat;
 
-        int maximumSamples =
-            checked(
-                _connection
-                    .MaximumPacketBytes /
-                sizeof(short));
+        int maximumSamples = checked(_connection.MaximumPacketBytes / sizeof(short));
 
         if (maximumSamples <= 0)
         {
-            throw new DriverProtocolException(
-                "Driver reported an invalid maximum packet size.");
+            throw new DriverProtocolException("Driver reported an invalid maximum packet size.");
         }
 
-        _conversionBuffer =
-            new float[
-                maximumSamples];
+        _conversionBuffer = new float[maximumSamples];
 
-        _staging =
-            new DriverSharedBuffer(
-                maximumSamples);
+        _staging = new DriverSharedBuffer(maximumSamples);
     }
 
     public void Start()
@@ -113,27 +81,21 @@ public sealed class DriverAudioInput :
 
         ResetPacketTimeline();
 
-        _started =
-            true;
+        _started = true;
     }
 
-    public int Read(
-        Span<float> destination)
+    public int Read(Span<float> destination)
     {
         ThrowIfDisposed();
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "Driver audio input is not started.");
+            throw new InvalidOperationException("Driver audio input is not started.");
         }
 
-        if (destination.Length %
-            Format.ChannelCount != 0)
+        if (destination.Length % Format.ChannelCount != 0)
         {
-            throw new ArgumentException(
-                "Destination must contain complete audio frames.",
-                nameof(destination));
+            throw new ArgumentException("Destination must contain complete audio frames.", nameof(destination));
         }
 
         if (destination.IsEmpty)
@@ -141,14 +103,11 @@ public sealed class DriverAudioInput :
             return 0;
         }
 
-        int bufferedSamples =
-            _staging.Read(
-                destination);
+        int bufferedSamples = _staging.Read(destination);
 
         if (bufferedSamples > 0)
         {
-            return bufferedSamples /
-                Format.ChannelCount;
+            return bufferedSamples / Format.ChannelCount;
         }
 
         if (!_connection.IsConnected)
@@ -157,8 +116,7 @@ public sealed class DriverAudioInput :
 
             if (!_connection.IsConnected)
             {
-                Thread.Sleep(
-                    2);
+                Thread.Sleep(2);
 
                 return 0;
             }
@@ -166,36 +124,22 @@ public sealed class DriverAudioInput :
 
         try
         {
-            if (!_connection.TryReadPacket(
-                    out DriverPacket packet))
+            if (!_connection.TryReadPacket(out DriverPacket packet))
             {
-                Thread.Sleep(
-                    1);
+                Thread.Sleep(1);
 
                 return 0;
             }
 
-            int sampleCount =
-                ConvertPacket(
-                    packet);
+            int sampleCount = ConvertPacket(packet);
 
-            ObservePacketTimeline(
-                packet,
-                sampleCount /
-                    Format.ChannelCount);
+            ObservePacketTimeline(packet, sampleCount / Format.ChannelCount);
 
-            _staging.Replace(
-                _conversionBuffer
-                    .AsSpan(
-                        0,
-                        sampleCount));
+            _staging.Replace(_conversionBuffer.AsSpan(0, sampleCount));
 
-            int copiedSamples =
-                _staging.Read(
-                    destination);
+            int copiedSamples = _staging.Read(destination);
 
-            return copiedSamples /
-                Format.ChannelCount;
+            return copiedSamples / Format.ChannelCount;
         }
         catch (IOException)
         {
@@ -205,8 +149,7 @@ public sealed class DriverAudioInput :
 
             TryReconnect();
 
-            Thread.Sleep(
-                1);
+            Thread.Sleep(1);
 
             return 0;
         }
@@ -221,8 +164,7 @@ public sealed class DriverAudioInput :
             return;
         }
 
-        _started =
-            false;
+        _started = false;
 
         _staging.Clear();
 
@@ -248,216 +190,127 @@ public sealed class DriverAudioInput :
             _connection.Dispose();
         }
 
-        _disposed =
-            true;
+        _disposed = true;
     }
 
-    private int ConvertPacket(
-        DriverPacket packet)
+    private int ConvertPacket(DriverPacket packet)
     {
-        AudioFormat packetFormat =
-            DriverProtocol
-                .ToAudioFormat(
-                    packet.Format);
+        AudioFormat packetFormat = DriverProtocol.ToAudioFormat(packet.Format);
 
-        if (packetFormat !=
-            Format)
+        if (packetFormat != Format)
         {
             throw new DriverProtocolException(
-                $"Driver packet format changed from {Format.SampleRate} Hz / {Format.ChannelCount} channels to {packetFormat.SampleRate} Hz / {packetFormat.ChannelCount} channels.");
+                $"Driver packet format changed from {Format.SampleRate} Hz / {Format.ChannelCount} channels to {packetFormat.SampleRate} Hz / {packetFormat.ChannelCount} channels."
+            );
         }
 
-        int sampleCount =
-            packet.Format.SampleFormat
-            switch
-            {
-                DriverSampleFormat
-                    .Float32 =>
-                        ConvertFloat32(
-                            packet
-                                .Payload
-                                .Span),
-
-                DriverSampleFormat
-                    .Pcm16 =>
-                        ConvertPcm16(
-                            packet
-                                .Payload
-                                .Span),
-
-                _ =>
-                    throw new DriverProtocolException(
-                        $"Unsupported driver sample format '{packet.Format.SampleFormat}'.")
-            };
-
-        if (sampleCount %
-            Format.ChannelCount != 0)
+        int sampleCount = packet.Format.SampleFormat switch
         {
-            throw new DriverProtocolException(
-                "Driver packet does not contain complete audio frames.");
+            DriverSampleFormat.Float32 => ConvertFloat32(packet.Payload.Span),
+
+            DriverSampleFormat.Pcm16 => ConvertPcm16(packet.Payload.Span),
+
+            _ => throw new DriverProtocolException($"Unsupported driver sample format '{packet.Format.SampleFormat}'."),
+        };
+
+        if (sampleCount % Format.ChannelCount != 0)
+        {
+            throw new DriverProtocolException("Driver packet does not contain complete audio frames.");
         }
 
         return sampleCount;
     }
 
-    private int ConvertFloat32(
-        ReadOnlySpan<byte> bytes)
+    private int ConvertFloat32(ReadOnlySpan<byte> bytes)
     {
-        if (bytes.Length %
-            sizeof(float) != 0)
+        if (bytes.Length % sizeof(float) != 0)
         {
-            throw new DriverProtocolException(
-                "Float32 packet has an invalid byte count.");
+            throw new DriverProtocolException("Float32 packet has an invalid byte count.");
         }
 
-        int count =
-            bytes.Length /
-            sizeof(float);
+        int count = bytes.Length / sizeof(float);
 
-        EnsureConversionCapacity(
-            count);
+        EnsureConversionCapacity(count);
 
-        for (int i = 0;
-             i < count;
-             ++i)
+        for (int i = 0; i < count; ++i)
         {
-            int bits =
-                BinaryPrimitives
-                    .ReadInt32LittleEndian(
-                        bytes.Slice(
-                            i * 4,
-                            4));
+            int bits = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(i * 4, 4));
 
-            _conversionBuffer[i] =
-                BitConverter
-                    .Int32BitsToSingle(
-                        bits);
+            _conversionBuffer[i] = BitConverter.Int32BitsToSingle(bits);
         }
 
         return count;
     }
 
-    private int ConvertPcm16(
-        ReadOnlySpan<byte> bytes)
+    private int ConvertPcm16(ReadOnlySpan<byte> bytes)
     {
-        if (bytes.Length %
-            sizeof(short) != 0)
+        if (bytes.Length % sizeof(short) != 0)
         {
-            throw new DriverProtocolException(
-                "PCM16 packet has an invalid byte count.");
+            throw new DriverProtocolException("PCM16 packet has an invalid byte count.");
         }
 
-        int count =
-            bytes.Length /
-            sizeof(short);
+        int count = bytes.Length / sizeof(short);
 
-        EnsureConversionCapacity(
-            count);
+        EnsureConversionCapacity(count);
 
-        const float scale =
-            1.0f /
-            32768.0f;
+        const float scale = 1.0f / 32768.0f;
 
-        for (int i = 0;
-             i < count;
-             ++i)
+        for (int i = 0; i < count; ++i)
         {
-            short value =
-                BinaryPrimitives
-                    .ReadInt16LittleEndian(
-                        bytes.Slice(
-                            i * 2,
-                            2));
+            short value = BinaryPrimitives.ReadInt16LittleEndian(bytes.Slice(i * 2, 2));
 
-            _conversionBuffer[i] =
-                value * scale;
+            _conversionBuffer[i] = value * scale;
         }
 
         return count;
     }
 
-    private void EnsureConversionCapacity(
-        int sampleCount)
+    private void EnsureConversionCapacity(int sampleCount)
     {
-        if (sampleCount >
-            _conversionBuffer.Length)
+        if (sampleCount > _conversionBuffer.Length)
         {
-            throw new DriverProtocolException(
-                "Driver packet exceeded the negotiated bounded buffer.");
+            throw new DriverProtocolException("Driver packet exceeded the negotiated bounded buffer.");
         }
     }
 
-    private void ObservePacketTimeline(
-        DriverPacket packet,
-        int packetFrames)
+    private void ObservePacketTimeline(DriverPacket packet, int packetFrames)
     {
-        bool sequenceGap =
-            _lastPacketSequence.HasValue &&
-            packet.Sequence !=
-                unchecked(
-                    _lastPacketSequence.Value +
-                    1);
+        bool sequenceGap = _lastPacketSequence.HasValue && packet.Sequence != unchecked(_lastPacketSequence.Value + 1);
 
-        bool invalidQpcOrder =
-            _lastPacketQpc.HasValue &&
-            packet.Qpc <=
-                _lastPacketQpc.Value;
+        bool invalidQpcOrder = _lastPacketQpc.HasValue && packet.Qpc <= _lastPacketQpc.Value;
 
-        bool qpcGap =
-            false;
+        bool qpcGap = false;
 
-        if (_lastPacketQpc.HasValue &&
-            !invalidQpcOrder)
+        if (_lastPacketQpc.HasValue && !invalidQpcOrder)
         {
-            TimeSpan elapsed =
-                Stopwatch.GetElapsedTime(
-                    checked(
-                        (long)_lastPacketQpc.Value),
-                    checked(
-                        (long)packet.Qpc));
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(checked((long)_lastPacketQpc.Value), checked((long)packet.Qpc));
 
-            TimeSpan expected =
-                TimeSpan.FromSeconds(
-                    _lastPacketFrames /
-                    (double)Format.SampleRate);
+            TimeSpan expected = TimeSpan.FromSeconds(_lastPacketFrames / (double)Format.SampleRate);
 
-            TimeSpan maximumContinuousGap =
-                TimeSpan.FromTicks(
-                    Math.Max(
-                        TimeSpan
-                            .FromMilliseconds(25)
-                            .Ticks,
-                        expected.Ticks * 6));
+            TimeSpan maximumContinuousGap = TimeSpan.FromTicks(
+                Math.Max(TimeSpan.FromMilliseconds(25).Ticks, expected.Ticks * 6)
+            );
 
-            qpcGap =
-                elapsed >
-                maximumContinuousGap;
+            qpcGap = elapsed > maximumContinuousGap;
         }
 
-        if (sequenceGap ||
-            invalidQpcOrder ||
-            qpcGap)
+        if (sequenceGap || invalidQpcOrder || qpcGap)
         {
-            Interlocked.Increment(
-                ref _discontinuityGeneration);
+            Interlocked.Increment(ref _discontinuityGeneration);
         }
 
-        _lastPacketSequence =
-            packet.Sequence;
+        _lastPacketSequence = packet.Sequence;
 
-        _lastPacketQpc =
-            packet.Qpc;
+        _lastPacketQpc = packet.Qpc;
 
-        _lastPacketFrames =
-            packetFrames;
+        _lastPacketFrames = packetFrames;
     }
 
     private void ReportConnectionDiscontinuity()
     {
         if (_lastPacketSequence.HasValue)
         {
-            Interlocked.Increment(
-                ref _discontinuityGeneration);
+            Interlocked.Increment(ref _discontinuityGeneration);
         }
 
         ResetPacketTimeline();
@@ -467,60 +320,43 @@ public sealed class DriverAudioInput :
 
     private void ResetPacketTimeline()
     {
-        _lastPacketSequence =
-            null;
+        _lastPacketSequence = null;
 
-        _lastPacketQpc =
-            null;
+        _lastPacketQpc = null;
 
-        _lastPacketFrames =
-            0;
+        _lastPacketFrames = 0;
     }
 
     private void TryReconnect()
     {
-        long now =
-            Environment.TickCount64;
+        long now = Environment.TickCount64;
 
-        if (now <
-            _nextReconnectTick)
+        if (now < _nextReconnectTick)
         {
             return;
         }
 
-        _nextReconnectTick =
-            now +
-            ReconnectDelayMilliseconds;
+        _nextReconnectTick = now + ReconnectDelayMilliseconds;
 
         try
         {
             _connection.Connect();
 
-            if (_connection
-                    .PreferredFormat !=
-                Format)
+            if (_connection.PreferredFormat != Format)
             {
                 _connection.Disconnect();
 
-                throw new DriverProtocolException(
-                    "Driver reconnected using a different nominal format.");
+                throw new DriverProtocolException("Driver reconnected using a different nominal format.");
             }
 
             _staging.Clear();
         }
-        catch (DriverUnavailableException)
-        {
-        }
-        catch (IOException)
-        {
-        }
+        catch (DriverUnavailableException) { }
+        catch (IOException) { }
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException
-            .ThrowIf(
-                _disposed,
-                this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

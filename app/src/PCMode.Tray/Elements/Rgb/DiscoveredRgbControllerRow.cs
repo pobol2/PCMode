@@ -12,10 +12,8 @@ namespace PCMode.Tray.Elements.Rgb;
 /// identity lives in the engine configuration rather than being named here, so
 /// this row has no alias action and nothing to activate.
 /// </remarks>
-public sealed class DiscoveredRgbControllerRow(
-    string name,
-    CaseRgbDeviceState state,
-    string detail) : IHardwareInventoryRow
+public sealed class DiscoveredRgbControllerRow(string name, CaseRgbDeviceState state, string detail)
+    : IHardwareInventoryRow
 {
     public string FriendlyName => name;
 

@@ -8,7 +8,8 @@ namespace PCMode.Engine.Tests;
 /// </summary>
 public sealed class DdcMonitorTests
 {
-    private const string DevicePath = @"\\?\DISPLAY#GSM5B09#5&39b3a707&0&UID4352#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
+    private const string DevicePath =
+        @"\\?\DISPLAY#GSM5B09#5&39b3a707&0&UID4352#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}";
     private const string Alias = "Left";
 
     private static readonly DdcCapabilities Both = new(
@@ -16,13 +17,12 @@ public sealed class DdcMonitorTests
         {
             [DdcVcpCode.Brightness] = new(DdcVcpCode.Brightness, []),
             [DdcVcpCode.InputSource] = new(DdcVcpCode.InputSource, [0x0F, 0x11, 0x12]),
-        });
+        }
+    );
 
     private static readonly DdcCapabilities BrightnessOnly = new(
-        new Dictionary<DdcVcpCode, DdcVcpCapability>
-        {
-            [DdcVcpCode.Brightness] = new(DdcVcpCode.Brightness, []),
-        });
+        new Dictionary<DdcVcpCode, DdcVcpCapability> { [DdcVcpCode.Brightness] = new(DdcVcpCode.Brightness, []) }
+    );
 
     // ---- configuration -------------------------------------------------------
 
@@ -216,8 +216,9 @@ public sealed class DdcMonitorTests
 
         DdcBrightnessProvider provider = Configured(monitors);
 
-        InvalidOperationException failure =
-            Assert.Throws<InvalidOperationException>(() => provider.Apply("50", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("50", CancellationToken.None)
+        );
 
         Assert.Contains("did not respond", failure.Message, StringComparison.Ordinal);
     }
@@ -278,8 +279,9 @@ public sealed class DdcMonitorTests
 
         DdcInputProvider provider = ConfiguredInput(monitors);
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("DVI1", CancellationToken.None)); // 0x03, not in the list
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("DVI1", CancellationToken.None)
+        ); // 0x03, not in the list
 
         Assert.Contains("does not list", failure.Message, StringComparison.Ordinal);
         Assert.Empty(monitors.Writes);
@@ -295,10 +297,13 @@ public sealed class DdcMonitorTests
 
         monitors.AddMonitor(
             DevicePath,
-            new DdcCapabilities(new Dictionary<DdcVcpCode, DdcVcpCapability>
-            {
-                [DdcVcpCode.InputSource] = new(DdcVcpCode.InputSource, []),
-            }));
+            new DdcCapabilities(
+                new Dictionary<DdcVcpCode, DdcVcpCapability>
+                {
+                    [DdcVcpCode.InputSource] = new(DdcVcpCode.InputSource, []),
+                }
+            )
+        );
 
         DdcInputProvider provider = ConfiguredInput(monitors);
 

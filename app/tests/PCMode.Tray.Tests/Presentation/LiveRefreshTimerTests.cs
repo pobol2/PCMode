@@ -22,11 +22,14 @@ public sealed class LiveRefreshTimerTests
         Wpf.Run(() =>
         {
             int ticks = 0;
-            var timer = new LiveRefreshTimer(TimeSpan.FromMilliseconds(20), () =>
-            {
-                ticks++;
-                return Task.CompletedTask;
-            });
+            var timer = new LiveRefreshTimer(
+                TimeSpan.FromMilliseconds(20),
+                () =>
+                {
+                    ticks++;
+                    return Task.CompletedTask;
+                }
+            );
 
             timer.Start();
             PumpFor(TimeSpan.FromMilliseconds(200));
@@ -63,22 +66,25 @@ public sealed class LiveRefreshTimerTests
             var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            var timer = new LiveRefreshTimer(TimeSpan.FromMilliseconds(20), async () =>
-            {
-                calls++;
-                int nowActive = Interlocked.Increment(ref active);
-                maximumActive = Math.Max(maximumActive, nowActive);
-                entered.TrySetResult();
+            var timer = new LiveRefreshTimer(
+                TimeSpan.FromMilliseconds(20),
+                async () =>
+                {
+                    calls++;
+                    int nowActive = Interlocked.Increment(ref active);
+                    maximumActive = Math.Max(maximumActive, nowActive);
+                    entered.TrySetResult();
 
-                try
-                {
-                    await release.Task;
+                    try
+                    {
+                        await release.Task;
+                    }
+                    finally
+                    {
+                        _ = Interlocked.Decrement(ref active);
+                    }
                 }
-                finally
-                {
-                    _ = Interlocked.Decrement(ref active);
-                }
-            });
+            );
 
             timer.Start();
             PumpFor(TimeSpan.FromMilliseconds(150));

@@ -1,9 +1,11 @@
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.IO;
 using PCMode.Engine;
 using PCMode.Picker;
+using PCMode.Tray.Platform.Picker;
 using PCMode.Tray.Platform.Startup;
+using PCMode.Tray.Platform.Themes;
 
 namespace PCMode.Tray.Elements.Settings;
 
@@ -31,10 +33,7 @@ public sealed class ApplicationSettingsStore
     private readonly IAutoStartRegistration _autoStart;
     private readonly string _autoStartCommand;
 
-    public ApplicationSettingsStore(
-        string? root,
-        IAutoStartRegistration autoStart,
-        string autoStartCommand)
+    public ApplicationSettingsStore(string? root, IAutoStartRegistration autoStart, string autoStartCommand)
     {
         ArgumentNullException.ThrowIfNull(autoStart);
         ArgumentException.ThrowIfNullOrWhiteSpace(autoStartCommand);
@@ -132,7 +131,8 @@ public sealed class ApplicationSettingsStore
             previousCommand = _autoStart.ReadCommand();
             _autoStart.WriteCommand(DesiredAutoStartCommand(settings));
         }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        catch (Exception exception)
+            when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
         {
             return SettingsSaveOutcome.Failed($"Windows startup could not be updated. {exception.Message}");
         }
@@ -148,10 +148,12 @@ public sealed class ApplicationSettingsStore
             {
                 _autoStart.WriteCommand(previousCommand);
             }
-            catch (Exception rollback) when (rollback is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+            catch (Exception rollback)
+                when (rollback is UnauthorizedAccessException or IOException or System.Security.SecurityException)
             {
                 return SettingsSaveOutcome.Failed(
-                    $"Could not write {path}. {exception.Message} Windows startup also could not be restored: {rollback.Message}");
+                    $"Could not write {path}. {exception.Message} Windows startup also could not be restored: {rollback.Message}"
+                );
             }
 
             return SettingsSaveOutcome.Failed($"Could not write {path}. {exception.Message}");
@@ -175,14 +177,18 @@ public sealed class ApplicationSettingsStore
 
             return null;
         }
-        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        catch (Exception exception)
+            when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
         {
             return $"Windows startup registration could not be synchronized. {exception.Message}";
         }
     }
 
     private static ApplicationSettings ReadApplication(
-        JsonObject application, ApplicationSettings defaults, TargetCatalog targets)
+        JsonObject application,
+        ApplicationSettings defaults,
+        TargetCatalog targets
+    )
     {
         JsonObject picker = OptionalObject(application, "picker");
         JsonObject controller = OptionalObject(application, "controller");
@@ -196,7 +202,8 @@ public sealed class ApplicationSettingsStore
             "light" => ApplicationTheme.Light,
             "dark" => ApplicationTheme.Dark,
             string value => throw new ModeConfigurationException(
-                $"'application.appearance.theme' is '{value}'. Use system, light or dark."),
+                $"'application.appearance.theme' is '{value}'. Use system, light or dark."
+            ),
         };
 
         PickerMonitorChoice monitor = ReadString(picker, "monitor")?.ToLowerInvariant() switch
@@ -206,7 +213,8 @@ public sealed class ApplicationSettingsStore
             "pointer" => PickerMonitorChoice.UnderPointer,
             "foreground" => PickerMonitorChoice.WithForegroundWindow,
             string value => throw new ModeConfigurationException(
-                $"'application.picker.monitor' is '{value}'. Use primary, pointer or foreground."),
+                $"'application.picker.monitor' is '{value}'. Use primary, pointer or foreground."
+            ),
         };
 
         JsonNode? favoriteNode = Find(picker, "favorites");
@@ -226,7 +234,8 @@ public sealed class ApplicationSettingsStore
         };
 
         FavoriteSet favorites = FavoriteSet.Create(
-            favoritesWithLegacyHotkeys.All.Select(favorite => favorite with { Hotkey = null }));
+            favoritesWithLegacyHotkeys.All.Select(favorite => favorite with { Hotkey = null })
+        );
 
         bool controllerEnabled = ReadBoolean(controller, "enabled") ?? defaults.ControllerEnabled;
         bool setupCompleted = ReadBoolean(setup, "completed") ?? defaults.SetupCompleted;
@@ -239,7 +248,8 @@ public sealed class ApplicationSettingsStore
             "restorepreviousmode" => LaunchBehavior.RestorePreviousMode,
             "switchtomode" => LaunchBehavior.SwitchToMode,
             string value => throw new ModeConfigurationException(
-                $"'application.startup.behavior' is '{value}'. Use doNothing, restorePreviousMode or switchToMode."),
+                $"'application.startup.behavior' is '{value}'. Use doNothing, restorePreviousMode or switchToMode."
+            ),
         };
 
         return defaults with
@@ -268,7 +278,8 @@ public sealed class ApplicationSettingsStore
                 throw new ModeConfigurationException("Each application picker favorite must be an object.");
             }
 
-            string directionText = ReadString(item, "direction")
+            string directionText =
+                ReadString(item, "direction")
                 ?? throw new ModeConfigurationException("An application picker favorite has no direction.");
 
             if (!Enum.TryParse(directionText, ignoreCase: true, out PickerDirection direction))
@@ -284,28 +295,32 @@ public sealed class ApplicationSettingsStore
                 null or "" => null,
                 { Length: 1 } value when char.IsAsciiLetter(value[0]) => char.ToLowerInvariant(value[0]),
                 _ => throw new ModeConfigurationException(
-                    $"The {direction} picker hotkey must be one letter A to Z, or empty."),
+                    $"The {direction} picker hotkey must be one letter A to Z, or empty."
+                ),
             };
 
             ModeFavorite appearance = defaults[direction];
 
-            favorites.Add(appearance with
-            {
-                Id = reference.Length == 0
-                    ? $"{direction.ToString().ToLowerInvariant()}-none"
-                    : $"{direction.ToString().ToLowerInvariant()}-{reference.ToLowerInvariant()}",
-                ModeName = reference,
+            favorites.Add(
+                appearance with
+                {
+                    Id =
+                        reference.Length == 0
+                            ? $"{direction.ToString().ToLowerInvariant()}-none"
+                            : $"{direction.ToString().ToLowerInvariant()}-{reference.ToLowerInvariant()}",
+                    ModeName = reference,
 
-                // What the wedge says is the target's name, not its key: the key
-                // is an identity, and 'desk/gaming/steam' is not a label. An
-                // unresolved reference is drawn as itself, so a wheel pointing
-                // at something that no longer exists says so rather than
-                // showing a blank.
-                Label = targets.Resolve(reference)?.DisplayName ??
-                    (reference.Length == 0 ? "Not assigned" : reference),
-                Icon = reference.Length == 0 ? FavoriteIcon.None : appearance.Icon,
-                Hotkey = hotkey,
-            });
+                    // What the wedge says is the target's name, not its key: the key
+                    // is an identity, and 'desk/gaming/steam' is not a label. An
+                    // unresolved reference is drawn as itself, so a wheel pointing
+                    // at something that no longer exists says so rather than
+                    // showing a blank.
+                    Label =
+                        targets.Resolve(reference)?.DisplayName ?? (reference.Length == 0 ? "Not assigned" : reference),
+                    Icon = reference.Length == 0 ? FavoriteIcon.None : appearance.Icon,
+                    Hotkey = hotkey,
+                }
+            );
         }
 
         try
@@ -329,78 +344,92 @@ public sealed class ApplicationSettingsStore
                 throw new ModeConfigurationException("Each application shortcut must be an object.");
             }
 
-            string reference = ReadTarget(item)
-                ?? throw new ModeConfigurationException("An application shortcut has no target.");
+            string reference =
+                ReadTarget(item) ?? throw new ModeConfigurationException("An application shortcut has no target.");
             string keyText = ReadString(item, "key") ?? ReadString(item, "hotkey") ?? string.Empty;
 
             if (keyText.Length != 1 || !char.IsAsciiLetter(keyText[0]))
             {
                 throw new ModeConfigurationException(
-                    $"The direct shortcut for '{reference}' must be one letter A to Z.");
+                    $"The direct shortcut for '{reference}' must be one letter A to Z."
+                );
             }
 
-            shortcuts.Add(new DirectShortcut(
-                reference,
-                char.ToLowerInvariant(keyText[0]),
-                targets.Resolve(reference)?.DisplayName ?? reference));
+            shortcuts.Add(
+                new DirectShortcut(
+                    reference,
+                    char.ToLowerInvariant(keyText[0]),
+                    targets.Resolve(reference)?.DisplayName ?? reference
+                )
+            );
         }
 
         return shortcuts;
     }
 
-    private static IReadOnlyList<DirectShortcut> LegacyShortcuts(
-        FavoriteSet favorites, TargetCatalog targets) =>
-    [
-        .. favorites.All
-            .Where(favorite => favorite.Hotkey is not null)
-            .Select(favorite => new DirectShortcut(
-                favorite.ModeName,
-                char.ToLowerInvariant(favorite.Hotkey!.Value),
-                targets.Resolve(favorite.ModeName)?.DisplayName ?? favorite.Label)),
-    ];
+    private static IReadOnlyList<DirectShortcut> LegacyShortcuts(FavoriteSet favorites, TargetCatalog targets) =>
+        [
+            .. favorites
+                .All.Where(favorite => favorite.Hotkey is not null)
+                .Select(favorite => new DirectShortcut(
+                    favorite.ModeName,
+                    char.ToLowerInvariant(favorite.Hotkey!.Value),
+                    targets.Resolve(favorite.ModeName)?.DisplayName ?? favorite.Label
+                )),
+        ];
 
-    private static JsonObject WriteApplication(ApplicationSettings settings) => new()
-    {
-        ["appearance"] = new JsonObject
+    private static JsonObject WriteApplication(ApplicationSettings settings) =>
+        new()
         {
-            ["theme"] = settings.Theme.ToString().ToLowerInvariant(),
-        },
-        ["picker"] = new JsonObject
-        {
-            ["monitor"] = settings.PickerMonitor switch
+            ["appearance"] = new JsonObject { ["theme"] = settings.Theme.ToString().ToLowerInvariant() },
+            ["picker"] = new JsonObject
             {
-                PickerMonitorChoice.UnderPointer => "pointer",
-                PickerMonitorChoice.WithForegroundWindow => "foreground",
-                _ => "primary",
-            },
-            ["favorites"] = new JsonArray(settings.Favorites.All.Select(favorite =>
-                (JsonNode)new JsonObject
+                ["monitor"] = settings.PickerMonitor switch
                 {
-                    ["direction"] = favorite.Direction.ToString(),
-                    ["target"] = favorite.IsAssigned ? favorite.ModeName : null,
-                }).ToArray()),
-        },
-        ["shortcuts"] = new JsonArray(settings.DirectShortcuts.Select(shortcut =>
-            (JsonNode)new JsonObject
-            {
-                ["target"] = shortcut.Target,
-                ["key"] = shortcut.Key.ToString().ToUpperInvariant(),
-            }).ToArray()),
-        ["controller"] = new JsonObject { ["enabled"] = settings.ControllerEnabled },
-        ["startup"] = new JsonObject
-        {
-            ["startWithWindows"] = settings.StartWithWindows,
-            ["startMinimizedToTray"] = settings.StartMinimizedToTray,
-            ["behavior"] = settings.LaunchBehavior switch
-            {
-                LaunchBehavior.RestorePreviousMode => "restorePreviousMode",
-                LaunchBehavior.SwitchToMode => "switchToMode",
-                _ => "doNothing",
+                    PickerMonitorChoice.UnderPointer => "pointer",
+                    PickerMonitorChoice.WithForegroundWindow => "foreground",
+                    _ => "primary",
+                },
+                ["favorites"] = new JsonArray(
+                    settings
+                        .Favorites.All.Select(favorite =>
+                            (JsonNode)
+                                new JsonObject
+                                {
+                                    ["direction"] = favorite.Direction.ToString(),
+                                    ["target"] = favorite.IsAssigned ? favorite.ModeName : null,
+                                }
+                        )
+                        .ToArray()
+                ),
             },
-            ["target"] = settings.StartupTarget,
-        },
-        ["setup"] = new JsonObject { ["completed"] = settings.SetupCompleted },
-    };
+            ["shortcuts"] = new JsonArray(
+                settings
+                    .DirectShortcuts.Select(shortcut =>
+                        (JsonNode)
+                            new JsonObject
+                            {
+                                ["target"] = shortcut.Target,
+                                ["key"] = shortcut.Key.ToString().ToUpperInvariant(),
+                            }
+                    )
+                    .ToArray()
+            ),
+            ["controller"] = new JsonObject { ["enabled"] = settings.ControllerEnabled },
+            ["startup"] = new JsonObject
+            {
+                ["startWithWindows"] = settings.StartWithWindows,
+                ["startMinimizedToTray"] = settings.StartMinimizedToTray,
+                ["behavior"] = settings.LaunchBehavior switch
+                {
+                    LaunchBehavior.RestorePreviousMode => "restorePreviousMode",
+                    LaunchBehavior.SwitchToMode => "switchToMode",
+                    _ => "doNothing",
+                },
+                ["target"] = settings.StartupTarget,
+            },
+            ["setup"] = new JsonObject { ["completed"] = settings.SetupCompleted },
+        };
 
     /// <summary>Persists only the setup-wizard completion flag, leaving every other setting untouched.</summary>
     public SettingsSaveOutcome MarkSetupCompleted(TargetCatalog targets)
@@ -453,12 +482,13 @@ public sealed class ApplicationSettingsStore
         }
     }
 
-    private static JsonObject OptionalObject(JsonObject parent, string name) => Find(parent, name) switch
-    {
-        null => [],
-        JsonObject value => value,
-        _ => throw new ModeConfigurationException($"'application.{name}' must be an object."),
-    };
+    private static JsonObject OptionalObject(JsonObject parent, string name) =>
+        Find(parent, name) switch
+        {
+            null => [],
+            JsonObject value => value,
+            _ => throw new ModeConfigurationException($"'application.{name}' must be an object."),
+        };
 
     private static string? ReadString(JsonObject parent, string name)
     {
@@ -497,7 +527,8 @@ public sealed class ApplicationSettingsStore
 
     private static void Remove(JsonObject parent, string name)
     {
-        string? actual = parent.Select(property => property.Key)
+        string? actual = parent
+            .Select(property => property.Key)
             .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 
         if (actual is not null)

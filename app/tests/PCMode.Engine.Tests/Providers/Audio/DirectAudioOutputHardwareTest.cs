@@ -15,10 +15,10 @@ public sealed class DirectAudioHardwareFactAttribute : FactAttribute
         if (!DirectAudioOutputHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_AUDIO_DIRECT_HARDWARE_TEST=1, " +
-                $"{DirectAudioOutputHardwareTest.OutputAVariable} and " +
-                $"{DirectAudioOutputHardwareTest.OutputBVariable} (two exact Windows playback device names) to " +
-                "run it: it changes the Windows default playback device twice.";
+                "Hardware check. Set PCMODE_AUDIO_DIRECT_HARDWARE_TEST=1, "
+                + $"{DirectAudioOutputHardwareTest.OutputAVariable} and "
+                + $"{DirectAudioOutputHardwareTest.OutputBVariable} (two exact Windows playback device names) to "
+                + "run it: it changes the Windows default playback device twice.";
         }
     }
 }
@@ -97,8 +97,11 @@ public sealed class DirectAudioOutputHardwareTest(Xunit.Abstractions.ITestOutput
             // audio: null is the point of the test -- see the type remarks.
             // This is exactly what EngineBootstrap builds on a machine that
             // has never installed the Native Audio beta capability.
-            IReadOnlyList<IModeResourceProvider> providers =
-                EngineBootstrap.ProductionProviders(root.Path, json, audio: null);
+            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(
+                root.Path,
+                json,
+                audio: null
+            );
 
             ModeConfiguration configuration = ModeConfiguration.Parse(json, providers);
             AudioProvider provider = providers.OfType<AudioProvider>().Single();
@@ -115,7 +118,9 @@ public sealed class DirectAudioOutputHardwareTest(Xunit.Abstractions.ITestOutput
             await ActivateAndVerify(engine, provider, endpoints, "A", outputA);
 
             Say(string.Empty);
-            Say("PCMode switched between two physical outputs with no Native Audio Host, driver or virtual endpoint involved.");
+            Say(
+                "PCMode switched between two physical outputs with no Native Audio Host, driver or virtual endpoint involved."
+            );
         }
         finally
         {
@@ -138,7 +143,8 @@ public sealed class DirectAudioOutputHardwareTest(Xunit.Abstractions.ITestOutput
         AudioProvider provider,
         CoreAudioEndpoints endpoints,
         string activity,
-        string expectedDeviceName)
+        string expectedDeviceName
+    )
     {
         Say(string.Empty);
         Say($"Activating '{activity}' -> '{expectedDeviceName}'...");
@@ -165,31 +171,30 @@ public sealed class DirectAudioOutputHardwareTest(Xunit.Abstractions.ITestOutput
 
     private static string Document(string outputA, string outputB) =>
         $$"""
-        {
-          "schemaVersion": 1,
-          "providers": {
-            "audio": { "devices": { "OutputA": {{Json(outputA)}}, "OutputB": {{Json(outputB)}} } }
-          },
-          "spaces": [
             {
-              "id": "space",
-              "name": "Space",
-              "activities": [
-                { "id": "A", "name": "A", "resources": { "audio": "OutputA" } },
-                { "id": "B", "name": "B", "resources": { "audio": "OutputB" } }
+              "schemaVersion": 1,
+              "providers": {
+                "audio": { "devices": { "OutputA": {{Json(outputA)}}, "OutputB": {{Json(outputB)}} } }
+              },
+              "spaces": [
+                {
+                  "id": "space",
+                  "name": "Space",
+                  "activities": [
+                    { "id": "A", "name": "A", "resources": { "audio": "OutputA" } },
+                    { "id": "B", "name": "B", "resources": { "audio": "OutputB" } }
+                  ]
+                }
               ]
             }
-          ]
-        }
-        """;
+            """;
 
     private static string Json(string value) => System.Text.Json.JsonSerializer.Serialize(value);
 
     private static string RequiredVariable(string name) =>
         Environment.GetEnvironmentVariable(name) is string value && !string.IsNullOrWhiteSpace(value)
             ? value
-            : throw new InvalidOperationException(
-                $"{name} must name a device Windows Sound settings shows right now.");
+            : throw new InvalidOperationException($"{name} must name a device Windows Sound settings shows right now.");
 
     private void Say(string line)
     {

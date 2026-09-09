@@ -1,7 +1,7 @@
 using System.Windows.Input;
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Configuration;
 
@@ -19,9 +19,7 @@ public abstract class ConfigurationPageViewModelBase : ObservableObject, IUnsave
     private bool _isBusy;
     private object? _selectedKey;
 
-    protected ConfigurationPageViewModelBase(
-        IConfigurationWorkspace workspace,
-        IConfigurationPrompts? prompts = null)
+    protected ConfigurationPageViewModelBase(IConfigurationWorkspace workspace, IConfigurationPrompts? prompts = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
         Workspace = workspace;
@@ -128,11 +126,7 @@ public abstract class ConfigurationPageViewModelBase : ObservableObject, IUnsave
     /// selected, which the generated wording in
     /// <see cref="ConfigurationPageCommands"/> cannot produce.
     /// </remarks>
-    public void PromptAndApply(
-        string title,
-        string message,
-        string initialValue,
-        Func<string, string?> apply)
+    public void PromptAndApply(string title, string message, string initialValue, Func<string, string?> apply)
     {
         if (GuardUnsavedChanges())
         {
@@ -246,7 +240,8 @@ public abstract class ConfigurationPageViewModelBase : ObservableObject, IUnsave
     protected bool SetDirtyProperty<T>(
         ref T field,
         T value,
-        [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null
+    )
     {
         bool changed = SetProperty(ref field, value, propertyName);
 
@@ -312,19 +307,21 @@ public abstract class ConfigurationPageViewModelBase : ObservableObject, IUnsave
     /// message when the configuration itself could not be read.
     /// </summary>
     protected (IReadOnlyList<TProvider> Providers, string? Problem) ReadProviders<TProvider>()
-        where TProvider : IModeResourceProvider =>
-        Workspace.ReadProviders<TProvider>();
+        where TProvider : IModeResourceProvider => Workspace.ReadProviders<TProvider>();
 
     /// <summary>The single configured provider of one kind, when a page has at most one.</summary>
     protected (TProvider? Provider, string? Problem) ReadProvider<TProvider>()
-        where TProvider : IModeResourceProvider =>
-        Workspace.ReadProvider<TProvider>();
+        where TProvider : IModeResourceProvider => Workspace.ReadProvider<TProvider>();
 
     /// <summary>
     /// The parsed configuration document alongside its providers, for pages
     /// that need the document's own structure and not just its providers.
     /// </summary>
-    protected (ModeConfiguration? Configuration, IReadOnlyList<IModeResourceProvider> Providers, string? Problem) ReadConfiguration()
+    protected (
+        ModeConfiguration? Configuration,
+        IReadOnlyList<IModeResourceProvider> Providers,
+        string? Problem
+    ) ReadConfiguration()
     {
         try
         {
@@ -364,7 +361,8 @@ public abstract class ConfigurationPageViewModelBase : ObservableObject, IUnsave
         string category,
         string activatingStatus,
         Func<CancellationToken, Task<ActivationOutcome>> activate,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         ArgumentNullException.ThrowIfNull(activate);
 

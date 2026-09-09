@@ -34,12 +34,13 @@ public sealed class DdcMonitorProviderSetTests
 
         Assert.Equal(
             ["ddc.Left.brightness", "ddc.Left.input"],
-            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase));
+            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase)
+        );
 
         var brightness = Assert.IsType<DdcBrightnessProvider>(
-            providers.Single(provider => provider.Key == "ddc.Left.brightness"));
-        var input = Assert.IsType<DdcInputProvider>(
-            providers.Single(provider => provider.Key == "ddc.Left.input"));
+            providers.Single(provider => provider.Key == "ddc.Left.brightness")
+        );
+        var input = Assert.IsType<DdcInputProvider>(providers.Single(provider => provider.Key == "ddc.Left.input"));
 
         // Both resources are configured (no "does not define monitor" refusal),
         // which is only possible if they share a connection that actually
@@ -51,31 +52,31 @@ public sealed class DdcMonitorProviderSetTests
     [Fact]
     public void Two_configured_monitors_are_two_independent_connections()
     {
-        IReadOnlyList<IModeResourceProvider> providers = Providers(
-            Section(("Left", LeftPath), ("Right", RightPath)));
+        IReadOnlyList<IModeResourceProvider> providers = Providers(Section(("Left", LeftPath), ("Right", RightPath)));
 
         Assert.Equal(
             ["ddc.Left.brightness", "ddc.Left.input", "ddc.Right.brightness", "ddc.Right.input"],
-            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase));
+            providers.Select(provider => provider.Key).Order(StringComparer.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
     public void A_malformed_monitor_entry_refuses_the_whole_document()
     {
         var document = new JsonObject { ["schemaVersion"] = 1 };
-        document["providers"] = new JsonObject
-        {
-            ["ddcMonitors"] = new JsonObject { ["Left"] = "" },
-        };
+        document["providers"] = new JsonObject { ["ddcMonitors"] = new JsonObject { ["Left"] = "" } };
         document["spaces"] = EmptySpaces();
 
         string json = document.ToJsonString();
 
-        IReadOnlyList<IModeResourceProvider> providers =
-            EngineBootstrap.DdcMonitorProviders(json, new FakeDdcMonitors());
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.DdcMonitorProviders(
+            json,
+            new FakeDdcMonitors()
+        );
 
-        ModeConfigurationException failure =
-            Assert.Throws<ModeConfigurationException>(() => ModeConfiguration.Parse(json, providers));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            ModeConfiguration.Parse(json, providers)
+        );
 
         Assert.Contains("is empty", failure.Message, StringComparison.Ordinal);
     }
@@ -93,8 +94,10 @@ public sealed class DdcMonitorProviderSetTests
 
         string json = document.ToJsonString();
 
-        IReadOnlyList<IModeResourceProvider> providers =
-            EngineBootstrap.DdcMonitorProviders(json, new FakeDdcMonitors());
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.DdcMonitorProviders(
+            json,
+            new FakeDdcMonitors()
+        );
 
         ModeConfiguration.Parse(json, providers);
 
@@ -102,22 +105,22 @@ public sealed class DdcMonitorProviderSetTests
     }
 
     private static JsonArray EmptySpaces() =>
-    [
-        new JsonObject
-        {
-            ["id"] = "space",
-            ["name"] = "Space",
-            ["activities"] = new JsonArray
+        [
+            new JsonObject
             {
-                new JsonObject
+                ["id"] = "space",
+                ["name"] = "Space",
+                ["activities"] = new JsonArray
                 {
-                    ["id"] = "desktop",
-                    ["name"] = "Desktop",
-                    ["resources"] = new JsonObject(),
+                    new JsonObject
+                    {
+                        ["id"] = "desktop",
+                        ["name"] = "Desktop",
+                        ["resources"] = new JsonObject(),
+                    },
                 },
             },
-        },
-    ];
+        ];
 
     private static JsonObject Section(params (string Alias, string DevicePath)[] monitors)
     {

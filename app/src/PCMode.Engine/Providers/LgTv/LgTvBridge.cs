@@ -40,8 +40,7 @@ internal static class LgTvBridge
     /// engine treats null as "apply it anyway", which is the right answer to all
     /// of them.
     /// </remarks>
-    public static string? Wait(Func<CancellationToken, Task<string?>> read) =>
-        Wait(read, whenItCannot: null);
+    public static string? Wait(Func<CancellationToken, Task<string?>> read) => Wait(read, whenItCannot: null);
 
     /// <summary>
     /// Reads, and answers <paramref name="whenItCannot"/> rather than throwing.

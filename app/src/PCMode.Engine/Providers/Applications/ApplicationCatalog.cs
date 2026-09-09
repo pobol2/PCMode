@@ -74,10 +74,12 @@ internal static class ApplicationCatalog
         {
             using JsonDocument document = JsonDocument.Parse(json, ReadOptions);
 
-            if (!document.RootElement.TryGetProperty("providers", out JsonElement providers) ||
-                providers.ValueKind != JsonValueKind.Object ||
-                !TryFindSection(providers, out JsonElement section) ||
-                section.ValueKind != JsonValueKind.Object)
+            if (
+                !document.RootElement.TryGetProperty("providers", out JsonElement providers)
+                || providers.ValueKind != JsonValueKind.Object
+                || !TryFindSection(providers, out JsonElement section)
+                || section.ValueKind != JsonValueKind.Object
+            )
             {
                 return [];
             }
@@ -104,7 +106,8 @@ internal static class ApplicationCatalog
     public static bool TryRead(
         JsonElement? settings,
         out IReadOnlyDictionary<string, ApplicationDefinition> applications,
-        out string? problem)
+        out string? problem
+    )
     {
         applications = Empty;
 
@@ -155,8 +158,10 @@ internal static class ApplicationCatalog
         return true;
     }
 
-    private static readonly IReadOnlyDictionary<string, ApplicationDefinition> Empty =
-        new Dictionary<string, ApplicationDefinition>(StringComparer.OrdinalIgnoreCase);
+    private static readonly IReadOnlyDictionary<string, ApplicationDefinition> Empty = new Dictionary<
+        string,
+        ApplicationDefinition
+    >(StringComparer.OrdinalIgnoreCase);
 
     private static readonly JsonDocumentOptions ReadOptions = new()
     {
@@ -184,7 +189,8 @@ internal static class ApplicationCatalog
         string name,
         JsonElement written,
         out ApplicationDefinition? definition,
-        out string? problem)
+        out string? problem
+    )
     {
         definition = null;
         string where = $"'{SettingsPath}.{name}'";
@@ -209,8 +215,7 @@ internal static class ApplicationCatalog
         {
             if (field.NameEquals("process"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem = $"{where}.process must be the process name Windows reports, without '.exe', in quotes.";
                     return false;
@@ -253,7 +258,15 @@ internal static class ApplicationCatalog
             }
             else if (field.NameEquals(TargetRequirements.FieldName))
             {
-                if (!TargetRequirements.TryParse(where, name, field.Value, out IReadOnlyList<ResourceRequirement>? needed, out problem))
+                if (
+                    !TargetRequirements.TryParse(
+                        where,
+                        name,
+                        field.Value,
+                        out IReadOnlyList<ResourceRequirement>? needed,
+                        out problem
+                    )
+                )
                 {
                     return false;
                 }
@@ -294,8 +307,8 @@ internal static class ApplicationCatalog
                 // dropped one is a setting the user believes they have written
                 // and has not.
                 problem =
-                    $"{where} does not understand '{field.Name}'. It takes 'process', 'start', 'stop', " +
-                    "'reactivate', 'requires', 'restartWhen', 'ready', 'startWithin' and 'stopWithin'.";
+                    $"{where} does not understand '{field.Name}'. It takes 'process', 'start', 'stop', "
+                    + "'reactivate', 'requires', 'restartWhen', 'ready', 'startWithin' and 'stopWithin'.";
 
                 return false;
             }
@@ -311,13 +324,15 @@ internal static class ApplicationCatalog
         {
             if (stop is not null)
             {
-                problem = $"{where}.stop needs process detection. Launch-only applications cannot be stopped by PCMode.";
+                problem =
+                    $"{where}.stop needs process detection. Launch-only applications cannot be stopped by PCMode.";
                 return false;
             }
 
             if (reactivate)
             {
-                problem = $"{where}.reactivate needs process detection. A launch-only application is dispatched when activated.";
+                problem =
+                    $"{where}.reactivate needs process detection. A launch-only application is dispatched when activated.";
                 return false;
             }
 
@@ -337,9 +352,7 @@ internal static class ApplicationCatalog
         definition = new ApplicationDefinition
         {
             Name = name,
-            Observation = process is null
-                ? ApplicationObservation.None
-                : ApplicationObservation.ForProcess(process),
+            Observation = process is null ? ApplicationObservation.None : ApplicationObservation.ForProcess(process),
             Start = start,
             Stop = stop,
             Reactivate = reactivate,
@@ -370,7 +383,8 @@ internal static class ApplicationCatalog
         string where,
         JsonElement written,
         out LaunchCommand? command,
-        out string? problem)
+        out string? problem
+    )
     {
         command = null;
 
@@ -397,8 +411,8 @@ internal static class ApplicationCatalog
         if (written.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"{where} must be an executable path, a URI, or " +
-                "{ \"executable\": \"...\", \"arguments\": [ ... ] }.";
+                $"{where} must be an executable path, a URI, or "
+                + "{ \"executable\": \"...\", \"arguments\": [ ... ] }.";
 
             return false;
         }
@@ -411,8 +425,7 @@ internal static class ApplicationCatalog
         {
             if (field.NameEquals("executable"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem = $"{where}.executable must be a path, in quotes.";
                     return false;
@@ -422,8 +435,7 @@ internal static class ApplicationCatalog
             }
             else if (field.NameEquals("uri"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem = $"{where}.uri must be a URI, in quotes.";
                     return false;
@@ -433,7 +445,8 @@ internal static class ApplicationCatalog
 
                 if (ApplicationDefinition.SchemeOf(uri) is null)
                 {
-                    problem = $"{where}.uri is '{uri}', which has no scheme. A URI looks like \"steam://open/bigpicture\".";
+                    problem =
+                        $"{where}.uri is '{uri}', which has no scheme. A URI looks like \"steam://open/bigpicture\".";
                     return false;
                 }
             }
@@ -493,11 +506,7 @@ internal static class ApplicationCatalog
         return true;
     }
 
-    private static bool TryReadReady(
-        string where,
-        JsonElement written,
-        out ReadinessAction? ready,
-        out string? problem)
+    private static bool TryReadReady(string where, JsonElement written, out ReadinessAction? ready, out string? problem)
     {
         ready = null;
 
@@ -525,8 +534,7 @@ internal static class ApplicationCatalog
             }
             else if (field.NameEquals("keys"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem = $"{where}.keys must be the characters to type, in quotes.";
                     return false;
@@ -543,8 +551,8 @@ internal static class ApplicationCatalog
                     if (character is < ' ' or > '~')
                     {
                         problem =
-                            $"{where}.keys may only contain ordinary printable characters. " +
-                            "Modifiers, chords and named keys are not supported.";
+                            $"{where}.keys may only contain ordinary printable characters. "
+                            + "Modifiers, chords and named keys are not supported.";
 
                         return false;
                     }
@@ -583,7 +591,8 @@ internal static class ApplicationCatalog
         string where,
         JsonElement written,
         out IReadOnlyList<string> keys,
-        out string? problem)
+        out string? problem
+    )
     {
         keys = [];
 
@@ -644,8 +653,8 @@ internal static class ApplicationCatalog
         if (given < ShortestWait || given > LongestWait)
         {
             problem =
-                $"{where} is {milliseconds}ms, and must be between {ShortestWait.TotalMilliseconds:0}ms " +
-                $"and {LongestWait.TotalSeconds:0} seconds.";
+                $"{where} is {milliseconds}ms, and must be between {ShortestWait.TotalMilliseconds:0}ms "
+                + $"and {LongestWait.TotalSeconds:0} seconds.";
 
             return false;
         }
@@ -663,6 +672,5 @@ internal static class ApplicationCatalog
     /// availability, the launch, the message when it is not there -- is talking
     /// about the same real path.
     /// </remarks>
-    private static string Expand(string value) =>
-        Environment.ExpandEnvironmentVariables(value.Trim());
+    private static string Expand(string value) => Environment.ExpandEnvironmentVariables(value.Trim());
 }

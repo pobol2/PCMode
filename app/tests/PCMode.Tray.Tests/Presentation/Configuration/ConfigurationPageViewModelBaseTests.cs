@@ -170,12 +170,11 @@ public sealed class ConfigurationPageViewModelBaseTests
     }
 
     private static (ModeConfiguration Configuration, IReadOnlyList<IModeResourceProvider> Providers) BuildSnapshot(
-        IModeResourceProvider provider)
+        IModeResourceProvider provider
+    )
     {
         IReadOnlyList<IModeResourceProvider> providers = [provider];
-        ModeConfiguration configuration = ModeConfiguration.Parse(
-            """{"schemaVersion":1,"spaces":[]}""",
-            providers);
+        ModeConfiguration configuration = ModeConfiguration.Parse("""{"schemaVersion":1,"spaces":[]}""", providers);
 
         return (configuration, providers);
     }
@@ -194,9 +193,7 @@ public sealed class ConfigurationPageViewModelBaseTests
 
         public string? Read() => null;
 
-        public void Apply(string value, CancellationToken cancellationToken)
-        {
-        }
+        public void Apply(string value, CancellationToken cancellationToken) { }
     }
 
     /// <summary>Exposes the protected base members a real feature ViewModel builds on, for testing in isolation.</summary>
@@ -229,8 +226,7 @@ public sealed class ConfigurationPageViewModelBaseTests
             ClearDirtyState();
         }
 
-        public void LoadWithoutDirtyTracking(string value) =>
-            RunWithoutDirtyTracking(() => Value = value);
+        public void LoadWithoutDirtyTracking(string value) => RunWithoutDirtyTracking(() => Value = value);
 
         public void SetBusy(bool value) => IsBusy = value;
 

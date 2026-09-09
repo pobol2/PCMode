@@ -19,14 +19,11 @@ public sealed class NavigationTests
     [Fact]
     public void Validate_rejects_a_page_that_appears_more_than_once()
     {
-        NavigationItem[] items =
-        [
-            new(PageId.Home, "Home"),
-            new(PageId.Home, "Home again"),
-        ];
+        NavigationItem[] items = [new(PageId.Home, "Home"), new(PageId.Home, "Home again")];
 
-        InvalidOperationException exception =
-            Assert.Throws<InvalidOperationException>(() => NavigationRegistry.Validate(items));
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            NavigationRegistry.Validate(items)
+        );
 
         Assert.Contains("appears more than once", exception.Message, StringComparison.Ordinal);
     }
@@ -36,8 +33,9 @@ public sealed class NavigationTests
     {
         NavigationItem[] items = [new(PageId.Home, "Home", PageId.Home)];
 
-        InvalidOperationException exception =
-            Assert.Throws<InvalidOperationException>(() => NavigationRegistry.Validate(items));
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            NavigationRegistry.Validate(items)
+        );
 
         Assert.Contains("cannot be its own parent", exception.Message, StringComparison.Ordinal);
     }
@@ -47,8 +45,9 @@ public sealed class NavigationTests
     {
         NavigationItem[] items = [new(PageId.Applications, "Applications", (PageId)(-1))];
 
-        InvalidOperationException exception =
-            Assert.Throws<InvalidOperationException>(() => NavigationRegistry.Validate(items));
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            NavigationRegistry.Validate(items)
+        );
 
         Assert.Contains("missing parent", exception.Message, StringComparison.Ordinal);
     }
@@ -62,8 +61,9 @@ public sealed class NavigationTests
             new(PageId.Applications, "Applications", PageId.Home),
         ];
 
-        InvalidOperationException exception =
-            Assert.Throws<InvalidOperationException>(() => NavigationRegistry.Validate(items));
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() =>
+            NavigationRegistry.Validate(items)
+        );
 
         Assert.Contains("cycle", exception.Message, StringComparison.Ordinal);
     }

@@ -30,14 +30,11 @@ namespace PCMode.Audio.Engine.Runtime;
 /// trade-off: it adds a small, fixed startup delay in exchange for
 /// absorbing the input's burstiness afterward.
 /// </remarks>
-public sealed class JitterBufferedAudioInput :
-    IAudioInputStream
+public sealed class JitterBufferedAudioInput : IAudioInputStream
 {
-    public const int RecoveryRampFrameCount =
-        256;
+    public const int RecoveryRampFrameCount = 256;
 
-    public const int DiscontinuityPrimeMilliseconds =
-        25;
+    public const int DiscontinuityPrimeMilliseconds = 25;
 
     /// <summary>
     /// Comfortably more than one PCMode driver packet interval (observed
@@ -45,16 +42,13 @@ public sealed class JitterBufferedAudioInput :
     /// delayed burst -- or an incidental GC pause or scheduling hiccup on
     /// the pump thread -- does not run the cushion dry.
     /// </summary>
-    public const int DefaultCushionMilliseconds =
-        150;
+    public const int DefaultCushionMilliseconds = 150;
 
-    private readonly IAudioInputStream
-        _inner;
+    private readonly IAudioInputStream _inner;
 
     private readonly int _cushionFrames;
 
-    private readonly object _syncRoot =
-        new();
+    private readonly object _syncRoot = new();
 
     private AudioRingBuffer? _buffer;
 
@@ -62,11 +56,9 @@ public sealed class JitterBufferedAudioInput :
 
     private Thread? _pumpThread;
 
-    private CancellationTokenSource?
-        _pumpCancellation;
+    private CancellationTokenSource? _pumpCancellation;
 
-    private volatile Exception?
-        _pumpFailure;
+    private volatile Exception? _pumpFailure;
 
     private int _recoveryRampFramesRemaining;
 
@@ -82,8 +74,7 @@ public sealed class JitterBufferedAudioInput :
 
     private bool _disposed;
 
-    public AudioFormat Format =>
-        _inner.Format;
+    public AudioFormat Format => _inner.Format;
 
     /// <summary>
     /// How many times <see cref="Read"/> had to zero-fill part of a block
@@ -98,8 +89,7 @@ public sealed class JitterBufferedAudioInput :
         {
             lock (_syncRoot)
             {
-                return _buffer?.UnderrunCount ??
-                    0;
+                return _buffer?.UnderrunCount ?? 0;
             }
         }
     }
@@ -115,25 +105,15 @@ public sealed class JitterBufferedAudioInput :
         }
     }
 
-    public JitterBufferedAudioInput(
-        IAudioInputStream inner,
-        int cushionMilliseconds =
-            DefaultCushionMilliseconds)
+    public JitterBufferedAudioInput(IAudioInputStream inner, int cushionMilliseconds = DefaultCushionMilliseconds)
     {
-        ArgumentNullException.ThrowIfNull(
-            inner);
+        ArgumentNullException.ThrowIfNull(inner);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            cushionMilliseconds);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cushionMilliseconds);
 
-        _inner =
-            inner;
+        _inner = inner;
 
-        _cushionFrames =
-            checked(
-                inner.Format.SampleRate *
-                cushionMilliseconds /
-                1000);
+        _cushionFrames = checked(inner.Format.SampleRate * cushionMilliseconds / 1000);
     }
 
     public void Start()
@@ -150,65 +130,40 @@ public sealed class JitterBufferedAudioInput :
         // Sized well past the cushion so the producer thread has real room
         // to run ahead of the consumer, not just exactly enough for one
         // priming fill.
-        _buffer =
-            new AudioRingBuffer(
-                checked(
-                    _cushionFrames * 4),
-                Format.ChannelCount);
+        _buffer = new AudioRingBuffer(checked(_cushionFrames * 4), Format.ChannelCount);
 
-        _buffer.PrimeSilence(
-            _cushionFrames);
+        _buffer.PrimeSilence(_cushionFrames);
 
-        _pumpBuffer =
-            new float[
-                checked(
-                    _cushionFrames *
-                    Format.ChannelCount)];
+        _pumpBuffer = new float[checked(_cushionFrames * Format.ChannelCount)];
 
-        _pumpFailure =
-            null;
+        _pumpFailure = null;
 
-        _recoveryRampFramesRemaining =
-            0;
+        _recoveryRampFramesRemaining = 0;
 
-        _recoveryRampStarted =
-            false;
+        _recoveryRampStarted = false;
 
-        _recoverySilenceFramesRemaining =
-            0;
+        _recoverySilenceFramesRemaining = 0;
 
-        _bufferDiscontinuityGeneration =
-            0;
+        _bufferDiscontinuityGeneration = 0;
 
-        _observedDiscontinuityGeneration =
-            0;
+        _observedDiscontinuityGeneration = 0;
 
-        _pumpCancellation =
-            new CancellationTokenSource();
+        _pumpCancellation = new CancellationTokenSource();
 
-        _pumpThread =
-            new Thread(
-                PumpMain)
-            {
-                IsBackground = true,
-                Name = "pcmode-jitter-buffer-pump"
-            };
+        _pumpThread = new Thread(PumpMain) { IsBackground = true, Name = "pcmode-jitter-buffer-pump" };
 
         _pumpThread.Start();
 
-        _started =
-            true;
+        _started = true;
     }
 
-    public int Read(
-        Span<float> destination)
+    public int Read(Span<float> destination)
     {
         ThrowIfDisposed();
 
         if (!_started)
         {
-            throw new InvalidOperationException(
-                "Jitter-buffered input is not started.");
+            throw new InvalidOperationException("Jitter-buffered input is not started.");
         }
 
         if (destination.IsEmpty)
@@ -219,14 +174,11 @@ public sealed class JitterBufferedAudioInput :
         // Surfaced here, on the consumer's own call, rather than left to
         // silently under-deliver: a pump thread that stopped running is a
         // real failure of the input stream, not an underrun to paper over.
-        Exception? failure =
-            _pumpFailure;
+        Exception? failure = _pumpFailure;
 
         if (failure is not null)
         {
-            throw new InvalidOperationException(
-                "The jitter buffer's pump thread failed.",
-                failure);
+            throw new InvalidOperationException("The jitter buffer's pump thread failed.", failure);
         }
 
         // AudioRingBuffer.Read always writes the full destination -- real
@@ -243,62 +195,40 @@ public sealed class JitterBufferedAudioInput :
 
         lock (_syncRoot)
         {
-            availableFrames =
-                _buffer!.Read(
-                    destination);
+            availableFrames = _buffer!.Read(destination);
 
-            discontinuityGeneration =
-                _bufferDiscontinuityGeneration;
+            discontinuityGeneration = _bufferDiscontinuityGeneration;
         }
 
-        int requestedFrames =
-            destination.Length /
-            Format.ChannelCount;
+        int requestedFrames = destination.Length / Format.ChannelCount;
 
-        if (discontinuityGeneration !=
-            _observedDiscontinuityGeneration)
+        if (discontinuityGeneration != _observedDiscontinuityGeneration)
         {
-            _observedDiscontinuityGeneration =
-                discontinuityGeneration;
+            _observedDiscontinuityGeneration = discontinuityGeneration;
 
-            _recoverySilenceFramesRemaining =
-                GetDiscontinuityPrimeFrames();
+            _recoverySilenceFramesRemaining = GetDiscontinuityPrimeFrames();
 
-            _recoveryRampFramesRemaining =
-                RecoveryRampFrameCount;
+            _recoveryRampFramesRemaining = RecoveryRampFrameCount;
 
-            _recoveryRampStarted =
-                false;
+            _recoveryRampStarted = false;
         }
 
-        int recoverySilenceFrames =
-            Math.Min(
-                availableFrames,
-                _recoverySilenceFramesRemaining);
+        int recoverySilenceFrames = Math.Min(availableFrames, _recoverySilenceFramesRemaining);
 
-        _recoverySilenceFramesRemaining -=
-            recoverySilenceFrames;
+        _recoverySilenceFramesRemaining -= recoverySilenceFrames;
 
         ApplyRecoveryRamp(
-            destination.Slice(
-                checked(
-                    recoverySilenceFrames *
-                    Format.ChannelCount)),
-            availableFrames -
-                recoverySilenceFrames);
+            destination.Slice(checked(recoverySilenceFrames * Format.ChannelCount)),
+            availableFrames - recoverySilenceFrames
+        );
 
-        if (availableFrames <
-            requestedFrames)
+        if (availableFrames < requestedFrames)
         {
-            ApplyUnderrunFadeOut(
-                destination,
-                availableFrames);
+            ApplyUnderrunFadeOut(destination, availableFrames);
 
-            _recoveryRampFramesRemaining =
-                RecoveryRampFrameCount;
+            _recoveryRampFramesRemaining = RecoveryRampFrameCount;
 
-            _recoveryRampStarted =
-                false;
+            _recoveryRampStarted = false;
         }
 
         return requestedFrames;
@@ -315,40 +245,30 @@ public sealed class JitterBufferedAudioInput :
 
         _pumpCancellation!.Cancel();
 
-        _pumpThread!.Join(
-            TimeSpan.FromSeconds(
-                2));
+        _pumpThread!.Join(TimeSpan.FromSeconds(2));
 
         _pumpCancellation.Dispose();
 
-        _pumpCancellation =
-            null;
+        _pumpCancellation = null;
 
-        _pumpThread =
-            null;
+        _pumpThread = null;
 
         _inner.Stop();
 
         lock (_syncRoot)
         {
-            _buffer =
-                null;
+            _buffer = null;
         }
 
-        _pumpBuffer =
-            null;
+        _pumpBuffer = null;
 
-        _recoveryRampFramesRemaining =
-            0;
+        _recoveryRampFramesRemaining = 0;
 
-        _recoveryRampStarted =
-            false;
+        _recoveryRampStarted = false;
 
-        _recoverySilenceFramesRemaining =
-            0;
+        _recoverySilenceFramesRemaining = 0;
 
-        _started =
-            false;
+        _started = false;
     }
 
     public void Dispose()
@@ -364,57 +284,37 @@ public sealed class JitterBufferedAudioInput :
             {
                 Stop();
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         _inner.Dispose();
 
-        _disposed =
-            true;
+        _disposed = true;
     }
 
     private void PumpMain()
     {
-        CancellationToken token =
-            _pumpCancellation!.Token;
+        CancellationToken token = _pumpCancellation!.Token;
 
-        float[] pumpBuffer =
-            _pumpBuffer!;
+        float[] pumpBuffer = _pumpBuffer!;
 
-        IAudioInputDiscontinuitySource?
-            discontinuitySource =
-                _inner as
-                    IAudioInputDiscontinuitySource;
+        IAudioInputDiscontinuitySource? discontinuitySource = _inner as IAudioInputDiscontinuitySource;
 
-        long observedSourceGeneration =
-            discontinuitySource?
-                .DiscontinuityGeneration ??
-            0;
+        long observedSourceGeneration = discontinuitySource?.DiscontinuityGeneration ?? 0;
 
         try
         {
             while (!token.IsCancellationRequested)
             {
-                int frames =
-                    _inner.Read(
-                        pumpBuffer);
+                int frames = _inner.Read(pumpBuffer);
 
-                long sourceGeneration =
-                    discontinuitySource?
-                        .DiscontinuityGeneration ??
-                    observedSourceGeneration;
+                long sourceGeneration = discontinuitySource?.DiscontinuityGeneration ?? observedSourceGeneration;
 
-                bool discontinuity =
-                    sourceGeneration !=
-                    observedSourceGeneration;
+                bool discontinuity = sourceGeneration != observedSourceGeneration;
 
-                observedSourceGeneration =
-                    sourceGeneration;
+                observedSourceGeneration = sourceGeneration;
 
-                if (frames <= 0 &&
-                    !discontinuity)
+                if (frames <= 0 && !discontinuity)
                 {
                     // The inner stream's own Read already paces itself
                     // (the driver client sleeps briefly while waiting for
@@ -423,15 +323,11 @@ public sealed class JitterBufferedAudioInput :
                     continue;
                 }
 
-                int sampleCount =
-                    checked(
-                        frames *
-                        Format.ChannelCount);
+                int sampleCount = checked(frames * Format.ChannelCount);
 
                 lock (_syncRoot)
                 {
-                    AudioRingBuffer? buffer =
-                        _buffer;
+                    AudioRingBuffer? buffer = _buffer;
 
                     if (buffer is null)
                     {
@@ -442,8 +338,7 @@ public sealed class JitterBufferedAudioInput :
                     {
                         buffer.Reset();
 
-                        buffer.PrimeSilence(
-                            GetDiscontinuityPrimeFrames());
+                        buffer.PrimeSilence(GetDiscontinuityPrimeFrames());
 
                         _bufferDiscontinuityGeneration++;
                     }
@@ -453,8 +348,7 @@ public sealed class JitterBufferedAudioInput :
                         continue;
                     }
 
-                    if (buffer.FreeFrames <
-                        frames)
+                    if (buffer.FreeFrames < frames)
                     {
                         // The cushion is already full because the consumer
                         // has fallen behind for a sustained stretch, not a
@@ -466,55 +360,37 @@ public sealed class JitterBufferedAudioInput :
                         continue;
                     }
 
-                    buffer.Write(
-                        pumpBuffer.AsSpan(
-                            0,
-                            sampleCount));
+                    buffer.Write(pumpBuffer.AsSpan(0, sampleCount));
                 }
             }
         }
-        catch (Exception ex)
-            when (!token.IsCancellationRequested)
+        catch (Exception ex) when (!token.IsCancellationRequested)
         {
-            _pumpFailure =
-                ex;
+            _pumpFailure = ex;
         }
     }
 
     private int GetDiscontinuityPrimeFrames()
     {
-        return Math.Min(
-            _cushionFrames,
-            checked(
-                Format.SampleRate *
-                DiscontinuityPrimeMilliseconds /
-                1000));
+        return Math.Min(_cushionFrames, checked(Format.SampleRate * DiscontinuityPrimeMilliseconds / 1000));
     }
 
     // Below this a sample is treated as driver-provided silence rather than
     // signal, tight enough that a genuine zero crossing in real audio still
     // reads as "started" once the ramp has already begun (see the started
     // latch below), but loose enough to absorb float round-trip noise.
-    private const float RecoverySilenceEpsilon =
-        1e-6f;
+    private const float RecoverySilenceEpsilon = 1e-6f;
 
-    private void ApplyRecoveryRamp(
-        Span<float> samples,
-        int availableFrames)
+    private void ApplyRecoveryRamp(Span<float> samples, int availableFrames)
     {
-        if (_recoveryRampFramesRemaining == 0 ||
-            availableFrames == 0)
+        if (_recoveryRampFramesRemaining == 0 || availableFrames == 0)
         {
             return;
         }
 
-        int channels =
-            Format.ChannelCount;
+        int channels = Format.ChannelCount;
 
-        for (int frame = 0;
-             frame < availableFrames &&
-             _recoveryRampFramesRemaining > 0;
-             frame++)
+        for (int frame = 0; frame < availableFrames && _recoveryRampFramesRemaining > 0; frame++)
         {
             // The ramp exists to protect the transition when real audio
             // resumes after a discontinuity. While the source is still
@@ -525,51 +401,28 @@ public sealed class JitterBufferedAudioInput :
             // real signal, then run the ramp normally (including through
             // any later zero crossings, which the started latch does not
             // re-pause for).
-            if (!_recoveryRampStarted &&
-                IsSilentFrame(
-                    samples,
-                    frame,
-                    channels))
+            if (!_recoveryRampStarted && IsSilentFrame(samples, frame, channels))
             {
                 continue;
             }
 
-            _recoveryRampStarted =
-                true;
+            _recoveryRampStarted = true;
 
-            float level =
-                1.0f -
-                (_recoveryRampFramesRemaining /
-                 (float)RecoveryRampFrameCount);
+            float level = 1.0f - (_recoveryRampFramesRemaining / (float)RecoveryRampFrameCount);
 
-            ScaleFrame(
-                samples,
-                frame,
-                channels,
-                level);
+            ScaleFrame(samples, frame, channels, level);
 
             _recoveryRampFramesRemaining--;
         }
     }
 
-    private static bool IsSilentFrame(
-        Span<float> samples,
-        int frame,
-        int channels)
+    private static bool IsSilentFrame(Span<float> samples, int frame, int channels)
     {
-        int sampleStart =
-            frame *
-            channels;
+        int sampleStart = frame * channels;
 
-        for (int channel = 0;
-             channel < channels;
-             channel++)
+        for (int channel = 0; channel < channels; channel++)
         {
-            if (MathF.Abs(
-                    samples[
-                        sampleStart +
-                        channel]) >
-                RecoverySilenceEpsilon)
+            if (MathF.Abs(samples[sampleStart + channel]) > RecoverySilenceEpsilon)
             {
                 return false;
             }
@@ -578,70 +431,39 @@ public sealed class JitterBufferedAudioInput :
         return true;
     }
 
-    private void ApplyUnderrunFadeOut(
-        Span<float> samples,
-        int availableFrames)
+    private void ApplyUnderrunFadeOut(Span<float> samples, int availableFrames)
     {
         if (availableFrames == 0)
         {
             return;
         }
 
-        int channels =
-            Format.ChannelCount;
+        int channels = Format.ChannelCount;
 
-        int fadeFrames =
-            Math.Min(
-                RecoveryRampFrameCount,
-                availableFrames);
+        int fadeFrames = Math.Min(RecoveryRampFrameCount, availableFrames);
 
-        int firstFadeFrame =
-            availableFrames -
-            fadeFrames;
+        int firstFadeFrame = availableFrames - fadeFrames;
 
-        for (int frame = 0;
-             frame < fadeFrames;
-             frame++)
+        for (int frame = 0; frame < fadeFrames; frame++)
         {
-            float level =
-                1.0f -
-                ((frame + 1) /
-                 (float)fadeFrames);
+            float level = 1.0f - ((frame + 1) / (float)fadeFrames);
 
-            ScaleFrame(
-                samples,
-                firstFadeFrame +
-                frame,
-                channels,
-                level);
+            ScaleFrame(samples, firstFadeFrame + frame, channels, level);
         }
     }
 
-    private static void ScaleFrame(
-        Span<float> samples,
-        int frame,
-        int channels,
-        float level)
+    private static void ScaleFrame(Span<float> samples, int frame, int channels, float level)
     {
-        int sampleStart =
-            frame *
-            channels;
+        int sampleStart = frame * channels;
 
-        for (int channel = 0;
-             channel < channels;
-             channel++)
+        for (int channel = 0; channel < channels; channel++)
         {
-            samples[
-                sampleStart +
-                channel] *=
-                    level;
+            samples[sampleStart + channel] *= level;
         }
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

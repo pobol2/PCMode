@@ -34,7 +34,8 @@ public sealed class PickerGeometryTests
 
         Assert.True(
             wide.WindowBounds.Height <= 1080,
-            $"The picker is {wide.WindowBounds.Height} tall on a 1080-tall monitor.");
+            $"The picker is {wide.WindowBounds.Height} tall on a 1080-tall monitor."
+        );
     }
 
     [Fact]
@@ -47,7 +48,8 @@ public sealed class PickerGeometryTests
         // stand out.
         Assert.True(
             geometry.CanvasSize > geometry.SelectedOuterDiameter,
-            "The selected wedge reaches the edge of the canvas and will be clipped.");
+            "The selected wedge reaches the edge of the canvas and will be clipped."
+        );
     }
 
     [Fact]
@@ -56,8 +58,11 @@ public sealed class PickerGeometryTests
         // A second monitor to the left of the primary one has a negative
         // origin. Anything that assumed a screen starts at zero puts the
         // picker on the wrong display, or off every display.
-        PickerGeometry geometry =
-            PickerGeometry.Create(new PixelRect(-2560, -300, 2560, 1440), 1.0, FavoriteSet.Default);
+        PickerGeometry geometry = PickerGeometry.Create(
+            new PixelRect(-2560, -300, 2560, 1440),
+            1.0,
+            FavoriteSet.Default
+        );
 
         PixelRect window = geometry.WindowBounds;
 
@@ -75,11 +80,9 @@ public sealed class PickerGeometryTests
         // The same panel, described twice: 3840x2160 at 200% is the same piece
         // of glass as 1920x1080 at 100%, and the picker should cover the same
         // amount of it.
-        PickerGeometry hundred =
-            PickerGeometry.Create(new PixelRect(0, 0, 1920, 1080), 1.0, FavoriteSet.Default);
+        PickerGeometry hundred = PickerGeometry.Create(new PixelRect(0, 0, 1920, 1080), 1.0, FavoriteSet.Default);
 
-        PickerGeometry twoHundred =
-            PickerGeometry.Create(new PixelRect(0, 0, 3840, 2160), 2.0, FavoriteSet.Default);
+        PickerGeometry twoHundred = PickerGeometry.Create(new PixelRect(0, 0, 3840, 2160), 2.0, FavoriteSet.Default);
 
         // Within a pixel or two rather than exactly, and the slack is the
         // point rather than a concession. Every circle is rounded to an even
@@ -88,7 +91,11 @@ public sealed class PickerGeometryTests
         // 1080 * 0.58. The residue is two device pixels on a 4K panel, which
         // is the correct thing to be wrong by: it buys a wheel that is not
         // half a pixel out of centre at any scale.
-        Assert.InRange(twoHundred.WindowBounds.Width, (hundred.WindowBounds.Width * 2) - 4, (hundred.WindowBounds.Width * 2) + 4);
+        Assert.InRange(
+            twoHundred.WindowBounds.Width,
+            (hundred.WindowBounds.Width * 2) - 4,
+            (hundred.WindowBounds.Width * 2) + 4
+        );
 
         // And in drawing units it is the same size, because those units are
         // what WPF lays out in.
@@ -98,8 +105,7 @@ public sealed class PickerGeometryTests
     [Fact]
     public void Reports_the_window_in_pixels_and_the_drawing_in_units()
     {
-        PickerGeometry geometry =
-            PickerGeometry.Create(new PixelRect(0, 0, 2560, 1440), 1.5, FavoriteSet.Default);
+        PickerGeometry geometry = PickerGeometry.Create(new PixelRect(0, 0, 2560, 1440), 1.5, FavoriteSet.Default);
 
         // The distinction the whole class exists for. A window placed in
         // drawing units lands in the wrong place on a mixed-DPI desktop, which
@@ -123,7 +129,8 @@ public sealed class PickerGeometryTests
 
         PickerHit hit = geometry.HitTest(
             new PickerPoint(geometry.Center + (dx * distance), geometry.Center + (dy * distance)),
-            PickerDirection.Up);
+            PickerDirection.Up
+        );
 
         Assert.Equal(PickerHitKind.Wedge, hit.Kind);
         Assert.Equal(expected, hit.Direction);
@@ -134,9 +141,7 @@ public sealed class PickerGeometryTests
     {
         PickerGeometry geometry = Standard();
 
-        PickerHit hit = geometry.HitTest(
-            new PickerPoint(geometry.Center, geometry.Center),
-            PickerDirection.Up);
+        PickerHit hit = geometry.HitTest(new PickerPoint(geometry.Center, geometry.Center), PickerDirection.Up);
 
         // Hovering the hub must not move the selection, and clicking it means
         // "the current mode", not "whichever quadrant the maths says".
@@ -187,11 +192,13 @@ public sealed class PickerGeometryTests
 
         PickerHit steeper = geometry.HitTest(
             new PickerPoint(geometry.Center + (reach * 0.9), geometry.Center - reach),
-            PickerDirection.Up);
+            PickerDirection.Up
+        );
 
         PickerHit shallower = geometry.HitTest(
             new PickerPoint(geometry.Center + reach, geometry.Center - (reach * 0.9)),
-            PickerDirection.Up);
+            PickerDirection.Up
+        );
 
         Assert.Equal(PickerDirection.Up, steeper.Direction);
         Assert.Equal(PickerDirection.Right, shallower.Direction);
@@ -209,13 +216,15 @@ public sealed class PickerGeometryTests
             PickerGeometry geometry = PickerGeometry.Create(
                 new PixelRect(0, 0, (int)(1920 * scale), (int)(1080 * scale)),
                 scale,
-                FavoriteSet.Default);
+                FavoriteSet.Default
+            );
 
             double reach = (geometry.WheelDiameter / 2.0) * 0.7;
 
             PickerHit hit = geometry.HitTest(
                 new PickerPoint(geometry.Center + reach, geometry.Center),
-                PickerDirection.Up);
+                PickerDirection.Up
+            );
 
             Assert.Equal(PickerDirection.Right, hit.Direction);
         }
@@ -254,20 +263,21 @@ public sealed class PickerGeometryTests
     {
         // Offsets belong to the favorite, so a set that overrides them moves
         // that favorite's icon and nothing else.
-        FavoriteSet nudged = FavoriteSet.Create(
-        [
-            .. FavoriteSet.Default.All.Select(favorite => favorite.Direction == PickerDirection.Up
-                ? favorite with { IconOffset = new PickerPoint(0.1, 0.0) }
-                : favorite)
+        FavoriteSet nudged = FavoriteSet.Create([
+            .. FavoriteSet.Default.All.Select(favorite =>
+                favorite.Direction == PickerDirection.Up
+                    ? favorite with
+                    {
+                        IconOffset = new PickerPoint(0.1, 0.0),
+                    }
+                    : favorite
+            ),
         ]);
 
         PickerGeometry plain = Standard();
         PickerGeometry moved = PickerGeometry.Create(new PixelRect(0, 0, 1920, 1040), 1.0, nudged);
 
         Assert.True(moved.IconCenter(PickerDirection.Up).X > plain.IconCenter(PickerDirection.Up).X);
-        Assert.Equal(
-            plain.IconCenter(PickerDirection.Down).X,
-            moved.IconCenter(PickerDirection.Down).X,
-            precision: 6);
+        Assert.Equal(plain.IconCenter(PickerDirection.Down).X, moved.IconCenter(PickerDirection.Down).X, precision: 6);
     }
 }

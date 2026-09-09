@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!--
     The radial picker's behaviour, with no rendering in it.
 
@@ -15,5 +14,4 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PCMode.Picker</RootNamespace>
   </PropertyGroup>
-
 </Project>

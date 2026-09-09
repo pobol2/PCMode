@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using PCMode.Picker;
-using PCMode.Tray.Elements.Settings;
 
 namespace PCMode.Tray.Platform.Picker;
 
@@ -46,7 +45,10 @@ public static class MonitorLayout
         nint monitor = choice switch
         {
             PickerMonitorChoice.UnderPointer => FromPointer(),
-            PickerMonitorChoice.WithForegroundWindow => MonitorFromWindow(GetForegroundWindow(), MonitorDefaultToNearest),
+            PickerMonitorChoice.WithForegroundWindow => MonitorFromWindow(
+                GetForegroundWindow(),
+                MonitorDefaultToNearest
+            ),
             _ => MonitorFromPoint(default, MonitorDefaultToPrimary),
         };
 
@@ -63,9 +65,7 @@ public static class MonitorLayout
         GetCursorPos(out POINT point) ? new PickerPoint(point.X, point.Y) : default;
 
     private static nint FromPointer() =>
-        GetCursorPos(out POINT point)
-            ? MonitorFromPoint(point, MonitorDefaultToNearest)
-            : 0;
+        GetCursorPos(out POINT point) ? MonitorFromPoint(point, MonitorDefaultToNearest) : 0;
 
     private static MonitorSurface Describe(nint monitor)
     {
@@ -83,7 +83,8 @@ public static class MonitorLayout
 
         return new MonitorSurface(
             new PixelRect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top),
-            ScaleOf(monitor));
+            ScaleOf(monitor)
+        );
     }
 
     private static double ScaleOf(nint monitor)
@@ -102,9 +103,7 @@ public static class MonitorLayout
             // Shcore arrived in Windows 8.1. Falling through to 100% gives a
             // picker of the wrong size rather than no picker.
         }
-        catch (EntryPointNotFoundException)
-        {
-        }
+        catch (EntryPointNotFoundException) { }
 
         return 1.0;
     }

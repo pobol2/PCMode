@@ -30,7 +30,8 @@ public sealed record PlannedResource(
     string? RequiredBy,
     ConvergencePolicy Policy,
     bool Optional,
-    ResourceAvailability Availability)
+    ResourceAvailability Availability
+)
 {
     public string Key => Provider.Key;
 
@@ -52,7 +53,8 @@ public sealed record OmittedResource(
     string Target,
     string? RequiredBy,
     ResourceAvailability Availability,
-    string Reason);
+    string Reason
+);
 
 /// <summary>
 /// The whole of one transition, decided before any of it happens.
@@ -99,7 +101,8 @@ public sealed class TransitionPlan
     private TransitionPlan(
         ConfiguredMode mode,
         IReadOnlyList<PlannedResource> steps,
-        IReadOnlyList<OmittedResource> omissions)
+        IReadOnlyList<OmittedResource> omissions
+    )
     {
         Mode = mode.Name;
         DisplayName = mode.DisplayName;
@@ -159,7 +162,8 @@ public sealed class TransitionPlan
         ConfiguredMode mode,
         IReadOnlyDictionary<string, IModeResourceProvider> providers,
         out TransitionPlan? plan,
-        out string? problem)
+        out string? problem
+    )
     {
         ArgumentNullException.ThrowIfNull(mode);
         ArgumentNullException.ThrowIfNull(providers);
@@ -233,11 +237,14 @@ public sealed class TransitionPlan
                 continue;
             }
 
-            if (!TryAsk(
+            if (
+                !TryAsk(
                     () => dependent.RequirementsFor(nodes[index].Target),
                     $"'{mode.DisplayName}': {nodes[index].ResourceName} could not say what '{nodes[index].Target}' needs.",
                     out IReadOnlyList<ResourceRequirement>? required,
-                    out problem))
+                    out problem
+                )
+            )
             {
                 return false;
             }
@@ -259,11 +266,14 @@ public sealed class TransitionPlan
                 continue;
             }
 
-            if (!TryAsk(
+            if (
+                !TryAsk(
                     () => dependent.RunsAfter,
                     $"'{mode.DisplayName}': {node.ResourceName} could not say what it runs after.",
                     out IReadOnlyList<string>? after,
-                    out problem))
+                    out problem
+                )
+            )
             {
                 return false;
             }
@@ -273,9 +283,11 @@ public sealed class TransitionPlan
                 // Absent means unwanted, not missing. This is the rule that
                 // stops a preference about order from dragging a resource into
                 // a mode that deliberately leaves it alone.
-                if (!string.IsNullOrWhiteSpace(key) &&
-                    byKey.ContainsKey(key) &&
-                    !string.Equals(key, node.Key, StringComparison.OrdinalIgnoreCase))
+                if (
+                    !string.IsNullOrWhiteSpace(key)
+                    && byKey.ContainsKey(key)
+                    && !string.Equals(key, node.Key, StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     node.After.Add(key);
                 }
@@ -359,11 +371,7 @@ public sealed class TransitionPlan
     /// a planner that dropped everything it was unsure of would drop the
     /// television every time it was still waking up.
     /// </remarks>
-    private static bool TryOmit(
-        ConfiguredMode mode,
-        List<Node> ordered,
-        out TransitionPlan? plan,
-        out string? problem)
+    private static bool TryOmit(ConfiguredMode mode, List<Node> ordered, out TransitionPlan? plan, out string? problem)
     {
         plan = null;
         problem = null;
@@ -386,8 +394,8 @@ public sealed class TransitionPlan
             if (node.Required)
             {
                 problem =
-                    $"'{mode.DisplayName}' cannot be applied: {node.ResourceName} '{node.Target}' " +
-                    $"is not available -- {node.Availability.Explain()} {Provenance(mode, nodes, node)}";
+                    $"'{mode.DisplayName}' cannot be applied: {node.ResourceName} '{node.Target}' "
+                    + $"is not available -- {node.Availability.Explain()} {Provenance(mode, nodes, node)}";
 
                 return false;
             }
@@ -399,7 +407,7 @@ public sealed class TransitionPlan
         // and saying so is how the branch leaves together rather than in pieces.
         // A required resource can never reach this: promotion made everything it
         // needs required too, so an unavailable one would already have refused.
-        for (bool spreading = true; spreading;)
+        for (bool spreading = true; spreading; )
         {
             spreading = false;
 
@@ -454,19 +462,30 @@ public sealed class TransitionPlan
         {
             if (node.Omission is null && kept.Contains(node.Key))
             {
-                steps.Add(new PlannedResource(
-                    node.Provider, node.Target, node.RequiredBy, node.Policy, !node.Required, node.Availability));
+                steps.Add(
+                    new PlannedResource(
+                        node.Provider,
+                        node.Target,
+                        node.RequiredBy,
+                        node.Policy,
+                        !node.Required,
+                        node.Availability
+                    )
+                );
 
                 continue;
             }
 
-            omissions.Add(new OmittedResource(
-                node.Key,
-                node.ResourceName,
-                node.Target,
-                node.RequiredBy,
-                node.Availability,
-                node.Omission ?? $"nothing left in '{mode.DisplayName}' needs it."));
+            omissions.Add(
+                new OmittedResource(
+                    node.Key,
+                    node.ResourceName,
+                    node.Target,
+                    node.RequiredBy,
+                    node.Availability,
+                    node.Omission ?? $"nothing left in '{mode.DisplayName}' needs it."
+                )
+            );
         }
 
         plan = new TransitionPlan(mode, steps, omissions);
@@ -511,9 +530,7 @@ public sealed class TransitionPlan
 
             foreach (string key in walking.Parents)
             {
-                if (!nodes.TryGetValue(key, out Node? parent) ||
-                    (node.Required && !parent.Required) ||
-                    !seen.Add(key))
+                if (!nodes.TryGetValue(key, out Node? parent) || (node.Required && !parent.Required) || !seen.Add(key))
                 {
                     continue;
                 }
@@ -541,9 +558,11 @@ public sealed class TransitionPlan
 
         var chain = new List<string>();
 
-        for (string at = root.Key;
-             !string.Equals(at, node.Key, StringComparison.OrdinalIgnoreCase);
-             at = discoveredFrom[at])
+        for (
+            string at = root.Key;
+            !string.Equals(at, node.Key, StringComparison.OrdinalIgnoreCase);
+            at = discoveredFrom[at]
+        )
         {
             chain.Add($"{nodes[at].ResourceName} '{nodes[at].Target}'");
         }
@@ -564,17 +583,20 @@ public sealed class TransitionPlan
         Dictionary<string, int> byKey,
         Node needer,
         ResourceRequirement requirement,
-        out string? problem)
+        out string? problem
+    )
     {
         problem = null;
 
-        if (requirement is null ||
-            string.IsNullOrWhiteSpace(requirement.Key) ||
-            string.IsNullOrWhiteSpace(requirement.Target))
+        if (
+            requirement is null
+            || string.IsNullOrWhiteSpace(requirement.Key)
+            || string.IsNullOrWhiteSpace(requirement.Target)
+        )
         {
             problem =
-                $"'{mode.DisplayName}': {needer.ResourceName} '{needer.Target}' declares a requirement " +
-                "with no resource or no target.";
+                $"'{mode.DisplayName}': {needer.ResourceName} '{needer.Target}' declares a requirement "
+                + "with no resource or no target.";
 
             return false;
         }
@@ -583,9 +605,11 @@ public sealed class TransitionPlan
         {
             Node already = nodes[existing];
 
-            if (string.Equals(already.Target, requirement.Target, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(requirement.Key, needer.Key, StringComparison.OrdinalIgnoreCase) &&
-                !already.Parents.Contains(needer.Key, StringComparer.OrdinalIgnoreCase))
+            if (
+                string.Equals(already.Target, requirement.Target, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(requirement.Key, needer.Key, StringComparison.OrdinalIgnoreCase)
+                && !already.Parents.Contains(needer.Key, StringComparer.OrdinalIgnoreCase)
+            )
             {
                 // A second resource needing what the first already brought in.
                 // The node is not added again, so this is the only place the
@@ -604,10 +628,10 @@ public sealed class TransitionPlan
                 // unavailable television conceal one would mean the same mode
                 // being refused or accepted depending on what was switched on.
                 problem = already.WasRequested
-                    ? $"'{mode.DisplayName}' sets {already.ResourceName} to '{already.Target}', but " +
-                      $"{needer.ResourceName} '{needer.Target}' needs '{requirement.Target}'."
-                    : $"'{mode.DisplayName}' would need {already.ResourceName} at both '{already.Target}' " +
-                      $"(for '{already.RequiredBy}') and '{requirement.Target}' (for '{needer.Key}').";
+                    ? $"'{mode.DisplayName}' sets {already.ResourceName} to '{already.Target}', but "
+                        + $"{needer.ResourceName} '{needer.Target}' needs '{requirement.Target}'."
+                    : $"'{mode.DisplayName}' would need {already.ResourceName} at both '{already.Target}' "
+                        + $"(for '{already.RequiredBy}') and '{requirement.Target}' (for '{needer.Key}').";
 
                 return false;
             }
@@ -617,8 +641,8 @@ public sealed class TransitionPlan
             if (!providers.TryGetValue(requirement.Key, out IModeResourceProvider? provider))
             {
                 problem =
-                    $"'{mode.DisplayName}' needs '{requirement.Key}' for {needer.ResourceName} " +
-                    $"'{needer.Target}', and nothing here knows how to apply it.";
+                    $"'{mode.DisplayName}' needs '{requirement.Key}' for {needer.ResourceName} "
+                    + $"'{needer.Target}', and nothing here knows how to apply it.";
 
                 return false;
             }
@@ -632,8 +656,8 @@ public sealed class TransitionPlan
             if (invalid is not null)
             {
                 problem =
-                    $"'{mode.DisplayName}' needs {provider.DisplayName} '{requirement.Target}' for " +
-                    $"{needer.ResourceName} '{needer.Target}'. {invalid}";
+                    $"'{mode.DisplayName}' needs {provider.DisplayName} '{requirement.Target}' for "
+                    + $"{needer.ResourceName} '{needer.Target}'. {invalid}";
 
                 return false;
             }
@@ -676,11 +700,7 @@ public sealed class TransitionPlan
     /// a loop is a loop on every machine rather than on the ones where the
     /// television happened to be plugged in.
     /// </remarks>
-    private static bool TryOrder(
-        ConfiguredMode mode,
-        List<Node> nodes,
-        out List<Node>? ordered,
-        out string? problem)
+    private static bool TryOrder(ConfiguredMode mode, List<Node> nodes, out List<Node>? ordered, out string? problem)
     {
         ordered = null;
         problem = null;
@@ -700,8 +720,8 @@ public sealed class TransitionPlan
                 // saying so now costs nothing, whereas discovering it half way
                 // through would cost whatever had already been changed.
                 problem =
-                    $"'{mode.DisplayName}' cannot be ordered: " +
-                    $"{string.Join(", ", remaining.Select(node => $"'{node.Key}'"))} depend on each other.";
+                    $"'{mode.DisplayName}' cannot be ordered: "
+                    + $"{string.Join(", ", remaining.Select(node => $"'{node.Key}'"))} depend on each other.";
 
                 return false;
             }
@@ -741,13 +761,13 @@ public sealed class TransitionPlan
             ResourceAvailability? answer = available.AvailabilityOf(node.Target);
 
             // A provider that answers with nothing has not said no either.
-            return answer ?? ResourceAvailability.Unknown(
-                $"{node.ResourceName} gave no answer about '{node.Target}'.");
+            return answer ?? ResourceAvailability.Unknown($"{node.ResourceName} gave no answer about '{node.Target}'.");
         }
         catch (Exception exception)
         {
             return ResourceAvailability.Unknown(
-                $"{node.ResourceName} could not say whether '{node.Target}' is available. {exception.Message}");
+                $"{node.ResourceName} could not say whether '{node.Target}' is available. {exception.Message}"
+            );
         }
     }
 
@@ -792,11 +812,13 @@ public sealed class TransitionPlan
         IModeResourceProvider provider,
         string value,
         out string? invalid,
-        out string? problem)
+        out string? problem
+    )
     {
         invalid = null;
 
-        if (!TryAsk(
+        if (
+            !TryAsk(
                 () =>
                 {
                     bool usable = provider.IsValidValue(value, out string? said);
@@ -804,7 +826,9 @@ public sealed class TransitionPlan
                 },
                 $"{provider.DisplayName} could not say whether '{value}' is usable.",
                 out string? answer,
-                out problem))
+                out problem
+            )
+        )
         {
             return false;
         }
@@ -821,7 +845,8 @@ public sealed class TransitionPlan
         IModeResourceProvider provider,
         string target,
         out ConvergencePolicy? policy,
-        out string? problem)
+        out string? problem
+    )
     {
         if (provider is not IConvergentProvider convergent)
         {
@@ -833,11 +858,14 @@ public sealed class TransitionPlan
             return true;
         }
 
-        if (!TryAsk(
+        if (
+            !TryAsk(
                 () => convergent.PolicyFor(target),
                 $"{provider.DisplayName} could not say what reaching '{target}' takes.",
                 out policy,
-                out problem))
+                out problem
+            )
+        )
         {
             return false;
         }
@@ -864,7 +892,8 @@ public sealed class TransitionPlan
         string target,
         string? requiredBy,
         ConvergencePolicy policy,
-        bool declaredOptional)
+        bool declaredOptional
+    )
     {
         public IModeResourceProvider Provider { get; } = provider;
 

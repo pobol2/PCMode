@@ -18,7 +18,8 @@ public sealed class EngineRuntimeTests
              "spaces":[{"id":"desk","name":"Desk","activities":[
                {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}},
                {"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}
-            """);
+            """
+        );
 
         var initial = EngineBootstrap.Create(root.Path);
         var runtime = new EngineRuntime(initial, root.Path);
@@ -98,7 +99,8 @@ public sealed class EngineRuntimeTests
             """
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"desktop","name":"Desktop","resources":{"theme":"Light","tvPower":{"value":"On","optional":true}}}]}]}
-            """);
+            """
+        );
 
         var initial = EngineBootstrap.Create(root.Path);
         var runtime = new EngineRuntime(initial, root.Path);
@@ -140,13 +142,15 @@ public sealed class EngineRuntimeTests
     }
 
     private static ModeEngine BuildEngine(string root, IReadOnlyList<IModeResourceProvider> providers) =>
-        new(ModeConfiguration.LoadOrCreate(root, providers), new ModeStateStore(PCModePaths.StateFile(root)), providers);
+        new(
+            ModeConfiguration.LoadOrCreate(root, providers),
+            new ModeStateStore(PCModePaths.StateFile(root)),
+            providers
+        );
 
-    private const string Document =
-        """
+    private const string Document = """
         {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
           {"id":"desktop","name":"Desktop","resources":{"theme":"Light"}},
           {"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}
         """;
-
 }

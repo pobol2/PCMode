@@ -11,28 +11,47 @@ public sealed class XamlOwnershipTests
 {
     private static readonly HashSet<string> ElementToTreeSeams =
     [
-        Normalize(Path.Combine(
-            "UI", "Tree", "Application", "MainWindowRegion", "AppShell",
-            "MainContentRegion", "ConfigurationPage",
-            "ConfigurationPageBindings.xaml")),
-        Normalize(Path.Combine(
-            "UI", "Tree", "Application", "MainWindowRegion", "AppShell",
-            "MainContentRegion", "ListPage",
-            "ListPageBindings.xaml")),
-        Normalize(Path.Combine(
-            "UI", "Tree", "Application", "MainWindowRegion", "AppShell",
-            "NavigationRegion", "PageNavigation",
-            "PageNavigationBindings.xaml")),
+        Normalize(
+            Path.Combine(
+                "UI",
+                "Tree",
+                "Application",
+                "MainWindowRegion",
+                "AppShell",
+                "MainContentRegion",
+                "ConfigurationPage",
+                "ConfigurationPageBindings.xaml"
+            )
+        ),
+        Normalize(
+            Path.Combine(
+                "UI",
+                "Tree",
+                "Application",
+                "MainWindowRegion",
+                "AppShell",
+                "MainContentRegion",
+                "ListPage",
+                "ListPageBindings.xaml"
+            )
+        ),
+        Normalize(
+            Path.Combine(
+                "UI",
+                "Tree",
+                "Application",
+                "MainWindowRegion",
+                "AppShell",
+                "NavigationRegion",
+                "PageNavigation",
+                "PageNavigationBindings.xaml"
+            )
+        ),
     ];
 
-    private static readonly XNamespace Presentation =
-        "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+    private static readonly XNamespace Presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-    private static readonly HashSet<string> ElementBindingMarkup =
-    [
-        "ResourceDictionary",
-        "DataTemplate",
-    ];
+    private static readonly HashSet<string> ElementBindingMarkup = ["ResourceDictionary", "DataTemplate"];
 
     [Fact]
     public void Elements_select_tree_nodes_and_components_but_do_not_render_raw_WPF()
@@ -40,12 +59,16 @@ public sealed class XamlOwnershipTests
         string[] violations =
         [
             .. XamlFiles("Elements")
-                .SelectMany(file => XDocument.Load(file).Descendants()
-                    .Where(element =>
-                        element.Name.Namespace == Presentation
-                        && !ElementBindingMarkup.Contains(element.Name.LocalName))
-                    .Select(element =>
-                        $"{Relative(file)} contains raw WPF element <{element.Name.LocalName}>.")),
+                .SelectMany(file =>
+                    XDocument
+                        .Load(file)
+                        .Descendants()
+                        .Where(element =>
+                            element.Name.Namespace == Presentation
+                            && !ElementBindingMarkup.Contains(element.Name.LocalName)
+                        )
+                        .Select(element => $"{Relative(file)} contains raw WPF element <{element.Name.LocalName}>.")
+                ),
         ];
 
         Assert.Empty(violations);
@@ -58,7 +81,8 @@ public sealed class XamlOwnershipTests
             XamlFiles(Path.Combine("UI", "Tree"))
                 .Where(file => !ElementToTreeSeams.Contains(Normalize(SourceRelative(file)))),
             "PCMode.Tray.Elements",
-            "Elements");
+            "Elements"
+        );
     }
 
     [Fact]
@@ -88,9 +112,7 @@ public sealed class XamlOwnershipTests
                 .Select(Normalize),
         ];
 
-        Assert.All(
-            crossBoundaryFiles,
-            file => Assert.Contains(file, ElementToTreeSeams));
+        Assert.All(crossBoundaryFiles, file => Assert.Contains(file, ElementToTreeSeams));
 
         Assert.All(
             ElementToTreeSeams,
@@ -98,11 +120,11 @@ public sealed class XamlOwnershipTests
             {
                 Assert.Contains(seam, allXaml.Select(SourceRelative).Select(Normalize));
 
-                string text = File.ReadAllText(TraySource.PathTo(
-                    seam.Replace('/', Path.DirectorySeparatorChar)));
+                string text = File.ReadAllText(TraySource.PathTo(seam.Replace('/', Path.DirectorySeparatorChar)));
                 Assert.Contains("clr-namespace:PCMode.Tray.Elements", text, StringComparison.Ordinal);
                 Assert.Contains("clr-namespace:PCMode.Tray.UI.Tree", text, StringComparison.Ordinal);
-            });
+            }
+        );
     }
 
     [Fact]
@@ -110,14 +132,11 @@ public sealed class XamlOwnershipTests
     {
         foreach (string seam in ElementToTreeSeams)
         {
-            string file = TraySource.PathTo(
-                seam.Replace('/', Path.DirectorySeparatorChar));
+            string file = TraySource.PathTo(seam.Replace('/', Path.DirectorySeparatorChar));
             XDocument document = XDocument.Load(file);
 
             Assert.Equal("ResourceDictionary", document.Root?.Name.LocalName);
-            Assert.All(
-                document.Root!.Elements(),
-                element => Assert.Equal("DataTemplate", element.Name.LocalName));
+            Assert.All(document.Root!.Elements(), element => Assert.Equal("DataTemplate", element.Name.LocalName));
         }
     }
 
@@ -133,8 +152,7 @@ public sealed class XamlOwnershipTests
     [Fact]
     public void App_does_not_own_element_to_tree_bindings()
     {
-        string app = File.ReadAllText(
-            TraySource.PathTo("App", "App.xaml"));
+        string app = File.ReadAllText(TraySource.PathTo("App", "App.xaml"));
 
         Assert.DoesNotContain("clr-namespace:PCMode.Tray.Elements", app, StringComparison.Ordinal);
     }
@@ -162,7 +180,8 @@ public sealed class XamlOwnershipTests
     private static void AssertNoOwnershipReferences(
         IEnumerable<string> files,
         string forbiddenNamespace,
-        string forbiddenPath)
+        string forbiddenPath
+    )
     {
         string[] sourceFiles = files.ToArray();
         AssertNoText(sourceFiles, $"clr-namespace:{forbiddenNamespace}");

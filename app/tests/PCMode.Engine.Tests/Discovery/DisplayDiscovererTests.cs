@@ -23,8 +23,16 @@ public sealed class DisplayDiscovererTests
     [Fact]
     public void Reports_an_active_monitor_with_its_picture()
     {
-        var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#1", Name = "Dell U2720Q", Active = true, Width = 2560, Height = 1440 });
+        var devices = new FakeDisplayDevices().Add(
+            new FakeMonitor
+            {
+                Path = @"\\?\DISPLAY#1",
+                Name = "Dell U2720Q",
+                Active = true,
+                Width = 2560,
+                Height = 1440,
+            }
+        );
 
         HardwareItem item = Assert.Single(new DisplayDiscoverer(Provider(devices)).Discover());
 
@@ -42,8 +50,14 @@ public sealed class DisplayDiscovererTests
         // Windows keeps a slot for a television it has ever seen, whether or
         // not it is switched on right now -- that is an ordinary state, not a
         // fault, and must not read as one.
-        var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#TV", Name = "Living Room TV", Active = false });
+        var devices = new FakeDisplayDevices().Add(
+            new FakeMonitor
+            {
+                Path = @"\\?\DISPLAY#TV",
+                Name = "Living Room TV",
+                Active = false,
+            }
+        );
 
         HardwareItem item = Assert.Single(new DisplayDiscoverer(Provider(devices)).Discover());
 
@@ -54,11 +68,18 @@ public sealed class DisplayDiscovererTests
     [Fact]
     public void Shows_the_configured_alias_and_marks_the_item_as_configured()
     {
-        var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#1", Name = "Dell U2720Q", Active = true });
+        var devices = new FakeDisplayDevices().Add(
+            new FakeMonitor
+            {
+                Path = @"\\?\DISPLAY#1",
+                Name = "Dell U2720Q",
+                Active = true,
+            }
+        );
 
         HardwareItem item = Assert.Single(
-            new DisplayDiscoverer(Provider(devices, """{ "Desk Left": "\\\\?\\DISPLAY#1" } """)).Discover());
+            new DisplayDiscoverer(Provider(devices, """{ "Desk Left": "\\\\?\\DISPLAY#1" } """)).Discover()
+        );
 
         Assert.Equal("Desk Left", item.Alias);
         Assert.True(item.IsConfigured);
@@ -71,8 +92,14 @@ public sealed class DisplayDiscovererTests
     [Fact]
     public void An_unconfigured_monitor_supports_an_alias_but_does_not_have_one()
     {
-        var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#1", Name = "Dell U2720Q", Active = true });
+        var devices = new FakeDisplayDevices().Add(
+            new FakeMonitor
+            {
+                Path = @"\\?\DISPLAY#1",
+                Name = "Dell U2720Q",
+                Active = true,
+            }
+        );
 
         HardwareItem item = Assert.Single(new DisplayDiscoverer(Provider(devices)).Discover());
 
@@ -88,8 +115,22 @@ public sealed class DisplayDiscovererTests
         // available as the identifier and in the details -- but the headline
         // must not show the two as if they were one entry twice.
         var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#A", Name = "Dell U2720Q", Active = true })
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#B", Name = "Dell U2720Q", Active = true });
+            .Add(
+                new FakeMonitor
+                {
+                    Path = @"\\?\DISPLAY#A",
+                    Name = "Dell U2720Q",
+                    Active = true,
+                }
+            )
+            .Add(
+                new FakeMonitor
+                {
+                    Path = @"\\?\DISPLAY#B",
+                    Name = "Dell U2720Q",
+                    Active = true,
+                }
+            );
 
         IReadOnlyList<HardwareItem> items = new DisplayDiscoverer(Provider(devices)).Discover();
 
@@ -102,8 +143,14 @@ public sealed class DisplayDiscovererTests
     [Fact]
     public void A_monitor_with_no_friendly_name_still_gets_one()
     {
-        var devices = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = @"\\?\DISPLAY#X", Name = string.Empty, Active = false });
+        var devices = new FakeDisplayDevices().Add(
+            new FakeMonitor
+            {
+                Path = @"\\?\DISPLAY#X",
+                Name = string.Empty,
+                Active = false,
+            }
+        );
 
         HardwareItem item = Assert.Single(new DisplayDiscoverer(Provider(devices)).Discover());
 
@@ -113,7 +160,10 @@ public sealed class DisplayDiscovererTests
     [Fact]
     public void Displays_being_unreadable_is_left_to_the_caller_to_report()
     {
-        var devices = new FakeDisplayDevices { Fails = new InvalidOperationException("Windows could not read the monitors.") };
+        var devices = new FakeDisplayDevices
+        {
+            Fails = new InvalidOperationException("Windows could not read the monitors."),
+        };
 
         Assert.Throws<InvalidOperationException>(() => new DisplayDiscoverer(Provider(devices)).Discover());
     }

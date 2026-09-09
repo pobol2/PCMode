@@ -24,12 +24,10 @@ public sealed record AudioRouteEdit(
     double Gain = 1.0,
     double? Volume = null,
     bool Required = true,
-    string? Profile = null);
+    string? Profile = null
+);
 
-public sealed record AudioProcessingProfileEdit(
-    string Name,
-    float PreampGainDb,
-    IReadOnlyList<EqBand> Bands);
+public sealed record AudioProcessingProfileEdit(string Name, float PreampGainDb, IReadOnlyList<EqBand> Bands);
 
 /// <summary>One Audio Target as a settings screen has it: a name and its routes.</summary>
 public sealed record AudioTargetEdit(string Name, IReadOnlyList<AudioRouteEdit> Routes);
@@ -101,13 +99,15 @@ public static class AudioConfigurationStore
                 // The same alias twice is the same endpoint twice, which the
                 // engine refuses outright.
                 return ModeSaveOutcome.Failed(
-                    $"'{output}' cannot be two of the audio target's outputs. Choose different outputs.");
+                    $"'{output}' cannot be two of the audio target's outputs. Choose different outputs."
+                );
             }
 
             if (route.DelayMs < 0 || route.DelayMs > AudioTargetSettings.MaxDelayMs)
             {
                 return ModeSaveOutcome.Failed(
-                    $"The delay for '{output}' must be between 0 and {AudioTargetSettings.MaxDelayMs} ms.");
+                    $"The delay for '{output}' must be between 0 and {AudioTargetSettings.MaxDelayMs} ms."
+                );
             }
 
             if (!IsUsable(route.Gain) || route.Gain < 0 || route.Gain > AudioTargetSettings.MaxGain)
@@ -115,7 +115,9 @@ public static class AudioConfigurationStore
                 return ModeSaveOutcome.Failed(
                     string.Create(
                         CultureInfo.InvariantCulture,
-                        $"The gain for '{output}' must be between 0 and {AudioTargetSettings.MaxGain}."));
+                        $"The gain for '{output}' must be between 0 and {AudioTargetSettings.MaxGain}."
+                    )
+                );
             }
 
             if (route.Volume is double level && (!IsUsable(level) || level < 0 || level > 1))
@@ -127,94 +129,80 @@ public static class AudioConfigurationStore
         if (!target.Routes.Any(route => route.Required))
         {
             return ModeSaveOutcome.Failed(
-                "At least one of the audio target's outputs has to be required, or nothing could fail it.");
+                "At least one of the audio target's outputs has to be required, or nothing could fail it."
+            );
         }
 
         string? renamedFrom = string.IsNullOrWhiteSpace(previousName) ? null : previousName.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-            JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
-            JsonObject targets = HardwareConfigurationStore.AsObject(audio, "targets");
-
-            if (renamedFrom is not null && !string.Equals(renamedFrom, name, StringComparison.OrdinalIgnoreCase))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                HardwareConfigurationStore.RemoveCaseInsensitive(targets, renamedFrom);
-                LayoutConfigurationStore.RenameModeReferences(document, AudioProvider.ResourceKey, renamedFrom, name);
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+                JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
+                JsonObject targets = HardwareConfigurationStore.AsObject(audio, "targets");
+
+                if (renamedFrom is not null && !string.Equals(renamedFrom, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    HardwareConfigurationStore.RemoveCaseInsensitive(targets, renamedFrom);
+                    LayoutConfigurationStore.RenameModeReferences(
+                        document,
+                        AudioProvider.ResourceKey,
+                        renamedFrom,
+                        name
+                    );
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(targets, name);
+                targets.Add(name, Write(target.Routes));
+
+                return null;
             }
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(targets, name);
-            targets.Add(name, Write(target.Routes));
-
-            return null;
-        });
+        );
     }
 
-    private static void UpdateProfileReferences(
-        JsonObject document,
-        string oldName,
-        string? replacement)
+    private static void UpdateProfileReferences(JsonObject document, string oldName, string? replacement)
     {
-        if (
-            document["audioTargets"]
-            is not JsonObject targets)
+        if (document["audioTargets"] is not JsonObject targets)
         {
             return;
         }
 
-        foreach (
-            KeyValuePair<string, JsonNode?> target
-            in targets)
+        foreach (KeyValuePair<string, JsonNode?> target in targets)
         {
-            if (
-                target.Value
-                is not JsonObject targetObject ||
-                targetObject["routes"]
-                is not JsonArray routes)
+            if (target.Value is not JsonObject targetObject || targetObject["routes"] is not JsonArray routes)
             {
                 continue;
             }
 
             foreach (JsonNode? routeNode in routes)
             {
-                if (
-                    routeNode
-                    is not JsonObject route)
+                if (routeNode is not JsonObject route)
                 {
                     continue;
                 }
 
-                string? profile =
-                    route["processingProfile"]
-                        ?.GetValue<string>();
+                string? profile = route["processingProfile"]?.GetValue<string>();
 
-                if (
-                    !string.Equals(
-                        profile,
-                        oldName,
-                        StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(profile, oldName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
 
                 if (replacement is null)
                 {
-                    route.Remove(
-                        "processingProfile");
+                    route.Remove("processingProfile");
                 }
                 else
                 {
-                    route["processingProfile"] =
-                        replacement;
+                    route["processingProfile"] = replacement;
                 }
             }
         }
     }
 
-    public static ModeSaveOutcome SaveProfile(
-        string? root,
-        AudioProcessingProfileEdit profile)
+    public static ModeSaveOutcome SaveProfile(string? root, AudioProcessingProfileEdit profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -225,98 +213,74 @@ public static class AudioConfigurationStore
             return ModeSaveOutcome.Failed("Choose a processing profile first.");
         }
 
-        if (profile.PreampGainDb < ParametricEqProfile.MinPreampGainDb ||
-            profile.PreampGainDb > ParametricEqProfile.MaxPreampGainDb)
-        {
-            return ModeSaveOutcome.Failed(
-                $"Preamp must be between {ParametricEqProfile.MinPreampGainDb} and {ParametricEqProfile.MaxPreampGainDb} dB.");
-        }
-
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers =
-                HardwareConfigurationStore.AsObject(document, "providers");
-
-            JsonObject audio =
-                HardwareConfigurationStore.AsObject(providers, "audio");
-
-            JsonObject profiles =
-                HardwareConfigurationStore.AsObject(audio, "profiles");
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(profiles, name);
-
-            var bands = new JsonArray();
-
-            foreach (EqBand band in profile.Bands)
-            {
-                bands.Add(new JsonObject
-                {
-                    ["type"] = band.Type.ToString(),
-                    ["frequencyHz"] = band.FrequencyHz,
-                    ["gainDb"] = band.GainDb,
-                    ["q"] = band.Q,
-                });
-            }
-
-            profiles.Add(
-                name,
-                new JsonObject
-                {
-                    ["preampGainDb"] = profile.PreampGainDb,
-                    ["bands"] = bands,
-                });
-
-            return null;
-        });
-    }
-
-    public static ModeSaveOutcome RenameProfile(
-        string? root,
-        string oldName,
-        string newName)
-    {
-        string source =
-            oldName?.Trim()
-            ?? string.Empty;
-
-        string destination =
-            newName?.Trim()
-            ?? string.Empty;
-
         if (
-            source.Length == 0 ||
-            destination.Length == 0)
+            profile.PreampGainDb < ParametricEqProfile.MinPreampGainDb
+            || profile.PreampGainDb > ParametricEqProfile.MaxPreampGainDb
+        )
         {
             return ModeSaveOutcome.Failed(
-                "Both processing profile names are required.");
+                $"Preamp must be between {ParametricEqProfile.MinPreampGainDb} and {ParametricEqProfile.MaxPreampGainDb} dB."
+            );
         }
 
         return ConfigurationDocumentEditor.Edit(
             root,
             document =>
             {
-                JsonObject providers =
-                    HardwareConfigurationStore.AsObject(
-                        document,
-                        "providers");
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
 
-                JsonObject audio =
-                    HardwareConfigurationStore.AsObject(
-                        providers,
-                        "audio");
+                JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
 
-                JsonObject profiles =
-                    HardwareConfigurationStore.AsObject(
-                        audio,
-                        "profiles");
+                JsonObject profiles = HardwareConfigurationStore.AsObject(audio, "profiles");
 
-                KeyValuePair<string, JsonNode?> existing =
-                    profiles.FirstOrDefault(
-                        pair =>
-                            string.Equals(
-                                pair.Key,
-                                source,
-                                StringComparison.OrdinalIgnoreCase));
+                HardwareConfigurationStore.RemoveCaseInsensitive(profiles, name);
+
+                var bands = new JsonArray();
+
+                foreach (EqBand band in profile.Bands)
+                {
+                    bands.Add(
+                        new JsonObject
+                        {
+                            ["type"] = band.Type.ToString(),
+                            ["frequencyHz"] = band.FrequencyHz,
+                            ["gainDb"] = band.GainDb,
+                            ["q"] = band.Q,
+                        }
+                    );
+                }
+
+                profiles.Add(name, new JsonObject { ["preampGainDb"] = profile.PreampGainDb, ["bands"] = bands });
+
+                return null;
+            }
+        );
+    }
+
+    public static ModeSaveOutcome RenameProfile(string? root, string oldName, string newName)
+    {
+        string source = oldName?.Trim() ?? string.Empty;
+
+        string destination = newName?.Trim() ?? string.Empty;
+
+        if (source.Length == 0 || destination.Length == 0)
+        {
+            return ModeSaveOutcome.Failed("Both processing profile names are required.");
+        }
+
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
+            {
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
+
+                JsonObject profiles = HardwareConfigurationStore.AsObject(audio, "profiles");
+
+                KeyValuePair<string, JsonNode?> existing = profiles.FirstOrDefault(pair =>
+                    string.Equals(pair.Key, source, StringComparison.OrdinalIgnoreCase)
+                );
 
                 if (existing.Key is null)
                 {
@@ -324,98 +288,63 @@ public static class AudioConfigurationStore
                 }
 
                 if (
-                    profiles.Any(
-                        pair =>
-                            !string.Equals(
-                                pair.Key,
-                                source,
-                                StringComparison.OrdinalIgnoreCase) &&
-                            string.Equals(
-                                pair.Key,
-                                destination,
-                                StringComparison.OrdinalIgnoreCase)))
+                    profiles.Any(pair =>
+                        !string.Equals(pair.Key, source, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(pair.Key, destination, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
                 {
                     return ModeSaveOutcome.Failed("Processing profile '{destination}' already exists.");
                 }
 
-                JsonNode? value =
-                    existing.Value?.DeepClone();
+                JsonNode? value = existing.Value?.DeepClone();
 
-                profiles.Remove(
-                    existing.Key);
+                profiles.Remove(existing.Key);
 
-                profiles[destination] =
-                    value;
+                profiles[destination] = value;
 
-                UpdateProfileReferences(
-                    document,
-                    source,
-                    destination);
+                UpdateProfileReferences(document, source, destination);
 
                 return null;
             }
         );
     }
 
-    public static ModeSaveOutcome RemoveProfile(
-        string? root,
-        string name)
+    public static ModeSaveOutcome RemoveProfile(string? root, string name)
     {
-        string trimmed =
-            name?.Trim()
-            ?? string.Empty;
+        string trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length == 0)
         {
-            return ModeSaveOutcome.Failed(
-                "Choose a processing profile first.");
+            return ModeSaveOutcome.Failed("Choose a processing profile first.");
         }
 
         return ConfigurationDocumentEditor.Edit(
             root,
             document =>
             {
-                JsonObject providers =
-                    HardwareConfigurationStore.AsObject(
-                        document,
-                        "providers");
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
 
-                JsonObject audio =
-                    HardwareConfigurationStore.AsObject(
-                        providers,
-                        "audio");
+                JsonObject audio = HardwareConfigurationStore.AsObject(providers, "audio");
 
-                JsonObject profiles =
-                    HardwareConfigurationStore.AsObject(
-                        audio,
-                        "profiles");
+                JsonObject profiles = HardwareConfigurationStore.AsObject(audio, "profiles");
 
-                string? actualName =
-                    profiles
-                        .Select(
-                            pair => pair.Key)
-                        .FirstOrDefault(
-                            key =>
-                                string.Equals(
-                                    key,
-                                    trimmed,
-                                    StringComparison.OrdinalIgnoreCase));
+                string? actualName = profiles
+                    .Select(pair => pair.Key)
+                    .FirstOrDefault(key => string.Equals(key, trimmed, StringComparison.OrdinalIgnoreCase));
 
                 if (actualName is null)
                 {
                     return ModeSaveOutcome.Failed("Processing profile '{trimmed}' does not exist.");
                 }
 
-                profiles.Remove(
-                    actualName);
+                profiles.Remove(actualName);
 
-                UpdateProfileReferences(
-                    document,
-                    trimmed,
-                    replacement: null);
+                UpdateProfileReferences(document, trimmed, replacement: null);
 
                 return null;
-            });
+            }
+        );
     }
 
     /// <summary>
@@ -427,23 +356,29 @@ public static class AudioConfigurationStore
 
         string wanted = name.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (FindTargets(document) is not JsonObject targets || FindKey(targets, wanted) is not string key)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio target.");
-            }
+                if (FindTargets(document) is not JsonObject targets || FindKey(targets, wanted) is not string key)
+                {
+                    return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio target.");
+                }
 
-            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, key)
-                is { Count: > 0 } referencing)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{key}' is used by {string.Join(", ", referencing)}. Change those first.");
-            }
+                if (
+                    LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, key) is
+                    { Count: > 0 } referencing
+                )
+                {
+                    return ModeSaveOutcome.Failed(
+                        $"'{key}' is used by {string.Join(", ", referencing)}. Change those first."
+                    );
+                }
 
-            targets.Remove(key);
-            return null;
-        });
+                targets.Remove(key);
+                return null;
+            }
+        );
     }
 
     /// <summary>
@@ -462,41 +397,50 @@ public static class AudioConfigurationStore
 
         string wanted = alias.Trim();
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            if (FindAudioSection(document) is not JsonObject audio ||
-                HardwareConfigurationStore.FindProperty(audio, "devices") is not JsonObject devices ||
-                FindKey(devices, wanted) is not string key)
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio output.");
-            }
+                if (
+                    FindAudioSection(document) is not JsonObject audio
+                    || HardwareConfigurationStore.FindProperty(audio, "devices") is not JsonObject devices
+                    || FindKey(devices, wanted) is not string key
+                )
+                {
+                    return ModeSaveOutcome.Failed($"'{wanted}' is not a configured audio output.");
+                }
 
-            if (HardwareConfigurationStore.FindProperty(audio, "targets") is JsonObject targets)
-            {
-                List<string> used =
-                [
-                    .. targets
-                        .Where(pair => pair.Value is JsonObject target && TargetNamesOutput(target, wanted))
-                        .Select(pair => $"'{pair.Key}'"),
-                ];
+                if (HardwareConfigurationStore.FindProperty(audio, "targets") is JsonObject targets)
+                {
+                    List<string> used =
+                    [
+                        .. targets
+                            .Where(pair => pair.Value is JsonObject target && TargetNamesOutput(target, wanted))
+                            .Select(pair => $"'{pair.Key}'"),
+                    ];
 
-                if (used.Count > 0)
+                    if (used.Count > 0)
+                    {
+                        return ModeSaveOutcome.Failed(
+                            $"'{wanted}' is an output of {string.Join(", ", used)}. Change those first."
+                        );
+                    }
+                }
+
+                if (
+                    LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, wanted) is
+                    { Count: > 0 } referencing
+                )
                 {
                     return ModeSaveOutcome.Failed(
-                        $"'{wanted}' is an output of {string.Join(", ", used)}. Change those first.");
+                        $"'{wanted}' is used by {string.Join(", ", referencing)}. Change those first."
+                    );
                 }
-            }
 
-            if (LayoutConfigurationStore.ModesReferencing(document, AudioProvider.ResourceKey, wanted)
-                is { Count: > 0 } referencing)
-            {
-                return ModeSaveOutcome.Failed(
-                    $"'{wanted}' is used by {string.Join(", ", referencing)}. Change those first.");
+                devices.Remove(key);
+                return null;
             }
-
-            devices.Remove(key);
-            return null;
-        });
+        );
     }
 
     /// <summary>One target's routes, in the shape the document holds them.</summary>
@@ -544,17 +488,19 @@ public static class AudioConfigurationStore
 
     /// <summary>Whether a written target names <paramref name="alias"/> as one of its outputs.</summary>
     private static bool TargetNamesOutput(JsonObject target, string alias) =>
-        HardwareConfigurationStore.FindProperty(target, "outputs") is JsonArray outputs &&
-        outputs.Any(output => string.Equals(OutputNameOf(output), alias, StringComparison.OrdinalIgnoreCase));
+        HardwareConfigurationStore.FindProperty(target, "outputs") is JsonArray outputs
+        && outputs.Any(output => string.Equals(OutputNameOf(output), alias, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>The alias one written route names, in either form it may take.</summary>
-    internal static string? OutputNameOf(JsonNode? written) => written switch
-    {
-        JsonValue value when value.TryGetValue(out string? name) => name?.Trim(),
-        JsonObject route when HardwareConfigurationStore.FindProperty(route, "output") is JsonValue named &&
-            named.TryGetValue(out string? name) => name?.Trim(),
-        _ => null,
-    };
+    internal static string? OutputNameOf(JsonNode? written) =>
+        written switch
+        {
+            JsonValue value when value.TryGetValue(out string? name) => name?.Trim(),
+            JsonObject route
+                when HardwareConfigurationStore.FindProperty(route, "output") is JsonValue named
+                    && named.TryGetValue(out string? name) => name?.Trim(),
+            _ => null,
+        };
 
     private static JsonObject? FindAudioSection(JsonObject document) =>
         HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers
@@ -569,5 +515,6 @@ public static class AudioConfigurationStore
     private static bool IsUsable(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
 
     private static string? FindKey(JsonObject obj, string name) =>
-        obj.Select(pair => pair.Key).FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
+        obj.Select(pair => pair.Key)
+            .FirstOrDefault(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase));
 }

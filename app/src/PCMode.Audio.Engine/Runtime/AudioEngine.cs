@@ -5,8 +5,7 @@ using PCMode.Audio.Engine.Health;
 
 namespace PCMode.Audio.Engine.Runtime;
 
-public sealed class AudioEngine :
-    IAudioEngine
+public sealed class AudioEngine : IAudioEngine
 {
     private readonly IAudioInputStreamFactory _inputFactory;
 
@@ -14,11 +13,9 @@ public sealed class AudioEngine :
 
     private readonly int _blockFrameCapacity;
 
-    private readonly AudioHealthTracker _health =
-        new();
+    private readonly AudioHealthTracker _health = new();
 
-    private AudioRouteHealthWriter[] _routeHealthWriters =
-        [];
+    private AudioRouteHealthWriter[] _routeHealthWriters = [];
 
     private AudioGraph? _graph;
 
@@ -26,26 +23,20 @@ public sealed class AudioEngine :
 
     private bool _disposed;
 
-    public AudioEngineState State { get; private set; } =
-        AudioEngineState.Stopped;
+    public AudioEngineState State { get; private set; } = AudioEngineState.Stopped;
 
-    public AudioTarget? ActiveTarget =>
-        _activeTarget;
+    public AudioTarget? ActiveTarget => _activeTarget;
 
     public bool NeedsRecovery
     {
         get
         {
-            if (State ==
-                AudioEngineState.Failed)
+            if (State == AudioEngineState.Failed)
             {
                 return _activeTarget is not null;
             }
 
-            if (State !=
-                    AudioEngineState.Running ||
-                _graph is null ||
-                _activeTarget is null)
+            if (State != AudioEngineState.Running || _graph is null || _activeTarget is null)
             {
                 return false;
             }
@@ -55,13 +46,9 @@ public sealed class AudioEngine :
                 return true;
             }
 
-            for (int i = 0;
-                 i < _activeTarget.Routes.Count;
-                 i++)
+            for (int i = 0; i < _activeTarget.Routes.Count; i++)
             {
-                if (!_graph.HasOperationalRoute(
-                        _activeTarget.Routes[i]
-                            .EndpointId))
+                if (!_graph.HasOperationalRoute(_activeTarget.Routes[i].EndpointId))
                 {
                     return true;
                 }
@@ -74,28 +61,22 @@ public sealed class AudioEngine :
     public AudioEngine(
         IAudioInputStreamFactory inputFactory,
         IAudioOutputStreamFactory outputFactory,
-        int blockFrameCapacity = 480)
+        int blockFrameCapacity = 480
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            inputFactory);
+        ArgumentNullException.ThrowIfNull(inputFactory);
 
-        ArgumentNullException.ThrowIfNull(
-            outputFactory);
+        ArgumentNullException.ThrowIfNull(outputFactory);
 
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(
-            blockFrameCapacity);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(blockFrameCapacity);
 
-        _inputFactory =
-            inputFactory;
+        _inputFactory = inputFactory;
 
-        _outputFactory =
-            outputFactory;
+        _outputFactory = outputFactory;
 
-        _blockFrameCapacity =
-            blockFrameCapacity;
+        _blockFrameCapacity = blockFrameCapacity;
 
-        _health.SetEngineState(
-            AudioEngineState.Stopped);
+        _health.SetEngineState(AudioEngineState.Stopped);
     }
 
     public AudioEngineHealth GetHealth()
@@ -103,45 +84,36 @@ public sealed class AudioEngine :
         return _health.GetHealth();
     }
 
-    public void Apply(
-        AudioTarget target)
+    public IReadOnlyList<AudioRouteWaveform> GetWaveform()
+    {
+        return _health.GetWaveform();
+    }
+
+    public void Apply(AudioTarget target)
     {
         ThrowIfDisposed();
 
-        ArgumentNullException.ThrowIfNull(
-            target);
+        ArgumentNullException.ThrowIfNull(target);
 
-        ValidateTarget(
-            target);
+        ValidateTarget(target);
 
         bool equivalentActiveTarget =
-            _graph is not null &&
-            _activeTarget is not null &&
-            TargetsAreEquivalent(
-                _activeTarget,
-                target);
+            _graph is not null && _activeTarget is not null && TargetsAreEquivalent(_activeTarget, target);
 
         if (equivalentActiveTarget)
         {
-            if (State ==
-                    AudioEngineState.Running &&
-                !NeedsRecovery)
+            if (State == AudioEngineState.Running && !NeedsRecovery)
             {
-                _activeTarget =
-                    target;
+                _activeTarget = target;
 
-                _health.SetActiveTarget(
-                    target);
+                _health.SetActiveTarget(target);
 
                 return;
             }
 
-            if (!_graph!.InputFailed &&
-                _routeHealthWriters.Length ==
-                    target.Routes.Count)
+            if (!_graph!.InputFailed && _routeHealthWriters.Length == target.Routes.Count)
             {
-                RecoverEquivalentTarget(
-                    target);
+                RecoverEquivalentTarget(target);
 
                 return;
             }
@@ -149,99 +121,72 @@ public sealed class AudioEngine :
 
         DisposeCurrentGraph();
 
-        State =
-            AudioEngineState.Starting;
+        State = AudioEngineState.Starting;
 
-        _health.SetEngineState(
-            State);
+        _health.SetEngineState(State);
 
-        _routeHealthWriters =
-            _health.BeginTarget(
-                target);
+        _routeHealthWriters = _health.BeginTarget(target);
 
-        IAudioInputStream? input =
-            null;
+        IAudioInputStream? input = null;
 
-        List<AudioRouteRuntime>? routeRuntimes =
-            null;
+        List<AudioRouteRuntime>? routeRuntimes = null;
 
-        AudioGraph? graph =
-            null;
+        AudioGraph? graph = null;
 
         try
         {
-            input =
-                _inputFactory.Create();
+            input = _inputFactory.Create();
 
-            routeRuntimes =
-                new List<AudioRouteRuntime>(
-                    target.Routes.Count);
+            routeRuntimes = new List<AudioRouteRuntime>(target.Routes.Count);
 
-            for (int i = 0;
-                 i < target.Routes.Count;
-                 i++)
+            for (int i = 0; i < target.Routes.Count; i++)
             {
-                AudioRoute route =
-                    target.Routes[i];
+                AudioRoute route = target.Routes[i];
 
-                AudioRouteHealthWriter routeHealth =
-                    _routeHealthWriters[i];
+                AudioRouteHealthWriter routeHealth = _routeHealthWriters[i];
 
-                IAudioOutputStream? output =
-                    null;
+                IAudioOutputStream? output = null;
 
                 try
                 {
-                    output =
-                        _outputFactory.Create(
-                            route.EndpointId,
-                            input.Format);
+                    output = _outputFactory.Create(route.EndpointId, input.Format);
 
-                    if (output.Format !=
-                        input.Format)
+                    if (output.Format != input.Format)
                     {
                         throw new NotSupportedException(
-                            $"Output route '{route.EndpointId}' uses " +
-                            $"{output.Format.SampleRate} Hz / " +
-                            $"{output.Format.ChannelCount} channel(s), " +
-                            $"while the input uses " +
-                            $"{input.Format.SampleRate} Hz / " +
-                            $"{input.Format.ChannelCount} channel(s).");
+                            $"Output route '{route.EndpointId}' uses "
+                                + $"{output.Format.SampleRate} Hz / "
+                                + $"{output.Format.ChannelCount} channel(s), "
+                                + $"while the input uses "
+                                + $"{input.Format.SampleRate} Hz / "
+                                + $"{input.Format.ChannelCount} channel(s)."
+                        );
                     }
 
-                    RouteProcessing processing =
-                        CreateProcessingChain(
-                            route,
-                            input.Format);
+                    RouteProcessing processing = CreateProcessingChain(route, input.Format);
 
-                    var runtime =
-                        new AudioRouteRuntime(
-                            route,
-                            output,
-                            processing.Chain,
-                            processing.Gain,
-                            processing.ParametricEq,
-                            _blockFrameCapacity,
-                            routeHealth,
-                            fadeInOnFirstStart:
-                                equivalentActiveTarget);
+                    var runtime = new AudioRouteRuntime(
+                        route,
+                        output,
+                        processing.Chain,
+                        processing.Gain,
+                        processing.ParametricEq,
+                        _blockFrameCapacity,
+                        routeHealth,
+                        fadeInOnFirstStart: equivalentActiveTarget
+                    );
 
-                    output =
-                        null;
+                    output = null;
 
-                    routeRuntimes.Add(
-                        runtime);
+                    routeRuntimes.Add(runtime);
                 }
                 catch (Exception ex)
                 {
-                    TryDispose(
-                        output);
+                    TryDispose(output);
 
-                    routeHealth.MarkUnavailable(
-                        ex);
+                    routeHealth.MarkUnavailable(ex);
 
-                    if (route.Requirement ==
-                        AudioRouteRequirement.Required)
+                    if (route.Requirement == AudioRouteRequirement.Required)
                     {
                         if (ex is NotSupportedException)
                         {
@@ -250,7 +195,8 @@ public sealed class AudioEngine :
 
                         throw new InvalidOperationException(
                             $"Failed to create required audio route '{route.EndpointId}'.",
-                            ex);
+                            ex
+                        );
                     }
 
                     // Optional route remains represented in Health,
@@ -260,80 +206,54 @@ public sealed class AudioEngine :
 
             if (routeRuntimes.Count == 0)
             {
-                throw new InvalidOperationException(
-                    "No configured audio route could be created.");
+                throw new InvalidOperationException("No configured audio route could be created.");
             }
 
-            graph =
-                new AudioGraph(
-                    input,
-                    routeRuntimes,
-                    _blockFrameCapacity);
+            graph = new AudioGraph(input, routeRuntimes, _blockFrameCapacity);
 
-            input =
-                null;
+            input = null;
 
-            routeRuntimes =
-                null;
+            routeRuntimes = null;
 
             graph.Start();
 
-            _graph =
-                graph;
+            _graph = graph;
 
-            graph =
-                null;
+            graph = null;
 
-            _activeTarget =
-                target;
+            _activeTarget = target;
 
-            _health.SetActiveTarget(
-                target);
+            _health.SetActiveTarget(target);
 
-            State =
-                AudioEngineState.Running;
+            State = AudioEngineState.Running;
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
         }
         catch (Exception ex)
         {
-            TryDispose(
-                graph);
+            TryDispose(graph);
 
-            if (graph is null &&
-                routeRuntimes is not null)
+            if (graph is null && routeRuntimes is not null)
             {
-                for (int i =
-                         routeRuntimes.Count - 1;
-                     i >= 0;
-                     i--)
+                for (int i = routeRuntimes.Count - 1; i >= 0; i--)
                 {
-                    TryDispose(
-                        routeRuntimes[i]);
+                    TryDispose(routeRuntimes[i]);
                 }
             }
 
-            TryDispose(
-                input);
+            TryDispose(input);
 
-            _graph =
-                null;
+            _graph = null;
 
-            _activeTarget =
-                null;
+            _activeTarget = null;
 
-            _health.SetActiveTarget(
-                null);
+            _health.SetActiveTarget(null);
 
-            State =
-                AudioEngineState.Failed;
+            State = AudioEngineState.Failed;
 
-            _health.RecordEngineFailure(
-                ex);
+            _health.RecordEngineFailure(ex);
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
 
             throw;
         }
@@ -368,32 +288,23 @@ public sealed class AudioEngine :
         bool muted,
         float gainDb,
         TimeSpan delay,
-        ParametricEqProfile? parametricEq)
+        ParametricEqProfile? parametricEq
+    )
     {
         ThrowIfDisposed();
 
-        if (State !=
-                AudioEngineState.Running ||
-            _graph is null ||
-            _activeTarget is null)
+        if (State != AudioEngineState.Running || _graph is null || _activeTarget is null)
         {
-            throw new InvalidOperationException(
-                "No audio target is running, so there is nothing to calibrate.");
+            throw new InvalidOperationException("No audio target is running, so there is nothing to calibrate.");
         }
 
-        int routeIndex =
-            -1;
+        int routeIndex = -1;
 
-        for (int i = 0;
-             i < _activeTarget.Routes.Count;
-             i++)
+        for (int i = 0; i < _activeTarget.Routes.Count; i++)
         {
-            if (_activeTarget.Routes[i]
-                    .EndpointId ==
-                endpointId)
+            if (_activeTarget.Routes[i].EndpointId == endpointId)
             {
-                routeIndex =
-                    i;
+                routeIndex = i;
 
                 break;
             }
@@ -401,73 +312,51 @@ public sealed class AudioEngine :
 
         if (routeIndex < 0)
         {
-            throw new InvalidOperationException(
-                $"'{endpointId}' is not one of the routes the running target uses.");
+            throw new InvalidOperationException($"'{endpointId}' is not one of the routes the running target uses.");
         }
 
-        AudioRoute currentRoute =
-            _activeTarget.Routes[
-                routeIndex];
+        AudioRoute currentRoute = _activeTarget.Routes[routeIndex];
 
-        var newRoute =
-            new AudioRoute(
-                endpointId,
-                currentRoute.Requirement,
-                volume,
-                muted,
-                delay,
-                new AudioProcessingProfile(
-                    gainDb,
-                    parametricEq));
+        var newRoute = new AudioRoute(
+            endpointId,
+            currentRoute.Requirement,
+            volume,
+            muted,
+            delay,
+            new AudioProcessingProfile(gainDb, parametricEq)
+        );
 
-        AudioRouteRuntime? runtime =
-            FindRuntime(
-                endpointId);
+        AudioRouteRuntime? runtime = FindRuntime(endpointId);
 
-        if (runtime is null ||
-            !runtime.IsOperational)
+        if (runtime is null || !runtime.IsOperational)
         {
             throw new InvalidOperationException(
-                $"'{endpointId}' is not currently playing, so it cannot be calibrated live.");
+                $"'{endpointId}' is not currently playing, so it cannot be calibrated live."
+            );
         }
 
         try
         {
-            if (runtime.Route.Delay !=
-                delay)
+            if (runtime.Route.Delay != delay)
             {
-                RebuildRouteInPlace(
-                    routeIndex,
-                    newRoute);
+                RebuildRouteInPlace(routeIndex, newRoute);
             }
             else
             {
-                runtime.SetGain(
-                    gainDb,
-                    volume,
-                    muted);
+                runtime.SetGain(gainDb, volume, muted);
 
-                runtime.SetParametricEq(
-                    parametricEq);
+                runtime.SetParametricEq(parametricEq);
             }
         }
         finally
         {
-            var updatedRoutes =
-                _activeTarget.Routes
-                    .ToArray();
+            var updatedRoutes = _activeTarget.Routes.ToArray();
 
-            updatedRoutes[routeIndex] =
-                newRoute;
+            updatedRoutes[routeIndex] = newRoute;
 
-            _activeTarget =
-                new AudioTarget(
-                    _activeTarget.Id,
-                    _activeTarget.Name,
-                    updatedRoutes);
+            _activeTarget = new AudioTarget(_activeTarget.Id, _activeTarget.Name, updatedRoutes);
 
-            _health.SetActiveTarget(
-                _activeTarget);
+            _health.SetActiveTarget(_activeTarget);
         }
     }
 
@@ -475,29 +364,22 @@ public sealed class AudioEngine :
     {
         ThrowIfDisposed();
 
-        if (State !=
-                AudioEngineState.Running ||
-            _graph is null)
+        if (State != AudioEngineState.Running || _graph is null)
         {
-            throw new InvalidOperationException(
-                "The audio engine is not running.");
+            throw new InvalidOperationException("The audio engine is not running.");
         }
 
         try
         {
-            return _graph
-                .ProcessNextBlock();
+            return _graph.ProcessNextBlock();
         }
         catch (Exception ex)
         {
-            State =
-                AudioEngineState.Failed;
+            State = AudioEngineState.Failed;
 
-            _health.RecordEngineFailure(
-                ex);
+            _health.RecordEngineFailure(ex);
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
 
             throw;
         }
@@ -509,59 +391,44 @@ public sealed class AudioEngine :
 
         if (_graph is null)
         {
-            _activeTarget =
-                null;
+            _activeTarget = null;
 
-            _health.SetActiveTarget(
-                null);
+            _health.SetActiveTarget(null);
 
-            State =
-                AudioEngineState.Stopped;
+            State = AudioEngineState.Stopped;
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
 
             return;
         }
 
-        State =
-            AudioEngineState.Stopping;
+        State = AudioEngineState.Stopping;
 
-        _health.SetEngineState(
-            State);
+        _health.SetEngineState(State);
 
-        AudioGraph graph =
-            _graph;
+        AudioGraph graph = _graph;
 
-        _graph =
-            null;
+        _graph = null;
 
-        _activeTarget =
-            null;
+        _activeTarget = null;
 
-        _health.SetActiveTarget(
-            null);
+        _health.SetActiveTarget(null);
 
         try
         {
             graph.Dispose();
 
-            State =
-                AudioEngineState.Stopped;
+            State = AudioEngineState.Stopped;
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
         }
         catch (Exception ex)
         {
-            State =
-                AudioEngineState.Failed;
+            State = AudioEngineState.Failed;
 
-            _health.RecordEngineFailure(
-                ex);
+            _health.RecordEngineFailure(ex);
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
 
             throw;
         }
@@ -583,8 +450,7 @@ public sealed class AudioEngine :
         }
         finally
         {
-            _disposed =
-                true;
+            _disposed = true;
         }
     }
 
@@ -603,115 +469,77 @@ public sealed class AudioEngine :
     private readonly record struct RouteProcessing(
         AudioProcessingChain Chain,
         GainProcessor Gain,
-        ParametricEqProcessor ParametricEq);
+        ParametricEqProcessor ParametricEq
+    );
 
-    private static RouteProcessing
-        CreateProcessingChain(
-            AudioRoute route,
-            AudioFormat format)
+    private static RouteProcessing CreateProcessingChain(AudioRoute route, AudioFormat format)
     {
-        var parametricEq =
-            new ParametricEqProcessor(
-                route.Processing.ParametricEq ??
-                ParametricEqProfile.Flat,
-                format);
+        var parametricEq = new ParametricEqProcessor(route.Processing.ParametricEq ?? ParametricEqProfile.Flat, format);
 
-        var gain =
-            new GainProcessor(
-                route.Processing.GainDb,
-                route.Volume,
-                route.Muted);
+        var gain = new GainProcessor(route.Processing.GainDb, route.Volume, route.Muted);
 
-        var chain =
-            new AudioProcessingChain(
-                parametricEq,
-                gain);
+        var chain = new AudioProcessingChain(parametricEq, gain);
 
-        return new RouteProcessing(
-            chain,
-            gain,
-            parametricEq);
+        return new RouteProcessing(chain, gain, parametricEq);
     }
 
-    private void RecoverEquivalentTarget(
-        AudioTarget target)
+    private void RecoverEquivalentTarget(AudioTarget target)
     {
         AudioGraph graph =
-            _graph
-            ?? throw new InvalidOperationException(
-                "No audio graph is available for route recovery.");
+            _graph ?? throw new InvalidOperationException("No audio graph is available for route recovery.");
 
-        State =
-            AudioEngineState.Starting;
+        State = AudioEngineState.Starting;
 
-        _health.SetEngineState(
-            State);
+        _health.SetEngineState(State);
 
         try
         {
-            for (int i = 0;
-                 i < target.Routes.Count;
-                 i++)
+            for (int i = 0; i < target.Routes.Count; i++)
             {
-                AudioRoute route =
-                    target.Routes[i];
+                AudioRoute route = target.Routes[i];
 
-                if (graph.HasOperationalRoute(
-                        route.EndpointId))
+                if (graph.HasOperationalRoute(route.EndpointId))
                 {
                     continue;
                 }
 
-                AudioRouteHealthWriter routeHealth =
-                    _routeHealthWriters[i];
+                AudioRouteHealthWriter routeHealth = _routeHealthWriters[i];
 
-                IAudioOutputStream? output =
-                    null;
+                IAudioOutputStream? output = null;
 
                 try
                 {
-                    output =
-                        _outputFactory.Create(
-                            route.EndpointId,
-                            graph.Format);
+                    output = _outputFactory.Create(route.EndpointId, graph.Format);
 
-                    if (output.Format !=
-                        graph.Format)
+                    if (output.Format != graph.Format)
                     {
                         throw new NotSupportedException(
-                            $"Output route '{route.EndpointId}' cannot consume the engine nominal format.");
+                            $"Output route '{route.EndpointId}' cannot consume the engine nominal format."
+                        );
                     }
 
-                    RouteProcessing processing =
-                        CreateProcessingChain(
-                            route,
-                            graph.Format);
+                    RouteProcessing processing = CreateProcessingChain(route, graph.Format);
 
-                    var replacement =
-                        new AudioRouteRuntime(
-                            route,
-                            output,
-                            processing.Chain,
-                            processing.Gain,
-                            processing.ParametricEq,
-                            _blockFrameCapacity,
-                            routeHealth,
-                            fadeInOnFirstStart:
-                                true);
+                    var replacement = new AudioRouteRuntime(
+                        route,
+                        output,
+                        processing.Chain,
+                        processing.Gain,
+                        processing.ParametricEq,
+                        _blockFrameCapacity,
+                        routeHealth,
+                        fadeInOnFirstStart: true
+                    );
 
-                    output =
-                        null;
+                    output = null;
 
-                    graph.ReplaceOrAddRoute(
-                        replacement);
+                    graph.ReplaceOrAddRoute(replacement);
                 }
                 catch (Exception ex)
                 {
-                    TryDispose(
-                        output);
+                    TryDispose(output);
 
-                    routeHealth.MarkUnavailable(
-                        ex);
+                    routeHealth.MarkUnavailable(ex);
 
                     // Required is enforced when a target first starts. Once a
                     // graph is live, promoting a single endpoint's failed
@@ -725,58 +553,46 @@ public sealed class AudioEngine :
             if (!graph.HasAnyOperationalRoute)
             {
                 throw new InvalidOperationException(
-                    "No audio route remains operational while recovering the active target.");
+                    "No audio route remains operational while recovering the active target."
+                );
             }
 
-            _activeTarget =
-                target;
+            _activeTarget = target;
 
-            _health.SetActiveTarget(
-                target);
+            _health.SetActiveTarget(target);
 
-            State =
-                AudioEngineState.Running;
+            State = AudioEngineState.Running;
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
         }
         catch (Exception ex)
         {
-            _activeTarget =
-                target;
+            _activeTarget = target;
 
-            _health.SetActiveTarget(
-                target);
+            _health.SetActiveTarget(target);
 
-            State =
-                AudioEngineState.Failed;
+            State = AudioEngineState.Failed;
 
-            _health.RecordEngineFailure(
-                ex);
+            _health.RecordEngineFailure(ex);
 
-            _health.SetEngineState(
-                State);
+            _health.SetEngineState(State);
 
             throw;
         }
     }
 
-    private AudioRouteRuntime? FindRuntime(
-        AudioEndpointId endpointId)
+    private AudioRouteRuntime? FindRuntime(AudioEndpointId endpointId)
     {
-        AudioGraph? graph =
-            _graph;
+        AudioGraph? graph = _graph;
 
         if (graph is null)
         {
             return null;
         }
 
-        foreach (AudioRouteRuntime candidate in
-            graph.Routes)
+        foreach (AudioRouteRuntime candidate in graph.Routes)
         {
-            if (candidate.Route.EndpointId ==
-                endpointId)
+            if (candidate.Route.EndpointId == endpointId)
             {
                 return candidate;
             }
@@ -785,68 +601,49 @@ public sealed class AudioEngine :
         return null;
     }
 
-    private void RebuildRouteInPlace(
-        int routeIndex,
-        AudioRoute newRoute)
+    private void RebuildRouteInPlace(int routeIndex, AudioRoute newRoute)
     {
-        AudioGraph graph =
-            _graph!;
+        AudioGraph graph = _graph!;
 
-        AudioRouteHealthWriter routeHealth =
-            _routeHealthWriters[
-                routeIndex];
+        AudioRouteHealthWriter routeHealth = _routeHealthWriters[routeIndex];
 
-        IAudioOutputStream? output =
-            null;
+        IAudioOutputStream? output = null;
 
         try
         {
-            output =
-                _outputFactory.Create(
-                    newRoute.EndpointId,
-                    graph.Format);
+            output = _outputFactory.Create(newRoute.EndpointId, graph.Format);
 
-            if (output.Format !=
-                graph.Format)
+            if (output.Format != graph.Format)
             {
                 throw new NotSupportedException(
-                    $"Output route '{newRoute.EndpointId}' cannot consume the engine nominal format.");
+                    $"Output route '{newRoute.EndpointId}' cannot consume the engine nominal format."
+                );
             }
 
-            RouteProcessing processing =
-                CreateProcessingChain(
-                    newRoute,
-                    graph.Format);
+            RouteProcessing processing = CreateProcessingChain(newRoute, graph.Format);
 
-            var replacement =
-                new AudioRouteRuntime(
-                    newRoute,
-                    output,
-                    processing.Chain,
-                    processing.Gain,
-                    processing.ParametricEq,
-                    _blockFrameCapacity,
-                    routeHealth,
-                    fadeInOnFirstStart:
-                        true);
+            var replacement = new AudioRouteRuntime(
+                newRoute,
+                output,
+                processing.Chain,
+                processing.Gain,
+                processing.ParametricEq,
+                _blockFrameCapacity,
+                routeHealth,
+                fadeInOnFirstStart: true
+            );
 
-            output =
-                null;
+            output = null;
 
-            graph.ReplaceOrAddRoute(
-                replacement);
+            graph.ReplaceOrAddRoute(replacement);
         }
         catch (Exception ex)
         {
-            TryDispose(
-                output);
+            TryDispose(output);
 
-            routeHealth.MarkUnavailable(
-                ex);
+            routeHealth.MarkUnavailable(ex);
 
-            throw new InvalidOperationException(
-                $"Could not recalibrate audio route '{newRoute.EndpointId}'.",
-                ex);
+            throw new InvalidOperationException($"Could not recalibrate audio route '{newRoute.EndpointId}'.", ex);
         }
     }
 
@@ -857,86 +654,61 @@ public sealed class AudioEngine :
             return;
         }
 
-        AudioGraph graph =
-            _graph;
+        AudioGraph graph = _graph;
 
-        _graph =
-            null;
+        _graph = null;
 
-        _activeTarget =
-            null;
+        _activeTarget = null;
 
-        _health.SetActiveTarget(
-            null);
+        _health.SetActiveTarget(null);
 
         graph.Dispose();
     }
 
-    private static void ValidateTarget(
-        AudioTarget target)
+    private static void ValidateTarget(AudioTarget target)
     {
-        var endpointIds =
-            new HashSet<AudioEndpointId>();
+        var endpointIds = new HashSet<AudioEndpointId>();
 
-        for (int i = 0;
-             i < target.Routes.Count;
-             i++)
+        for (int i = 0; i < target.Routes.Count; i++)
         {
-            AudioRoute route =
-                target.Routes[i];
+            AudioRoute route = target.Routes[i];
 
-            if (!endpointIds.Add(
-                    route.EndpointId))
+            if (!endpointIds.Add(route.EndpointId))
             {
                 throw new ArgumentException(
                     $"Audio target contains duplicate endpoint '{route.EndpointId}'.",
-                    nameof(target));
+                    nameof(target)
+                );
             }
-
         }
     }
 
-    private static bool TargetsAreEquivalent(
-        AudioTarget first,
-        AudioTarget second)
+    private static bool TargetsAreEquivalent(AudioTarget first, AudioTarget second)
     {
-        if (!string.Equals(
-                first.Id,
-                second.Id,
-                StringComparison.Ordinal))
+        if (!string.Equals(first.Id, second.Id, StringComparison.Ordinal))
         {
             return false;
         }
 
-        if (first.Routes.Count !=
-            second.Routes.Count)
+        if (first.Routes.Count != second.Routes.Count)
         {
             return false;
         }
 
-        for (int i = 0;
-             i < first.Routes.Count;
-             i++)
+        for (int i = 0; i < first.Routes.Count; i++)
         {
-            AudioRoute a =
-                first.Routes[i];
+            AudioRoute a = first.Routes[i];
 
-            AudioRoute b =
-                second.Routes[i];
+            AudioRoute b = second.Routes[i];
 
-            if (a.EndpointId !=
-                    b.EndpointId ||
-                a.Requirement !=
-                    b.Requirement ||
-                a.Volume !=
-                    b.Volume ||
-                a.Muted !=
-                    b.Muted ||
-                a.Delay !=
-                    b.Delay ||
-                !Equals(
-                    a.Processing,
-                    b.Processing))
+            if (
+                a.EndpointId != b.EndpointId
+                || a.Requirement != b.Requirement
+                || a.Volume != b.Volume
+                || a.Muted != b.Muted
+                || a.Delay != b.Delay
+                || !Equals(a.Processing, b.Processing)
+            )
             {
                 return false;
             }
@@ -945,8 +717,7 @@ public sealed class AudioEngine :
         return true;
     }
 
-    private static void TryDispose(
-        IDisposable? disposable)
+    private static void TryDispose(IDisposable? disposable)
     {
         if (disposable is null)
         {
@@ -957,15 +728,11 @@ public sealed class AudioEngine :
         {
             disposable.Dispose();
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(
-            _disposed,
-            this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
     }
 }

@@ -175,9 +175,10 @@ public sealed class PickerCoordinator
 
         _geometry = geometry;
 
-        Current = Favorites.ByModeName(currentModeName) ??
-            Favorites.All.FirstOrDefault(favorite => favorite.IsAssigned) ??
-            Favorites.All[0];
+        Current =
+            Favorites.ByModeName(currentModeName)
+            ?? Favorites.All.FirstOrDefault(favorite => favorite.IsAssigned)
+            ?? Favorites.All[0];
         Selected = Current.Direction;
         InputSource = PickerInputSource.Keyboard;
         _lastPointer = pointer;
@@ -282,8 +283,7 @@ public sealed class PickerCoordinator
         return hit.Kind switch
         {
             PickerHitKind.Hub when Current.IsAssigned => BeginClosing(now, Current),
-            PickerHitKind.Wedge when Favorites[hit.Direction].IsAssigned =>
-                BeginClosing(now, Favorites[hit.Direction]),
+            PickerHitKind.Wedge when Favorites[hit.Direction].IsAssigned => BeginClosing(now, Favorites[hit.Direction]),
             _ => false,
         };
     }

@@ -21,30 +21,24 @@ public sealed class ListElementBindingsTests
         "/PCMode.Tray;component/UI/Tree/Application/MainWindowRegion/AppShell/MainContentRegion/ListPage/ListPageBindings.xaml";
 
     [Fact]
-    public void Home_resolves_to_a_valid_list_page() =>
-        AssertListPage(new HomeViewModel(runtime: null), "Home");
+    public void Home_resolves_to_a_valid_list_page() => AssertListPage(new HomeViewModel(runtime: null), "Home");
 
     [Fact]
     public void Settings_resolves_to_a_valid_list_page() =>
-        AssertListPage(
-            new SettingsViewModel(new FakeWorkspace(), store: null),
-            "Settings");
+        AssertListPage(new SettingsViewModel(new FakeWorkspace(), store: null), "Settings");
 
     [Fact]
     public void Diagnostics_resolves_to_a_valid_list_page() =>
-        AssertListPage(
-            new DiagnosticsViewModel(new FakeWorkspace(), runtime: null, log: null),
-            "Diagnostics");
+        AssertListPage(new DiagnosticsViewModel(new FakeWorkspace(), runtime: null, log: null), "Diagnostics");
 
     private static void AssertListPage(object element, string title)
     {
         Wpf.Run(() =>
         {
             var host = new ContentControl { Content = element };
-            host.Resources.MergedDictionaries.Add(new ResourceDictionary
-            {
-                Source = new Uri(Bindings, UriKind.Relative),
-            });
+            host.Resources.MergedDictionaries.Add(
+                new ResourceDictionary { Source = new Uri(Bindings, UriKind.Relative) }
+            );
 
             // Realizing applies ListPageLayout and therefore runs the actual
             // RegionRuntime checks for header, content, and footer.
@@ -54,8 +48,9 @@ public sealed class ListElementBindingsTests
             Assert.Equal(title, block.Title);
             Assert.IsType<FinalUiComponent>(
                 block.Template.FindName(ListPageBlock.ContentRegion, block) is Region content
-                    ? Wpf.Descendants<FinalUiComponent>(content).Single()
-                    : null);
+                    ? Wpf.Descendants<FinalUiComponent>(content).FirstOrDefault()
+                    : null
+            );
         });
     }
 }

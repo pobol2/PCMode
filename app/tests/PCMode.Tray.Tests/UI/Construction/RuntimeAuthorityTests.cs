@@ -22,7 +22,8 @@ public sealed class RuntimeAuthorityTests
     {
         AssertTemplateFailure(
             "LayoutWithUndeclaredRegion",
-            failure => Assert.Contains("does not declare", failure.Message, StringComparison.OrdinalIgnoreCase));
+            failure => Assert.Contains("does not declare", failure.Message, StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -30,7 +31,8 @@ public sealed class RuntimeAuthorityTests
     {
         AssertTemplateFailure(
             "LayoutWithDirectStructuralBlock",
-            failure => Assert.Contains("directly", failure.Message, StringComparison.OrdinalIgnoreCase));
+            failure => Assert.Contains("directly", failure.Message, StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     [Fact]
@@ -40,13 +42,9 @@ public sealed class RuntimeAuthorityTests
         {
             // FixtureStrictBlock's one region admits FixtureDetailBlock. A root
             // view model resolves to FixtureRootBlock, which it does not.
-            var host = new ContentControl
-            {
-                Content = new FixtureStrictViewModel(Probe.Page()),
-            };
+            var host = new ContentControl { Content = new FixtureStrictViewModel(Probe.Page()) };
 
-            TemplateContractException failure =
-                Assert.Throws<TemplateContractException>(() => Wpf.Realize(host));
+            TemplateContractException failure = Assert.Throws<TemplateContractException>(() => Wpf.Realize(host));
 
             Assert.Contains(FixtureStrictBlock.OnlyRegion, failure.Message, StringComparison.Ordinal);
             Assert.Contains(nameof(FixtureRootBlock), failure.Message, StringComparison.Ordinal);
@@ -59,13 +57,9 @@ public sealed class RuntimeAuthorityTests
     {
         Wpf.Run(() =>
         {
-            var host = new ContentControl
-            {
-                Content = new FixtureStrictViewModel("just a string"),
-            };
+            var host = new ContentControl { Content = new FixtureStrictViewModel("just a string") };
 
-            TemplateContractException failure =
-                Assert.Throws<TemplateContractException>(() => Wpf.Realize(host));
+            TemplateContractException failure = Assert.Throws<TemplateContractException>(() => Wpf.Realize(host));
 
             Assert.Contains(FixtureStrictBlock.OnlyRegion, failure.Message, StringComparison.Ordinal);
             Assert.Contains(nameof(FinalUiComponent), failure.Message, StringComparison.Ordinal);
@@ -105,15 +99,12 @@ public sealed class RuntimeAuthorityTests
         });
     }
 
-    private static void AssertTemplateFailure(
-        string template,
-        Action<TemplateContractException> assert)
+    private static void AssertTemplateFailure(string template, Action<TemplateContractException> assert)
     {
         Wpf.Run(() =>
         {
             var block = new FixtureRootBlock { Template = Probe.InvalidLayout(template) };
-            TemplateContractException failure =
-                Assert.Throws<TemplateContractException>(() => block.ApplyTemplate());
+            TemplateContractException failure = Assert.Throws<TemplateContractException>(() => block.ApplyTemplate());
             assert(failure);
         });
     }

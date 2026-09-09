@@ -19,8 +19,7 @@ internal static class Program
     /// </remarks>
     public const int ExitCodeAlreadyRunning = 3;
 
-    private static async Task<int> Main(
-        string[] args)
+    private static async Task<int> Main(string[] args)
     {
         // MMCSS raises the audio thread's OS scheduling priority, but does
         // not exempt it from a GC safepoint: a blocking Gen2 collection can
@@ -28,194 +27,134 @@ internal static class Program
         // asks the GC to avoid exactly that on this process, at the cost of a
         // larger working set -- the standard trade for a real-time audio
         // thread.
-        System.Runtime.GCSettings.LatencyMode =
-            System.Runtime.GCLatencyMode.SustainedLowLatency;
+        System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency;
 
         try
         {
-            HostOptions options =
-                HostOptions.Parse(
-                    args);
+            HostOptions options = HostOptions.Parse(args);
 
             // Before the runtime is built and before the pipe is opened. A
             // second Host that got as far as either would already be holding
             // the driver transport it is not entitled to.
-            using AudioHostOwnership ownership =
-                AudioHostOwnership.Claim(
-                    options.PipeName);
+            using AudioHostOwnership ownership = AudioHostOwnership.Claim(options.PipeName);
 
             if (!ownership.Owned)
             {
-                Console.Error.WriteLine(
-                    ownership.HeldBy);
+                Console.Error.WriteLine(ownership.HeldBy);
 
                 return ExitCodeAlreadyRunning;
             }
 
-            string sourceIdentity =
-                options.UsesDevelopmentInput
-                    ? options
-                        .DevelopmentSourceEndpointId!
-                    : AudioHostSourceIds
-                        .VirtualEndpoint;
+            string sourceIdentity = options.UsesDevelopmentInput
+                ? options.DevelopmentSourceEndpointId!
+                : AudioHostSourceIds.VirtualEndpoint;
 
-            var sourceId =
-                new AudioEndpointId(
-                    sourceIdentity);
+            var sourceId = new AudioEndpointId(sourceIdentity);
 
-            var engineFactory =
-                new AudioEngineFactory(
-                    options);
+            var engineFactory = new AudioEngineFactory(options);
 
-            using VirtualEndpointControlClient?
-                driverControl =
-                    options.UsesDevelopmentInput
-                        ? null
-                        : new VirtualEndpointControlClient();
+            using VirtualEndpointControlClient? driverControl = options.UsesDevelopmentInput
+                ? null
+                : new VirtualEndpointControlClient();
 
-            Func<AudioEngineState, AudioInputHealth>
-                inputHealthProvider =
-                    options.UsesDevelopmentInput
-                        ? CreateDevelopmentInputHealth
-                        : state =>
-                            CreateDriverInputHealth(
-                                driverControl!,
-                                state);
+            Func<AudioEngineState, AudioInputHealth> inputHealthProvider = options.UsesDevelopmentInput
+                ? CreateDevelopmentInputHealth
+                : state => CreateDriverInputHealth(driverControl!, state);
 
-            using var lifetime =
-                new AudioHostLifetime();
+            using var lifetime = new AudioHostLifetime();
 
-            await using var runtime =
-                new AudioHostRuntime(
-                    sourceId,
-                    engineFactory.Create,
-                    () =>
-                        MmcssRegistration
-                            .RegisterProAudio(),
-                    inputHealthProvider);
+            await using var runtime = new AudioHostRuntime(
+                sourceId,
+                engineFactory.Create,
+                () => MmcssRegistration.RegisterProAudio(),
+                inputHealthProvider
+            );
 
             runtime.Start();
 
-            var server =
-                new AudioHostServer(
-                    options,
-                    runtime,
-                    lifetime);
+            var server = new AudioHostServer(options, runtime, lifetime);
 
-            Console.CancelKeyPress +=
-                (_, eventArgs) =>
-                {
-                    eventArgs.Cancel =
-                        true;
+            Console.CancelKeyPress += (_, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
 
-                    lifetime.RequestStop();
-                };
+                lifetime.RequestStop();
+            };
 
-            Console.WriteLine(
-                "PCMode.Audio.Host started.");
+            Console.WriteLine("PCMode.Audio.Host started.");
 
-            Console.WriteLine(
-                $"Pipe   : {options.PipeName}");
+            Console.WriteLine($"Pipe   : {options.PipeName}");
 
             if (options.UsesDevelopmentInput)
             {
-                Console.WriteLine(
-                    $"Input  : development loopback ({options.DevelopmentSourceEndpointId})");
+                Console.WriteLine($"Input  : development loopback ({options.DevelopmentSourceEndpointId})");
             }
             else
             {
-                Console.WriteLine(
-                    "Input  : PCMode Audio virtual endpoint");
+                Console.WriteLine("Input  : PCMode Audio virtual endpoint");
             }
 
-            Console.WriteLine(
-                $"PID    : {Environment.ProcessId}");
+            Console.WriteLine($"PID    : {Environment.ProcessId}");
 
-            await server.RunAsync(
-                lifetime.Stopping);
+            await server.RunAsync(lifetime.Stopping);
 
             await runtime.ShutdownAsync();
 
-            Console.WriteLine(
-                "PCMode.Audio.Host stopped cleanly.");
+            Console.WriteLine("PCMode.Audio.Host stopped cleanly.");
 
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(
-                ex);
+            Console.Error.WriteLine(ex);
 
             return 1;
         }
     }
 
-    private static AudioInputHealth
-        CreateDevelopmentInputHealth(
-            AudioEngineState engineState)
+    private static AudioInputHealth CreateDevelopmentInputHealth(AudioEngineState engineState)
     {
-        AudioInputHealthState state =
-            engineState switch
-            {
-                AudioEngineState.Stopped =>
-                    AudioInputHealthState.Stopped,
+        AudioInputHealthState state = engineState switch
+        {
+            AudioEngineState.Stopped => AudioInputHealthState.Stopped,
 
-                AudioEngineState.Starting =>
-                    AudioInputHealthState.Ready,
+            AudioEngineState.Starting => AudioInputHealthState.Ready,
 
-                AudioEngineState.Running =>
-                    AudioInputHealthState.Running,
+            AudioEngineState.Running => AudioInputHealthState.Running,
 
-                AudioEngineState.Stopping =>
-                    AudioInputHealthState.Stopped,
+            AudioEngineState.Stopping => AudioInputHealthState.Stopped,
 
-                AudioEngineState.Failed =>
-                    AudioInputHealthState.Failed,
+            AudioEngineState.Failed => AudioInputHealthState.Failed,
 
-                _ =>
-                    AudioInputHealthState.Unknown
-            };
+            _ => AudioInputHealthState.Unknown,
+        };
 
-        return new AudioInputHealth(
-            AudioInputKind.DevelopmentLoopback,
-            state);
+        return new AudioInputHealth(AudioInputKind.DevelopmentLoopback, state);
     }
 
-    private static AudioInputHealth
-        CreateDriverInputHealth(
-            VirtualEndpointControlClient control,
-            AudioEngineState engineState)
+    private static AudioInputHealth CreateDriverInputHealth(
+        VirtualEndpointControlClient control,
+        AudioEngineState engineState
+    )
     {
-        DriverStatus status =
-            control.GetStatus();
+        DriverStatus status = control.GetStatus();
 
-        AudioFailure? failure =
-            string.IsNullOrWhiteSpace(
-                status.Failure)
-                ? null
-                : new AudioFailure(
-                    "Driver",
-                    status.Failure,
-                    0,
-                    DateTimeOffset.UtcNow);
+        AudioFailure? failure = string.IsNullOrWhiteSpace(status.Failure)
+            ? null
+            : new AudioFailure("Driver", status.Failure, 0, DateTimeOffset.UtcNow);
 
         AudioInputHealthState state =
-            !status.Available ||
-            !status.DeviceStarted
-                ? AudioInputHealthState.Unavailable
-                : !status.PcmConsumerConnected &&
-                  engineState ==
-                      AudioEngineState.Running
-                    ? AudioInputHealthState.Reconnecting
-                    : status.StreamRunning
-                        ? AudioInputHealthState.Running
-                        : AudioInputHealthState.Ready;
+            !status.Available || !status.DeviceStarted ? AudioInputHealthState.Unavailable
+            : !status.PcmConsumerConnected && engineState == AudioEngineState.Running
+                ? AudioInputHealthState.Reconnecting
+            : status.StreamRunning ? AudioInputHealthState.Running
+            : AudioInputHealthState.Ready;
 
         return new AudioInputHealth(
             AudioInputKind.VirtualEndpointDriver,
             state,
-            status.CurrentFormat ??
-            status.PreferredFormat,
-            failure);
+            status.CurrentFormat ?? status.PreferredFormat,
+            failure
+        );
     }
 }

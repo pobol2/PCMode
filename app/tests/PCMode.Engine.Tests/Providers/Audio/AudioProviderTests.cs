@@ -23,7 +23,8 @@ public sealed class AudioProviderTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"movie","name":"Movie","resources":{"theme":"Dark"}}]}]}
             """,
-            new AudioProvider(new FakeAudioEndpoints()));
+            new AudioProvider(new FakeAudioEndpoints())
+        );
 
         Assert.NotNull(configuration.Find("Movie"));
     }
@@ -34,12 +35,15 @@ public sealed class AudioProviderTests
         // The other half of the rule above. Unconfigured is fine until a mode
         // depends on it, and then it is refused by name rather than at the
         // moment the sound was supposed to move.
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"movie","name":"Movie","resources":{"audio":"TV"}}]}]}
-            """,
-            new AudioProvider(new FakeAudioEndpoints())));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"movie","name":"Movie","resources":{"audio":"TV"}}]}]}
+                """,
+                new AudioProvider(new FakeAudioEndpoints())
+            )
+        );
 
         Assert.Contains(AudioProvider.SettingsPath, failure.Message, StringComparison.Ordinal);
     }
@@ -74,7 +78,8 @@ public sealed class AudioProviderTests
         // the other name report the wrong current device for good.
         string? problem = Configure(
             new AudioProvider(new FakeAudioEndpoints()),
-            $$$"""{"devices":{"TV":"{{{Television}}}","Cinema":"{{{Television}}}"}}""");
+            $$$"""{"devices":{"TV":"{{{Television}}}","Cinema":"{{{Television}}}"}}"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("TV", problem, StringComparison.Ordinal);
@@ -88,7 +93,8 @@ public sealed class AudioProviderTests
         // selected and nothing would say which.
         string? problem = Configure(
             new AudioProvider(new FakeAudioEndpoints()),
-            $$$"""{"devices":{"TV":"{{{Television}}}","tv":"{{{Speakers}}}"}}""");
+            $$$"""{"devices":{"TV":"{{{Television}}}","tv":"{{{Speakers}}}"}}"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("more than once", problem, StringComparison.Ordinal);
@@ -151,14 +157,17 @@ public sealed class AudioProviderTests
         var runtime = new FakeAudioRuntime();
         var provider = new AudioProvider(endpoints, runtime);
 
-        Assert.Null(Configure(
-            provider,
-            $$$"""
-            {
-              "devices": { "Desk": "{{{Speakers}}}", "TV": "{{{Television}}}" },
-              "targets": { "Both": { "outputs": [{ "output": "Desk" }, { "output": "TV" }] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$$"""
+                {
+                  "devices": { "Desk": "{{{Speakers}}}", "TV": "{{{Television}}}" },
+                  "targets": { "Both": { "outputs": [{ "output": "Desk" }, { "output": "TV" }] } }
+                }
+                """
+            )
+        );
 
         provider.Apply("Desk", CancellationToken.None);
 
@@ -278,9 +287,7 @@ public sealed class AudioProviderTests
         Assert.True(outcome.Succeeded);
         Assert.Equal([endpoints.IdOf(1)], endpoints.MadeDefault);
 
-        TransitionStep step = Assert.Single(
-            outcome.Steps,
-            reported => reported.Resource == AudioProvider.ResourceKey);
+        TransitionStep step = Assert.Single(outcome.Steps, reported => reported.Resource == AudioProvider.ResourceKey);
 
         Assert.Equal(TransitionStepStatus.Applied, step.Status);
         Assert.Equal("TV", step.Target);
@@ -309,7 +316,8 @@ public sealed class AudioProviderTests
 
         Assert.Equal(
             TransitionStepStatus.AlreadyCorrect,
-            Assert.Single(outcome.Steps, reported => reported.Resource == AudioProvider.ResourceKey).Status);
+            Assert.Single(outcome.Steps, reported => reported.Resource == AudioProvider.ResourceKey).Status
+        );
     }
 
     [Fact]
@@ -357,13 +365,11 @@ public sealed class AudioProviderTests
 
     // ---- helpers ------------------------------------------------------------
 
-    private static readonly string Settings =
-        $$"""
+    private static readonly string Settings = $$"""
         { "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" } }
         """;
 
-    private static readonly string Document =
-        $$"""
+    private static readonly string Document = $$"""
         {
           "schemaVersion": 1,
           "providers": {
@@ -385,7 +391,10 @@ public sealed class AudioProviderTests
         root.Write(Document);
 
         IReadOnlyList<IModeResourceProvider> providers =
-            [new FakeProvider("theme", "Dark"), new AudioProvider(endpoints)];
+        [
+            new FakeProvider("theme", "Dark"),
+            new AudioProvider(endpoints),
+        ];
 
         // A fake clock, because this provider retries six times over twelve
         // seconds when a device is missing, and these tests are about what it
@@ -394,7 +403,8 @@ public sealed class AudioProviderTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
     }
 
     private static ModeConfiguration Parse(string json, AudioProvider audio) =>
@@ -410,13 +420,16 @@ public sealed class AudioProviderTests
         // does, and which layout that is depends on somebody's cabling.
         var provider = new AudioProvider(new FakeAudioEndpoints());
 
-        Assert.Null(Configure(
-            provider,
-            """
-            {"devices":{
-              "Desk":"Speakers (Realtek)",
-              "TV":{"device":"Digital Audio (HDMI)","requires":{"display":"TVOnly"}}}}
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                """
+                {"devices":{
+                  "Desk":"Speakers (Realtek)",
+                  "TV":{"device":"Digital Audio (HDMI)","requires":{"display":"TVOnly"}}}}
+                """
+            )
+        );
 
         Assert.Equal(["Desk", "TV"], provider.DeviceNames);
 
@@ -442,7 +455,8 @@ public sealed class AudioProviderTests
         Assert.Contains(
             mentions,
             Configure(new AudioProvider(new FakeAudioEndpoints()), settings)!,
-            StringComparison.Ordinal);
+            StringComparison.Ordinal
+        );
     }
 
     private static AudioProvider Provider(FakeAudioEndpoints endpoints)

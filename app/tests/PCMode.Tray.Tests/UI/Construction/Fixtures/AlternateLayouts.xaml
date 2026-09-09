@@ -1,9 +1,7 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
-    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
+                    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
     <!--
         An alternative Layout for FixtureRootBlock: the same three regions,
         items and detail side by side. Proves a block depends on its region
@@ -20,23 +18,19 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <controls:Region
-                x:Name="PART_HeaderRegion"
-                Grid.Row="0"
-                Grid.Column="0"
-                Grid.ColumnSpan="2"
-                Content="{TemplateBinding Header}" />
-            <controls:RepeatedRegion
-                x:Name="PART_ItemsRegion"
-                Grid.Row="1"
-                Grid.Column="0"
-                ItemsSource="{TemplateBinding Items}" />
-            <controls:Region
-                x:Name="PART_DetailRegion"
-                Grid.Row="1"
-                Grid.Column="1"
-                Content="{TemplateBinding Detail}" />
+            <controls:Region x:Name="PART_HeaderRegion"
+                             Grid.Row="0"
+                             Grid.Column="0"
+                             Grid.ColumnSpan="2"
+                             Content="{TemplateBinding Header}" />
+            <controls:RepeatedRegion x:Name="PART_ItemsRegion"
+                                     Grid.Row="1"
+                                     Grid.Column="0"
+                                     ItemsSource="{TemplateBinding Items}" />
+            <controls:Region x:Name="PART_DetailRegion"
+                             Grid.Row="1"
+                             Grid.Column="1"
+                             Content="{TemplateBinding Detail}" />
         </Grid>
     </ControlTemplate>
-
 </ResourceDictionary>

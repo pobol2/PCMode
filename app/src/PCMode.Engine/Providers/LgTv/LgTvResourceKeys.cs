@@ -18,17 +18,13 @@ public static class LgTvResourceKeys
 {
     private const string Prefix = "tv.";
 
-    public static string Power(string? resourceName) =>
-        Build(resourceName, "power", TvPowerProvider.ResourceKey);
+    public static string Power(string? resourceName) => Build(resourceName, "power", TvPowerProvider.ResourceKey);
 
-    public static string Input(string? resourceName) =>
-        Build(resourceName, "input", TvInputProvider.ResourceKey);
+    public static string Input(string? resourceName) => Build(resourceName, "input", TvInputProvider.ResourceKey);
 
-    public static string Signal(string? resourceName) =>
-        Build(resourceName, "signal", TvSignalProvider.ResourceKey);
+    public static string Signal(string? resourceName) => Build(resourceName, "signal", TvSignalProvider.ResourceKey);
 
-    public static string Profile(string? resourceName) =>
-        Build(resourceName, "profile", TvProfileProvider.ResourceKey);
+    public static string Profile(string? resourceName) => Build(resourceName, "profile", TvProfileProvider.ResourceKey);
 
     public static string DisplayName(string? televisionName, string capability) =>
         string.IsNullOrWhiteSpace(televisionName)
@@ -47,15 +43,15 @@ public static class LgTvResourceKeys
     /// worth something.
     /// </remarks>
     public static bool IsTelevisionKey(string? key) =>
-        !string.IsNullOrWhiteSpace(key) &&
-        (key.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(key, TvPowerProvider.ResourceKey, StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(key, TvInputProvider.ResourceKey, StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(key, TvSignalProvider.ResourceKey, StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(key, TvProfileProvider.ResourceKey, StringComparison.OrdinalIgnoreCase));
+        !string.IsNullOrWhiteSpace(key)
+        && (
+            key.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, TvPowerProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, TvInputProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, TvSignalProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, TvProfileProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)
+        );
 
     private static string Build(string? resourceName, string capability, string defaultKey) =>
-        string.IsNullOrWhiteSpace(resourceName)
-            ? defaultKey
-            : $"{Prefix}{resourceName.Trim()}.{capability}";
+        string.IsNullOrWhiteSpace(resourceName) ? defaultKey : $"{Prefix}{resourceName.Trim()}.{capability}";
 }

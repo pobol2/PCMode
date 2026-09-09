@@ -6,15 +6,17 @@ namespace PCMode.Engine.Tests;
 /// </summary>
 public sealed class ApplicationDiscovererTests
 {
-    private static ApplicationProvider Steam(IProcessHost host, bool reactivate = false) => new(
-        new ApplicationDefinition
-        {
-            Name = "Steam",
-            ProcessName = "steam",
-            Start = new LaunchCommand { Uri = "steam://open/bigpicture" },
-            Reactivate = reactivate,
-        },
-        host);
+    private static ApplicationProvider Steam(IProcessHost host, bool reactivate = false) =>
+        new(
+            new ApplicationDefinition
+            {
+                Name = "Steam",
+                ProcessName = "steam",
+                Start = new LaunchCommand { Uri = "steam://open/bigpicture" },
+                Reactivate = reactivate,
+            },
+            host
+        );
 
     [Fact]
     public void Reports_a_running_application()
@@ -93,8 +95,14 @@ public sealed class ApplicationDiscovererTests
         ApplicationProvider steam = Steam(okHost);
 
         ApplicationProvider broken = new(
-            new ApplicationDefinition { Name = "Broken", ProcessName = "broken", Start = new LaunchCommand { Uri = "broken://open" } },
-            new UriCheckFailsHost());
+            new ApplicationDefinition
+            {
+                Name = "Broken",
+                ProcessName = "broken",
+                Start = new LaunchCommand { Uri = "broken://open" },
+            },
+            new UriCheckFailsHost()
+        );
 
         IReadOnlyList<HardwareItem> items = new ApplicationDiscoverer([steam, broken]).Discover();
 
@@ -113,13 +121,9 @@ public sealed class ApplicationDiscovererTests
     {
         public bool IsRunning(string processName) => false;
 
-        public void Start(LaunchCommand command)
-        {
-        }
+        public void Start(LaunchCommand command) { }
 
-        public void Kill(string processName)
-        {
-        }
+        public void Kill(string processName) { }
 
         public bool WaitUntilStopped(string processName, TimeSpan within, CancellationToken cancellationToken) => true;
 
@@ -127,12 +131,11 @@ public sealed class ApplicationDiscovererTests
 
         public bool Activate(string processName) => false;
 
-        public void SendKeys(string processName, string keys)
-        {
-        }
+        public void SendKeys(string processName, string keys) { }
 
         public bool FileExists(string path) => false;
 
-        public bool HandlesUriScheme(string scheme) => throw new InvalidOperationException("the shell could not be asked.");
+        public bool HandlesUriScheme(string scheme) =>
+            throw new InvalidOperationException("the shell could not be asked.");
     }
 }

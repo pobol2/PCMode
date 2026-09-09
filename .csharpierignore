@@ -1,0 +1,8 @@
+# Build output. Nothing under these directories is hand-written.
+**/bin/
+**/obj/
+
+# XAML belongs to XAML Styler (Settings.XamlStyler). CSharpier 1.x also formats
+# .xaml, and the two disagree about where the first attribute goes, so the file
+# would flip style on every run. One formatter per language.
+**/*.xaml

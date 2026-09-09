@@ -55,7 +55,8 @@ public sealed record AudioRouteSettings(
     double Gain,
     double? Volume,
     bool Required,
-    string? Profile = null)
+    string? Profile = null
+)
 {
     public int DelayMs => (int)Math.Round(Delay.TotalMilliseconds);
 }
@@ -137,7 +138,10 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
     /// resolves to. Called only for a route that names one; a route with no
     /// profile stays flat.
     /// </param>
-    public AudioTarget Compose(Func<string, string> endpointIdFor, Func<string, ParametricEqProfile>? parametricEqFor = null)
+    public AudioTarget Compose(
+        Func<string, string> endpointIdFor,
+        Func<string, ParametricEqProfile>? parametricEqFor = null
+    )
     {
         ArgumentNullException.ThrowIfNull(endpointIdFor);
 
@@ -155,15 +159,19 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
                 // a duplicate endpoint outright; caught here so the message can
                 // name the two aliases rather than an endpoint ID.
                 throw new InvalidOperationException(
-                    $"'{seen[endpointId]}' and '{route.Output}' are the same playback device right now, " +
-                    $"so '{Name}' would send the same sound to it twice.");
+                    $"'{seen[endpointId]}' and '{route.Output}' are the same playback device right now, "
+                        + $"so '{Name}' would send the same sound to it twice."
+                );
             }
 
             ParametricEqProfile? parametricEq = route.Profile is null
                 ? null
-                : (parametricEqFor ?? throw new InvalidOperationException(
-                    $"'{route.Output}' names the processing profile '{route.Profile}', but nothing was given to resolve it."))
-                    (route.Profile);
+                : (
+                    parametricEqFor
+                    ?? throw new InvalidOperationException(
+                        $"'{route.Output}' names the processing profile '{route.Profile}', but nothing was given to resolve it."
+                    )
+                )(route.Profile);
 
             routes[index] = new AudioRoute(
                 new AudioEndpointId(endpointId),
@@ -171,7 +179,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
                 volume: 1.0f,
                 muted: route.Gain <= 0,
                 delay: route.Delay,
-                processing: new AudioProcessingProfile(GainDecibels(route.Gain), parametricEq));
+                processing: new AudioProcessingProfile(GainDecibels(route.Gain), parametricEq)
+            );
         }
 
         return new AudioTarget(Name, Name, routes);
@@ -201,7 +210,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         IReadOnlyDictionary<string, string> devices,
         IReadOnlyDictionary<string, AudioProcessingProfileSettings> profiles,
         out IReadOnlyDictionary<string, AudioTargetSettings>? targets,
-        out string? problem)
+        out string? problem
+    )
     {
         ArgumentNullException.ThrowIfNull(profiles);
 
@@ -210,8 +220,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         if (written.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"'{SettingsPath}' must be an object mapping a name a mode asks for to the outputs it " +
-                "plays through.";
+                $"'{SettingsPath}' must be an object mapping a name a mode asks for to the outputs it "
+                + "plays through.";
 
             return false;
         }
@@ -233,8 +243,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
                 // A mode names one value for the audio resource, and it would
                 // mean two different things.
                 problem =
-                    $"'{SettingsPath}.{name}' is also an audio device in " +
-                    $"'{AudioProvider.SettingsPath}'. Give the target a name of its own.";
+                    $"'{SettingsPath}.{name}' is also an audio device in "
+                    + $"'{AudioProvider.SettingsPath}'. Give the target a name of its own.";
 
                 return false;
             }
@@ -263,7 +273,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         IReadOnlyDictionary<string, string> devices,
         IReadOnlyDictionary<string, AudioProcessingProfileSettings> profiles,
         out AudioTargetSettings? target,
-        out string? problem)
+        out string? problem
+    )
     {
         target = null;
         string where = $"'{SettingsPath}.{name}'";
@@ -294,8 +305,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         if (outputs is not JsonElement list || list.ValueKind != JsonValueKind.Array)
         {
             problem =
-                $"{where} needs 'outputs': a list of the outputs it plays through, each " +
-                "{ \"output\": \"...\" } with optional 'delayMs', 'gain', 'volume' and 'required'.";
+                $"{where} needs 'outputs': a list of the outputs it plays through, each "
+                + "{ \"output\": \"...\" } with optional 'delayMs', 'gain', 'volume' and 'required'.";
 
             return false;
         }
@@ -347,7 +358,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         IReadOnlyDictionary<string, string> devices,
         IReadOnlyDictionary<string, AudioProcessingProfileSettings> profiles,
         out AudioRouteSettings? route,
-        out string? problem)
+        out string? problem
+    )
     {
         route = null;
 
@@ -355,14 +367,25 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         if (written.ValueKind == JsonValueKind.String)
         {
             return TryBuildRoute(
-                where, written.GetString(), 0, 1.0, null, required: true, profile: null, devices, profiles, out route, out problem);
+                where,
+                written.GetString(),
+                0,
+                1.0,
+                null,
+                required: true,
+                profile: null,
+                devices,
+                profiles,
+                out route,
+                out problem
+            );
         }
 
         if (written.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"{where}.outputs takes either an output name or " +
-                "{ \"output\": \"...\", \"delayMs\": ..., \"gain\": ..., \"volume\": ..., \"required\": ..., \"profile\": ... }.";
+                $"{where}.outputs takes either an output name or "
+                + "{ \"output\": \"...\", \"delayMs\": ..., \"gain\": ..., \"volume\": ..., \"required\": ..., \"profile\": ... }.";
 
             return false;
         }
@@ -388,7 +411,9 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
             }
             else if (field.NameEquals("delayMs"))
             {
-                if (!TryReadNumber(field.Value, $"{where}.outputs.delayMs", 0, MaxDelayMs, out double read, out problem))
+                if (
+                    !TryReadNumber(field.Value, $"{where}.outputs.delayMs", 0, MaxDelayMs, out double read, out problem)
+                )
                 {
                     return false;
                 }
@@ -434,14 +459,26 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
             else
             {
                 problem =
-                    $"{where}.outputs does not understand '{field.Name}'. An output takes 'output', " +
-                    "'delayMs', 'gain', 'volume', 'required' and 'profile'.";
+                    $"{where}.outputs does not understand '{field.Name}'. An output takes 'output', "
+                    + "'delayMs', 'gain', 'volume', 'required' and 'profile'.";
 
                 return false;
             }
         }
 
-        return TryBuildRoute(where, output, delayMs, gain, volume, required, profile, devices, profiles, out route, out problem);
+        return TryBuildRoute(
+            where,
+            output,
+            delayMs,
+            gain,
+            volume,
+            required,
+            profile,
+            devices,
+            profiles,
+            out route,
+            out problem
+        );
     }
 
     private static bool TryBuildRoute(
@@ -455,7 +492,8 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         IReadOnlyDictionary<string, string> devices,
         IReadOnlyDictionary<string, AudioProcessingProfileSettings> profiles,
         out AudioRouteSettings? route,
-        out string? problem)
+        out string? problem
+    )
     {
         route = null;
 
@@ -470,10 +508,12 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         if (!devices.TryGetValue(named, out _))
         {
             problem =
-                $"{where} names '{named}', which '{AudioProvider.SettingsPath}' does not define. " +
-                (devices.Count == 0
-                    ? "No audio devices are defined at all."
-                    : $"Defined: {string.Join(", ", devices.Keys.Order(StringComparer.OrdinalIgnoreCase))}.");
+                $"{where} names '{named}', which '{AudioProvider.SettingsPath}' does not define. "
+                + (
+                    devices.Count == 0
+                        ? "No audio devices are defined at all."
+                        : $"Defined: {string.Join(", ", devices.Keys.Order(StringComparer.OrdinalIgnoreCase))}."
+                );
 
             return false;
         }
@@ -481,7 +521,9 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         // The alias exactly as the devices section spells it, so that everything
         // downstream compares one spelling rather than whichever case the target
         // happened to be written in.
-        string canonical = devices.Keys.First(device => string.Equals(device, named, StringComparison.OrdinalIgnoreCase));
+        string canonical = devices.Keys.First(device =>
+            string.Equals(device, named, StringComparison.OrdinalIgnoreCase)
+        );
 
         string? canonicalProfile = null;
 
@@ -490,11 +532,13 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
             if (!profiles.TryGetValue(profile, out AudioProcessingProfileSettings? found))
             {
                 problem =
-                    $"{where} names the processing profile '{profile}', which '{AudioProcessingProfileSettings.SettingsPath}' " +
-                    "does not define. " +
-                    (profiles.Count == 0
-                        ? "No processing profiles are defined at all."
-                        : $"Defined: {string.Join(", ", profiles.Keys.Order(StringComparer.OrdinalIgnoreCase))}.");
+                    $"{where} names the processing profile '{profile}', which '{AudioProcessingProfileSettings.SettingsPath}' "
+                    + "does not define. "
+                    + (
+                        profiles.Count == 0
+                            ? "No processing profiles are defined at all."
+                            : $"Defined: {string.Join(", ", profiles.Keys.Order(StringComparer.OrdinalIgnoreCase))}."
+                    );
 
                 return false;
             }
@@ -502,7 +546,14 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
             canonicalProfile = found.Name;
         }
 
-        route = new AudioRouteSettings(canonical, TimeSpan.FromMilliseconds(delayMs), gain, volume, required, canonicalProfile);
+        route = new AudioRouteSettings(
+            canonical,
+            TimeSpan.FromMilliseconds(delayMs),
+            gain,
+            volume,
+            required,
+            canonicalProfile
+        );
         problem = null;
         return true;
     }
@@ -513,12 +564,17 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
         double lowest,
         double highest,
         out double value,
-        out string? problem)
+        out string? problem
+    )
     {
         value = 0;
 
-        if (written.ValueKind != JsonValueKind.Number || !written.TryGetDouble(out value) ||
-            double.IsNaN(value) || double.IsInfinity(value))
+        if (
+            written.ValueKind != JsonValueKind.Number
+            || !written.TryGetDouble(out value)
+            || double.IsNaN(value)
+            || double.IsInfinity(value)
+        )
         {
             problem = $"'{where}' must be a number.";
             return false;
@@ -526,9 +582,7 @@ public sealed record AudioTargetSettings(string Name, IReadOnlyList<AudioRouteSe
 
         if (value < lowest || value > highest)
         {
-            problem = string.Create(
-                CultureInfo.InvariantCulture,
-                $"'{where}' must be between {lowest} and {highest}.");
+            problem = string.Create(CultureInfo.InvariantCulture, $"'{where}' must be between {lowest} and {highest}.");
 
             return false;
         }

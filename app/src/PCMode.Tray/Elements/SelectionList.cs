@@ -53,7 +53,8 @@ public sealed class SelectionList<TRow>
         Func<string?, TRow> createRow,
         Action onChanged,
         int maximumRows = int.MaxValue,
-        int minimumRows = 0)
+        int minimumRows = 0
+    )
     {
         ArgumentNullException.ThrowIfNull(createRow);
         ArgumentNullException.ThrowIfNull(onChanged);
@@ -150,10 +151,12 @@ public sealed class SelectionList<TRow>
             List<string> available =
             [
                 .. Choices.Where(choice =>
-                    string.Equals(choice, row.Selection, StringComparison.OrdinalIgnoreCase) ||
-                    !Rows.Any(other =>
-                        !ReferenceEquals(other, row) &&
-                        string.Equals(other.Selection, choice, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(choice, row.Selection, StringComparison.OrdinalIgnoreCase)
+                    || !Rows.Any(other =>
+                        !ReferenceEquals(other, row)
+                        && string.Equals(other.Selection, choice, StringComparison.OrdinalIgnoreCase)
+                    )
+                ),
             ];
 
             Reconcile(row.AvailableSelections, available);
@@ -162,7 +165,8 @@ public sealed class SelectionList<TRow>
 
     private string? FirstUnusedChoice() =>
         Choices.FirstOrDefault(choice =>
-            !Rows.Any(row => string.Equals(row.Selection, choice, StringComparison.OrdinalIgnoreCase)));
+            !Rows.Any(row => string.Equals(row.Selection, choice, StringComparison.OrdinalIgnoreCase))
+        );
 
     /// <summary>
     /// Patches <paramref name="target"/> in place to hold exactly

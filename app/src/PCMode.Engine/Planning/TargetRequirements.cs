@@ -59,16 +59,17 @@ internal static class TargetRequirements
         string owner,
         JsonElement element,
         out IReadOnlyList<ResourceRequirement>? requirements,
-        out string? problem)
+        out string? problem
+    )
     {
         requirements = null;
 
         if (element.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"{where} has a '{FieldName}' that is not an object. " +
-                $"It maps a resource to the value it must be set to, like " +
-                $"{{ \"tvInput\": \"PC\" }}.";
+                $"{where} has a '{FieldName}' that is not an object. "
+                + $"It maps a resource to the value it must be set to, like "
+                + $"{{ \"tvInput\": \"PC\" }}.";
 
             return false;
         }
@@ -96,12 +97,13 @@ internal static class TargetRequirements
                 return false;
             }
 
-            if (required.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(required.Value.GetString()))
+            if (
+                required.Value.ValueKind != JsonValueKind.String
+                || string.IsNullOrWhiteSpace(required.Value.GetString())
+            )
             {
                 problem =
-                    $"{where} requires '{key}' but does not say what to set it to. " +
-                    "Give the value in quotes.";
+                    $"{where} requires '{key}' but does not say what to set it to. " + "Give the value in quotes.";
 
                 return false;
             }

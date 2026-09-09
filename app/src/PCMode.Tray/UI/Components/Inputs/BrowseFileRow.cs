@@ -13,31 +13,30 @@ public class BrowseFileRow : System.Windows.Controls.Control
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(BrowseFileRow),
-            new FrameworkPropertyMetadata(typeof(BrowseFileRow)));
+            new FrameworkPropertyMetadata(typeof(BrowseFileRow))
+        );
     }
 
-    public static readonly DependencyProperty TextProperty =
-        DependencyProperty.Register(
-            nameof(Text),
-            typeof(string),
-            typeof(BrowseFileRow),
-            new FrameworkPropertyMetadata(
-                string.Empty,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
+        nameof(Text),
+        typeof(string),
+        typeof(BrowseFileRow),
+        new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+    );
 
-    public static readonly DependencyProperty ToolTipTextProperty =
-        DependencyProperty.Register(
-            nameof(ToolTipText),
-            typeof(string),
-            typeof(BrowseFileRow),
-            new PropertyMetadata(string.Empty));
+    public static readonly DependencyProperty ToolTipTextProperty = DependencyProperty.Register(
+        nameof(ToolTipText),
+        typeof(string),
+        typeof(BrowseFileRow),
+        new PropertyMetadata(string.Empty)
+    );
 
-    public static readonly RoutedEvent BrowseClickEvent =
-        EventManager.RegisterRoutedEvent(
-            nameof(BrowseClick),
-            RoutingStrategy.Bubble,
-            typeof(RoutedEventHandler),
-            typeof(BrowseFileRow));
+    public static readonly RoutedEvent BrowseClickEvent = EventManager.RegisterRoutedEvent(
+        nameof(BrowseClick),
+        RoutingStrategy.Bubble,
+        typeof(RoutedEventHandler),
+        typeof(BrowseFileRow)
+    );
 
     public string Text
     {

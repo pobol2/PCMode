@@ -1,6 +1,6 @@
 using PCMode.Engine;
-using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements;
+using PCMode.Tray.Elements.Configuration;
 
 namespace PCMode.Tray.Elements.Audio;
 
@@ -30,8 +30,7 @@ public sealed class DiscoveredAudioOutputRow(HardwareItem item) : IHardwareInven
     /// Whether the underlying Windows device name is worth a line of its own --
     /// only once <see cref="FriendlyName"/> has diverged from it by being aliased.
     /// </summary>
-    public bool ShowUnderlyingDevice =>
-        !string.Equals(FriendlyName, item.Name, StringComparison.Ordinal);
+    public bool ShowUnderlyingDevice => !string.Equals(FriendlyName, item.Name, StringComparison.Ordinal);
 
     public string ActionLabel => IsConfigured ? "Rename" : "Add to PCMode";
 
@@ -40,8 +39,7 @@ public sealed class DiscoveredAudioOutputRow(HardwareItem item) : IHardwareInven
     /// <see cref="AudioOutputDiscoverer.DescribeOutputs"/>'s own "Default"
     /// detail rather than duplicating that computation here.
     /// </summary>
-    public bool IsDefault =>
-        item.Details.Any(detail => detail.Label == "Default" && detail.Value == "Yes");
+    public bool IsDefault => item.Details.Any(detail => detail.Label == "Default" && detail.Value == "Yes");
 
     /// <summary>
     /// Whether Switch makes sense for this row: it needs an alias to hand
@@ -100,7 +98,8 @@ public sealed class AudioDeviceDiscoveryViewModel
     public AudioDeviceDiscoveryViewModel(
         IConfigurationWorkspace workspace,
         Action onAliasSaved,
-        Func<HardwareCategoryResult>? scan = null)
+        Func<HardwareCategoryResult>? scan = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
         ArgumentNullException.ThrowIfNull(onAliasSaved);
@@ -127,11 +126,13 @@ public sealed class AudioDeviceDiscoveryViewModel
             ? new HardwareCategoryResult(
                 AudioOutputDiscoverer.CategoryName,
                 AudioOutputDiscoverer.DescribeOutputs(snapshot),
-                Problem: null)
+                Problem: null
+            )
             : new HardwareCategoryResult(
                 AudioOutputDiscoverer.CategoryName,
                 [],
-                snapshot.Problem ?? "The audio outputs could not be read.");
+                snapshot.Problem ?? "The audio outputs could not be read."
+            );
 
         Apply(result);
     }
@@ -163,8 +164,9 @@ public sealed class AudioDeviceDiscoveryViewModel
 
         try
         {
-            HardwareAliasOutcome outcome = await Task
-                .Run(() => HardwareConfigurationStore.SetAudioAlias(_workspace.Root, endpointName, trimmed))
+            HardwareAliasOutcome outcome = await Task.Run(() =>
+                    HardwareConfigurationStore.SetAudioAlias(_workspace.Root, endpointName, trimmed)
+                )
                 .ConfigureAwait(true);
 
             if (!outcome.Success)
@@ -219,7 +221,8 @@ public sealed class AudioDeviceDiscoveryViewModel
     }
 
     private static (IReadOnlyList<DiscoveredAudioOutputRow> Rows, string? Problem) Project(
-        HardwareCategoryResult result)
+        HardwareCategoryResult result
+    )
     {
         var rows = new List<DiscoveredAudioOutputRow>();
 

@@ -16,10 +16,8 @@ public sealed class AudioProcessingChain : IAudioProcessor
 
         for (int i = 0; i < processors.Length; i++)
         {
-            _processors[i] = processors[i]
-                ?? throw new ArgumentException(
-                    $"Processor {i} cannot be null.",
-                    nameof(processors));
+            _processors[i] =
+                processors[i] ?? throw new ArgumentException($"Processor {i} cannot be null.", nameof(processors));
         }
     }
 

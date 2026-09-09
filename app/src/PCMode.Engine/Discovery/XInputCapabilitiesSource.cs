@@ -55,7 +55,9 @@ public sealed class XInputCapabilitiesSource : IGamepadCapabilitiesSource, IDisp
             if (NativeLibrary.TryGetExport(handle, "XInputGetCapabilities", out nint export))
             {
                 return new XInputCapabilitiesSource(
-                    handle, Marshal.GetDelegateForFunctionPointer<XInputGetCapabilities>(export));
+                    handle,
+                    Marshal.GetDelegateForFunctionPointer<XInputGetCapabilities>(export)
+                );
             }
 
             NativeLibrary.Free(handle);
@@ -97,20 +99,21 @@ public sealed class XInputCapabilitiesSource : IGamepadCapabilitiesSource, IDisp
         }
     }
 
-    private static string SubTypeName(byte subType) => subType switch
-    {
-        1 => "Gamepad",
-        2 => "Wheel",
-        3 => "Arcade stick",
-        4 => "Flight stick",
-        5 => "Dance pad",
-        6 => "Guitar",
-        8 => "Guitar (alternate)",
-        9 => "Drum kit",
-        11 => "Guitar (bass)",
-        19 => "Arcade pad",
-        _ => "Unknown controller",
-    };
+    private static string SubTypeName(byte subType) =>
+        subType switch
+        {
+            1 => "Gamepad",
+            2 => "Wheel",
+            3 => "Arcade stick",
+            4 => "Flight stick",
+            5 => "Dance pad",
+            6 => "Guitar",
+            8 => "Guitar (alternate)",
+            9 => "Drum kit",
+            11 => "Guitar (bass)",
+            19 => "Arcade pad",
+            _ => "Unknown controller",
+        };
 
     private const ushort FlagWireless = 0x0002;
 

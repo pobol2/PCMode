@@ -1,9 +1,7 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:construction="clr-namespace:PCMode.Tray.UI.Framework"
-    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:construction="clr-namespace:PCMode.Tray.UI.Framework"
+                    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
     <Style TargetType="{x:Type tree:PageNavigationBlock}">
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="VerticalContentAlignment" Value="Stretch" />
@@ -11,23 +9,13 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type tree:PageNavigationBlock}">
-
-                    <construction:Region
-                        x:Name="PART_ContentRegion"
-                        HorizontalContentAlignment="Stretch"
-                        VerticalContentAlignment="Stretch">
-
-                        <construction:FinalUiComponent
-                            HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch">
-
-                            <ListBox
-                                ItemsSource="{TemplateBinding Items}"
-                                SelectedItem="{Binding SelectedEntry,
-                                    RelativeSource={RelativeSource TemplatedParent},
-                                    Mode=TwoWay}"
-                                Style="{StaticResource NavigationListStyle}">
-
+                    <construction:Region x:Name="PART_ContentRegion"
+                                         HorizontalContentAlignment="Stretch"
+                                         VerticalContentAlignment="Stretch">
+                        <construction:FinalUiComponent HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                            <ListBox ItemsSource="{TemplateBinding Items}"
+                                     SelectedItem="{Binding SelectedEntry, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                     Style="{StaticResource NavigationListStyle}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Grid>
@@ -36,69 +24,34 @@
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
 
-                                            <ToggleButton
-                                                Grid.Column="0"
-                                                Width="20"
-                                                Height="20"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Focusable="False"
-                                                Cursor="Hand"
-                                                IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                Visibility="{Binding HasChildren,
-                                                    Converter={StaticResource BooleanToVisibility}}">
+                                            <ToggleButton Grid.Column="0"
+                                                          Style="{StaticResource ExpansionToggleButtonStyle}"
+                                                          IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                          Visibility="{Binding HasChildren, Converter={StaticResource BooleanToVisibility}}" />
 
-                                                <ToggleButton.Template>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border Background="Transparent">
-                                                            <ContentControl
-                                                                Style="{StaticResource ExpandCollapseChevronStyle}"
-                                                                Tag="{Binding IsChecked,
-                                                                    RelativeSource={RelativeSource TemplatedParent}}"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center" />
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </ToggleButton.Template>
-
-                                            </ToggleButton>
-
-                                            <TextBlock
-                                                Grid.Column="1"
-                                                Text="{Binding Label}"
-                                                VerticalAlignment="Center">
-
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Label}"
+                                                       VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Margin" Value="0" />
 
                                                         <Style.Triggers>
-                                                            <DataTrigger
-                                                                Binding="{Binding IsChild}"
-                                                                Value="True">
-                                                                <Setter
-                                                                    Property="Margin"
-                                                                    Value="20,0,0,0" />
+                                                            <DataTrigger Binding="{Binding IsChild}" Value="True">
+                                                                <Setter Property="Margin" Value="20,0,0,0" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
-
                                             </TextBlock>
-
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
-
                             </ListBox>
-
                         </construction:FinalUiComponent>
-
                     </construction:Region>
-
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-
 </ResourceDictionary>

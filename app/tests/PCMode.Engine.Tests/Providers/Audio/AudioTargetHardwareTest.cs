@@ -25,9 +25,9 @@ public sealed class HardwareFactAttribute : FactAttribute
         if (!AudioTargetHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_AUDIO_HARDWARE_TEST=1 to run it: it starts the real audio " +
-                "Host, changes the Windows default playback device to the PCMode virtual endpoint, and " +
-                "plays a tone out loud through every one of the target's outputs.";
+                "Hardware check. Set PCMODE_AUDIO_HARDWARE_TEST=1 to run it: it starts the real audio "
+                + "Host, changes the Windows default playback device to the PCMode virtual endpoint, and "
+                + "plays a tone out loud through every one of the target's outputs.";
         }
     }
 }
@@ -119,7 +119,8 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
 
         var link = new AudioHostLink(
             new AudioHostClient(pipeName, connectTimeoutMilliseconds: 2000),
-            () => new AudioHostLauncher(hostPath, pipeName).Launch());
+            () => new AudioHostLauncher(hostPath, pipeName).Launch()
+        );
 
         AudioEndpoint? wasDefault = endpoints.DefaultPlayback();
         WasapiTestSignal? signal = null;
@@ -135,7 +136,11 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
             // than exercising anything.
             (string rawJson, string path) = ModeConfiguration.ReadOrCreate(configRoot);
             string json = EngineBootstrap.ConvertAudioTargets(configRoot, path, rawJson);
-            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(configRoot, json, link);
+            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(
+                configRoot,
+                json,
+                link
+            );
             _ = ModeConfiguration.Parse(json, providers, path);
 
             AudioProvider provider = providers.OfType<AudioProvider>().Single();
@@ -157,15 +162,14 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
             var engine = new ModeEngine(
                 ModeConfiguration.Parse(CheckDocument(target.Name), providers),
                 new ModeStateStore(Path.Combine(testRoot, "state.json")),
-                providers);
+                providers
+            );
 
             using var control = new VirtualEndpointControlClient();
 
             DriverStatus before = control.GetStatus();
 
-            Assert.True(
-                before.Available,
-                $"The PCMode audio driver is not available. {before.Failure}");
+            Assert.True(before.Available, $"The PCMode audio driver is not available. {before.Failure}");
 
             Say(string.Empty);
             Say("Activating the audio target through PCMode...");
@@ -205,7 +209,9 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
                 string deviceEndpointId = ResolveDeviceEndpointId(endpoints, provider, route.Output);
                 double? actualVolume = endpoints.ReadVolume(deviceEndpointId);
 
-                Say($"Windows volume '{route.Output}': configured {expectedVolume:0.00}, read back {actualVolume:0.00}");
+                Say(
+                    $"Windows volume '{route.Output}': configured {expectedVolume:0.00}, read back {actualVolume:0.00}"
+                );
 
                 Assert.NotNull(actualVolume);
                 Assert.Equal(expectedVolume, actualVolume!.Value, 2);
@@ -226,7 +232,7 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
 
                 if (second % 5 == 0 || second == seconds)
                 {
-                    Say($"{second,4}s  {Describe(provider, target.Name)}");
+                    Say($"{second, 4}s  {Describe(provider, target.Name)}");
                 }
             }
 
@@ -241,7 +247,8 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
 
             Assert.True(
                 after.PacketsRendered > before.PacketsRendered,
-                "No Windows PCM reached the PCMode audio driver during the check.");
+                "No Windows PCM reached the PCMode audio driver during the check."
+            );
 
             // 5. The engine routed it to every configured output, and each route
             //    is healthy with the delay it was configured with.
@@ -262,12 +269,14 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
                 AudioRouteHealth route = engineHealth.Routes[index];
 
                 Say(
-                    $"Route {target.Routes[index].Output,-16} {route.State}/{route.EndpointState}, " +
-                    string.Create(
-                        CultureInfo.InvariantCulture,
-                        $"delay {route.ConfiguredDelay.TotalMilliseconds:0} ms, " +
-                        $"offset {route.ClockOffsetMilliseconds ?? 0:0.0} ms, " +
-                        $"underruns {route.UnderrunCount}, resyncs {route.ResyncCount}"));
+                    $"Route {target.Routes[index].Output, -16} {route.State}/{route.EndpointState}, "
+                        + string.Create(
+                            CultureInfo.InvariantCulture,
+                            $"delay {route.ConfiguredDelay.TotalMilliseconds:0} ms, "
+                                + $"offset {route.ClockOffsetMilliseconds ?? 0:0.0} ms, "
+                                + $"underruns {route.UnderrunCount}, resyncs {route.ResyncCount}"
+                        )
+                );
 
                 Assert.Equal(AudioRouteHealthState.Healthy, route.State);
                 Assert.Equal(AudioEndpointState.Active, route.EndpointState);
@@ -289,7 +298,8 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
 
             Assert.Equal(
                 TransitionStepStatus.AlreadyCorrect,
-                Assert.Single(again.Steps, step => step.Resource == AudioProvider.ResourceKey).Status);
+                Assert.Single(again.Steps, step => step.Resource == AudioProvider.ResourceKey).Status
+            );
 
             AudioHostStatus hostAfter = link.Refresh().Host!;
 
@@ -305,7 +315,9 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
             const double calibratedGain = 0.5;
 
             Say(string.Empty);
-            Say($"Recalibrating '{calibratedRoute.Output}' to gain {calibratedGain:0.00} live. The sound must not glitch.");
+            Say(
+                $"Recalibrating '{calibratedRoute.Output}' to gain {calibratedGain:0.00} live. The sound must not glitch."
+            );
 
             provider.Recalibrate(
                 target.Name,
@@ -314,7 +326,8 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
                 calibratedGain,
                 calibratedRoute.Volume,
                 profileName: null,
-                CancellationToken.None);
+                CancellationToken.None
+            );
 
             AudioHostStatus hostAfterCalibration = link.Refresh().Host!;
 
@@ -330,15 +343,16 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
             // order and Health reports them back in that same order.
             AudioRouteHealth calibratedHealth = healthAfterCalibration.Routes[0];
 
-            Assert.Equal(
-                AudioTargetSettings.GainDecibels(calibratedGain),
-                calibratedHealth.Processing.GainDb,
-                2);
+            Assert.Equal(AudioTargetSettings.GainDecibels(calibratedGain), calibratedHealth.Processing.GainDb, 2);
 
-            Say($"Health after live calibration: {calibratedHealth.State}, gain {calibratedHealth.Processing.GainDb:0.0} dB");
+            Say(
+                $"Health after live calibration: {calibratedHealth.State}, gain {calibratedHealth.Processing.GainDb:0.0} dB"
+            );
 
             Say(string.Empty);
-            Say("PCMode drove the whole path: activation -> provider -> Host -> virtual endpoint -> routes -> outputs.");
+            Say(
+                "PCMode drove the whole path: activation -> provider -> Host -> virtual endpoint -> routes -> outputs."
+            );
         }
         finally
         {
@@ -389,19 +403,22 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
         {
             return provider.Target(wanted)
                 ?? throw new InvalidOperationException(
-                    $"No audio target called '{wanted}' is configured in {path}. " +
-                    $"Configured: {string.Join(", ", provider.Targets.Select(target => target.Name))}.");
+                    $"No audio target called '{wanted}' is configured in {path}. "
+                        + $"Configured: {string.Join(", ", provider.Targets.Select(target => target.Name))}."
+                );
         }
 
         return provider.Targets.Count switch
         {
             1 => provider.Targets[0],
             0 => throw new InvalidOperationException(
-                $"No audio target is configured in {path}. Add a '{AudioTargetSettings.SettingsPath}' " +
-                "section naming the outputs it plays through."),
+                $"No audio target is configured in {path}. Add a '{AudioTargetSettings.SettingsPath}' "
+                    + "section naming the outputs it plays through."
+            ),
             _ => throw new InvalidOperationException(
-                $"{provider.Targets.Count} audio targets are configured in {path}. " +
-                $"Set {TargetVariable} to the one to check."),
+                $"{provider.Targets.Count} audio targets are configured in {path}. "
+                    + $"Set {TargetVariable} to the one to check."
+            ),
         };
     }
 
@@ -430,13 +447,22 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
     private static string FindHost()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        string configuration = Path.GetFileName(Path.GetDirectoryName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))!);
+        string configuration = Path.GetFileName(
+            Path.GetDirectoryName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))!
+        );
 
         while (directory is not null)
         {
             string candidate = Path.Combine(
-                directory.FullName, "src", "PCMode.Tray", "bin", configuration,
-                "net10.0-windows", "AudioHost", "PCMode.Audio.Host.exe");
+                directory.FullName,
+                "src",
+                "PCMode.Tray",
+                "bin",
+                configuration,
+                "net10.0-windows",
+                "AudioHost",
+                "PCMode.Audio.Host.exe"
+            );
 
             if (File.Exists(candidate))
             {
@@ -447,16 +473,17 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
         }
 
         throw new FileNotFoundException(
-            "PCMode.Audio.Host.exe was not found. Build PCMode.Tray first, or set " +
-            $"{HostPathVariable} to the Host executable.");
+            "PCMode.Audio.Host.exe was not found. Build PCMode.Tray first, or set "
+                + $"{HostPathVariable} to the Host executable."
+        );
     }
 
     private static string CheckDocument(string targetName) =>
-        "{\"schemaVersion\":1,\"spaces\":[{\"id\":\"space\",\"name\":\"Space\",\"activities\":[{\"id\":\"check\",\"name\":" +
-        JsonSerializer.Serialize(ActivityName) +
-        ",\"resources\":{\"audio\":" +
-        JsonSerializer.Serialize(targetName) +
-        "}}]}]}";
+        "{\"schemaVersion\":1,\"spaces\":[{\"id\":\"space\",\"name\":\"Space\",\"activities\":[{\"id\":\"check\",\"name\":"
+        + JsonSerializer.Serialize(ActivityName)
+        + ",\"resources\":{\"audio\":"
+        + JsonSerializer.Serialize(targetName)
+        + "}}]}]}";
 
     private static string Describe(AudioProvider provider, string targetName)
     {
@@ -464,9 +491,11 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
 
         return status is null
             ? "no status"
-            : $"{status.State}: " + string.Join(
-                ", ",
-                status.Routes.Select(route => $"{route.Output}={route.Runtime?.ToString() ?? "?"}"));
+            : $"{status.State}: "
+                + string.Join(
+                    ", ",
+                    status.Routes.Select(route => $"{route.Output}={route.Runtime?.ToString() ?? "?"}")
+                );
     }
 
     private static string Name(IAudioEndpoints endpoints, string endpointId) =>
@@ -481,11 +510,16 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
     /// </summary>
     private static string ResolveDeviceEndpointId(IAudioEndpoints endpoints, AudioProvider provider, string routeOutput)
     {
-        AudioDeviceMapping mapping = provider.Discover().Devices.Single(
-            device => string.Equals(device.LogicalName, routeOutput, StringComparison.OrdinalIgnoreCase));
+        AudioDeviceMapping mapping = provider
+            .Discover()
+            .Devices.Single(device =>
+                string.Equals(device.LogicalName, routeOutput, StringComparison.OrdinalIgnoreCase)
+            );
 
-        return endpoints.ActivePlayback().Single(
-            endpoint => string.Equals(endpoint.Name, mapping.EndpointName, StringComparison.OrdinalIgnoreCase)).Id;
+        return endpoints
+            .ActivePlayback()
+            .Single(endpoint => string.Equals(endpoint.Name, mapping.EndpointName, StringComparison.OrdinalIgnoreCase))
+            .Id;
     }
 
     private static int Seconds() =>
@@ -493,7 +527,9 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
             Environment.GetEnvironmentVariable(SecondsVariable),
             NumberStyles.Integer,
             CultureInfo.InvariantCulture,
-            out int given) && given > 0
+            out int given
+        )
+        && given > 0
             ? given
             : 30;
 
@@ -502,5 +538,4 @@ public sealed class AudioTargetHardwareTest(Xunit.Abstractions.ITestOutputHelper
         _output.WriteLine(line);
         Console.WriteLine(line);
     }
-
 }

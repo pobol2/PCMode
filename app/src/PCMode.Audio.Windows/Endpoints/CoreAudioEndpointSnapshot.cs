@@ -7,4 +7,5 @@ public sealed record CoreAudioEndpointSnapshot(
     AudioEndpointId Id,
     string FriendlyName,
     AudioFormat Format,
-    WaveFormatInfo NativeFormat);
+    WaveFormatInfo NativeFormat
+);

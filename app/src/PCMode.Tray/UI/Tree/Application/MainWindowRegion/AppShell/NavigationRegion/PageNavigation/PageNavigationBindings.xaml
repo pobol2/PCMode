@@ -1,15 +1,9 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:navigation="clr-namespace:PCMode.Tray.Elements.Navigation"
-    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:navigation="clr-namespace:PCMode.Tray.Elements.Navigation"
+                    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
     <!-- Navigation selects the legal PageNavigation node and supplies state. -->
     <DataTemplate DataType="{x:Type navigation:NavigationState}">
-        <tree:PageNavigationBlock
-            Items="{Binding Items}"
-            SelectedEntry="{Binding SelectedEntry, Mode=TwoWay}" />
+        <tree:PageNavigationBlock Items="{Binding Items}" SelectedEntry="{Binding SelectedEntry, Mode=TwoWay}" />
     </DataTemplate>
-
 </ResourceDictionary>
-

@@ -51,7 +51,8 @@ public sealed record ConfiguredSource(
     string Id,
     string Name,
     SourceKind Kind,
-    IReadOnlyList<ResourceAssignment> Resources)
+    IReadOnlyList<ResourceAssignment> Resources
+)
 {
     /// <summary>Whether this source target may be switched to.</summary>
     public bool Enabled { get; init; } = true;
@@ -72,7 +73,8 @@ public sealed record ConfiguredActivity(
     string Id,
     string Name,
     IReadOnlyList<ResourceAssignment> Resources,
-    IReadOnlyList<ConfiguredSource> Sources)
+    IReadOnlyList<ConfiguredSource> Sources
+)
 {
     /// <summary>Whether this activity target may be switched to.</summary>
     public bool Enabled { get; init; } = true;
@@ -83,7 +85,8 @@ public sealed record ConfiguredSpace(
     string Id,
     string Name,
     IReadOnlyList<ResourceAssignment> Resources,
-    IReadOnlyList<ConfiguredActivity> Activities);
+    IReadOnlyList<ConfiguredActivity> Activities
+);
 
 /// <summary>
 /// Which Space, Activity and Source a target is, by their stable logical IDs.
@@ -101,9 +104,10 @@ public sealed record TargetIdentity(string SpaceId, string ActivityId, string? S
     public const char Separator = '/';
 
     /// <summary>The stable reference for this target.</summary>
-    public string Key => SourceId is null
-        ? $"{SpaceId}{Separator}{ActivityId}"
-        : $"{SpaceId}{Separator}{ActivityId}{Separator}{SourceId}";
+    public string Key =>
+        SourceId is null
+            ? $"{SpaceId}{Separator}{ActivityId}"
+            : $"{SpaceId}{Separator}{ActivityId}{Separator}{SourceId}";
 
     public override string ToString() => Key;
 }
@@ -146,10 +150,7 @@ public sealed record ConfiguredTarget
     public bool Enabled { get; init; } = true;
 
     /// <summary>A target for one Activity, and optionally one of its Sources.</summary>
-    public static ConfiguredTarget For(
-        ConfiguredSpace space,
-        ConfiguredActivity activity,
-        ConfiguredSource? source)
+    public static ConfiguredTarget For(ConfiguredSpace space, ConfiguredActivity activity, ConfiguredSource? source)
     {
         ArgumentNullException.ThrowIfNull(space);
         ArgumentNullException.ThrowIfNull(activity);
@@ -211,7 +212,8 @@ public static class TargetComposition
     public static IReadOnlyList<ConfiguredResource> Compose(
         ConfiguredSpace space,
         ConfiguredActivity activity,
-        ConfiguredSource? source)
+        ConfiguredSource? source
+    )
     {
         ArgumentNullException.ThrowIfNull(space);
         ArgumentNullException.ThrowIfNull(activity);
@@ -249,7 +251,10 @@ public static class TargetComposition
                 }
 
                 resolved[assignment.Key] = new ConfiguredResource(
-                    assignment.Key, assignment.Value!, assignment.Optional);
+                    assignment.Key,
+                    assignment.Value!,
+                    assignment.Optional
+                );
             }
         }
 
@@ -328,7 +333,8 @@ public sealed class TargetCatalog
         }
 
         ConfiguredTarget? byPath = Targets.FirstOrDefault(candidate =>
-            string.Equals(candidate.DisplayPath, trimmed, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.DisplayPath, trimmed, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (byPath is not null)
         {
@@ -339,7 +345,8 @@ public sealed class TargetCatalog
         ConfiguredTarget[] byName =
         [
             .. Targets.Where(candidate =>
-                string.Equals(candidate.DisplayName, trimmed, StringComparison.OrdinalIgnoreCase))
+                string.Equals(candidate.DisplayName, trimmed, StringComparison.OrdinalIgnoreCase)
+            ),
         ];
 
         if (byName.Length == 1)
@@ -348,10 +355,11 @@ public sealed class TargetCatalog
             return true;
         }
 
-        problem = byName.Length > 1
-            ? $"'{trimmed}' names {byName.Length} targets ({string.Join(", ", byName.Select(match => match.Key))}). " +
-              "Use the full one."
-            : $"'{trimmed}' is not a configured target. Known: {string.Join(", ", Keys)}.";
+        problem =
+            byName.Length > 1
+                ? $"'{trimmed}' names {byName.Length} targets ({string.Join(", ", byName.Select(match => match.Key))}). "
+                    + "Use the full one."
+                : $"'{trimmed}' is not a configured target. Known: {string.Join(", ", Keys)}.";
 
         return false;
     }

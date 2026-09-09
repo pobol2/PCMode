@@ -27,7 +27,8 @@ public sealed class DisplayProviderTests
             {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
               {"id":"film","name":"Film","resources":{"theme":"Dark"}}]}]}
             """,
-            new DisplayProvider(Machine()));
+            new DisplayProvider(Machine())
+        );
 
         Assert.NotNull(configuration.Find("Film"));
     }
@@ -38,12 +39,15 @@ public sealed class DisplayProviderTests
         // The other half of the rule above. Unconfigured is fine until a mode
         // depends on it, and then it is refused by name rather than at the moment
         // the screens were supposed to change.
-        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() => Parse(
-            """
-            {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
-              {"id":"film","name":"Film","resources":{"display":"TVOnly"}}]}]}
-            """,
-            new DisplayProvider(Machine())));
+        ModeConfigurationException failure = Assert.Throws<ModeConfigurationException>(() =>
+            Parse(
+                """
+                {"schemaVersion":1,"spaces":[{"id":"space","name":"Space","activities":[
+                  {"id":"film","name":"Film","resources":{"display":"TVOnly"}}]}]}
+                """,
+                new DisplayProvider(Machine())
+            )
+        );
 
         Assert.Contains(DisplayProvider.LayoutsPath, failure.Message, StringComparison.Ordinal);
     }
@@ -78,7 +82,8 @@ public sealed class DisplayProviderTests
         // could not say which of them the machine was in.
         string? problem = Configure(
             new DisplayProvider(Machine()),
-            $$"""{ "monitors": { "TV": "{{Tv}}", "Cinema": "{{Tv}}" } }""");
+            $$"""{ "monitors": { "TV": "{{Tv}}", "Cinema": "{{Tv}}" } }"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("TV", problem, StringComparison.Ordinal);
@@ -100,7 +105,8 @@ public sealed class DisplayProviderTests
                 }
               }
             }
-            """);
+            """
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("Projector", problem, StringComparison.Ordinal);
@@ -121,7 +127,8 @@ public sealed class DisplayProviderTests
               "monitors": { "TV": "{{Tv}}" },
               "layouts": { "TVOnly": { "monitors": ["TV"], "requires": { "tvPower": "On" } } }
             }
-            """);
+            """
+        );
 
         Assert.Null(problem);
     }
@@ -143,7 +150,8 @@ public sealed class DisplayProviderTests
               "monitors": { "TV": "{{Tv}}" },
               "layouts": { "TVOnly": { "monitors": ["TV"], "requires": { "cursor": "Center" } } }
             }
-            """);
+            """
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("cursor", problem, StringComparison.OrdinalIgnoreCase);
@@ -171,7 +179,8 @@ public sealed class DisplayProviderTests
         // that cannot be laid out has no moment at which it becomes applicable.
         string? problem = Configure(
             new DisplayProvider(Machine()),
-            $$"""{ "monitors": { "A": "a", "B": "b", "C": "c" }, "layouts": { "L": {{layout}} } }""");
+            $$"""{ "monitors": { "A": "a", "B": "b", "C": "c" }, "layouts": { "L": {{layout}} } }"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains(expected, problem, StringComparison.Ordinal);
@@ -192,7 +201,8 @@ public sealed class DisplayProviderTests
                 "Cinema": { "monitors": ["TV"] }
               }
             }
-            """);
+            """
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("TVOnly", problem, StringComparison.Ordinal);
@@ -257,9 +267,9 @@ public sealed class DisplayProviderTests
 
         DisplayProvider provider = new(machine);
 
-        Assert.Null(Configure(
-            provider,
-            $$"""{ "monitors": { "Desk1": "{{Desk1}}", "Projector": "one that was sold" } }"""));
+        Assert.Null(
+            Configure(provider, $$"""{ "monitors": { "Desk1": "{{Desk1}}", "Projector": "one that was sold" } }""")
+        );
 
         DisplaySnapshot snapshot = provider.Discover();
 
@@ -288,8 +298,7 @@ public sealed class DisplayProviderTests
     // ---- readback -----------------------------------------------------------
 
     [Fact]
-    public void Reads_the_layout_the_machine_is_in() =>
-        Assert.Equal("Desktop", Provider(InDesktopLayout()).Read());
+    public void Reads_the_layout_the_machine_is_in() => Assert.Equal("Desktop", Provider(InDesktopLayout()).Read());
 
     [Fact]
     public void Reads_nothing_when_a_monitor_nobody_asked_for_is_also_on()
@@ -374,7 +383,8 @@ public sealed class DisplayProviderTests
 
         TransitionStep step = Assert.Single(
             outcome.Steps,
-            reported => reported.Resource == DisplayProvider.ResourceKey);
+            reported => reported.Resource == DisplayProvider.ResourceKey
+        );
 
         Assert.Equal(TransitionStepStatus.Applied, step.Status);
         Assert.Equal("Desktop", step.Target);
@@ -401,7 +411,8 @@ public sealed class DisplayProviderTests
 
         Assert.Equal(
             TransitionStepStatus.AlreadyCorrect,
-            Assert.Single(outcome.Steps, step => step.Resource == DisplayProvider.ResourceKey).Status);
+            Assert.Single(outcome.Steps, step => step.Resource == DisplayProvider.ResourceKey).Status
+        );
     }
 
     [Fact]
@@ -452,17 +463,37 @@ public sealed class DisplayProviderTests
         // takes longer to wake than an API call takes to return.
 
         FakeDisplayDevices machine = new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = Desk1, Name = "DELL U2720Q", Width = 2560, Height = 1440, Supported = [60, 144] })
-            .Add(new FakeMonitor { Path = Desk2, Name = "DELL U2720Q", Width = 1920, Height = 1080, Supported = [60] })
-            .Add(new FakeMonitor
-            {
-                Path = Tv,
-                Name = "LG TV SSCR2",
-                Width = 3840,
-                Height = 2160,
-                Supported = [60, 120],
-                WakesAfter = 4,
-            });
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Desk1,
+                    Name = "DELL U2720Q",
+                    Width = 2560,
+                    Height = 1440,
+                    Supported = [60, 144],
+                }
+            )
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Desk2,
+                    Name = "DELL U2720Q",
+                    Width = 1920,
+                    Height = 1080,
+                    Supported = [60],
+                }
+            )
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Tv,
+                    Name = "LG TV SSCR2",
+                    Width = 3840,
+                    Height = 2160,
+                    Supported = [60, 120],
+                    WakesAfter = 4,
+                }
+            );
 
         machine[Desk1].Active = true;
         machine[Desk1].Hz = 144;
@@ -478,7 +509,8 @@ public sealed class DisplayProviderTests
 
         TransitionStep step = Assert.Single(
             outcome.Steps,
-            reported => reported.Resource == DisplayProvider.ResourceKey);
+            reported => reported.Resource == DisplayProvider.ResourceKey
+        );
 
         Assert.Equal(TransitionStepStatus.Applied, step.Status);
         Assert.Equal(1, step.Attempts);
@@ -497,17 +529,21 @@ public sealed class DisplayProviderTests
 
         var provider = new DisplayProvider(machine);
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "monitors": { "TV": "{{Tv}}" },
-              "layouts": { "Cinema": { "monitors": ["TV"], "refresh": ["TV 240"] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "monitors": { "TV": "{{Tv}}" },
+                  "layouts": { "Cinema": { "monitors": ["TV"], "refresh": ["TV 240"] } }
+                }
+                """
+            )
+        );
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("Cinema", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("Cinema", CancellationToken.None)
+        );
 
         Assert.Contains("240", failure.Message, StringComparison.Ordinal);
         Assert.Contains("60", failure.Message, StringComparison.Ordinal);
@@ -526,20 +562,23 @@ public sealed class DisplayProviderTests
 
         var provider = new DisplayProvider(machine);
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "monitors": { "Desk1": "{{Desk1}}", "Desk2": "{{Desk2}}" },
-              "layouts": {
-                "Centered": {
-                  "monitors": ["Desk1", "Desk2"],
-                  "primary": "Desk1",
-                  "placement": ["Desk2 RightOf Desk1 Center"]
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "monitors": { "Desk1": "{{Desk1}}", "Desk2": "{{Desk2}}" },
+                  "layouts": {
+                    "Centered": {
+                      "monitors": ["Desk1", "Desk2"],
+                      "primary": "Desk1",
+                      "placement": ["Desk2 RightOf Desk1 Center"]
+                    }
+                  }
                 }
-              }
-            }
-            """));
+                """
+            )
+        );
 
         provider.Apply("Centered", CancellationToken.None);
 
@@ -558,8 +597,9 @@ public sealed class DisplayProviderTests
         machine[Desk2].X = 0;
         machine.IgnoresArrange = true;
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => Provider(machine).Apply("Desktop", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            Provider(machine).Apply("Desktop", CancellationToken.None)
+        );
 
         Assert.Single(machine.Arrangements);
         Assert.Contains("Desk2", failure.Message, StringComparison.Ordinal);
@@ -567,8 +607,7 @@ public sealed class DisplayProviderTests
 
     // ---- helpers ------------------------------------------------------------
 
-    private static readonly string Settings =
-        $$"""
+    private static readonly string Settings = $$"""
         {
           "monitors": { "Desk1": "{{Desk1}}", "Desk2": "{{Desk2}}", "TV": "{{Tv}}" },
           "layouts": {
@@ -583,8 +622,7 @@ public sealed class DisplayProviderTests
         }
         """;
 
-    private static readonly string Document =
-        $$"""
+    private static readonly string Document = $$"""
         {
           "schemaVersion": 1,
           "providers": { "display": {{Settings}} },
@@ -600,9 +638,36 @@ public sealed class DisplayProviderTests
     /// <summary>Three monitors, two of which report the identical name.</summary>
     private static FakeDisplayDevices Machine() =>
         new FakeDisplayDevices()
-            .Add(new FakeMonitor { Path = Desk1, Name = "DELL U2720Q", Width = 2560, Height = 1440, Supported = [60, 144] })
-            .Add(new FakeMonitor { Path = Desk2, Name = "DELL U2720Q", Width = 1920, Height = 1080, Supported = [60] })
-            .Add(new FakeMonitor { Path = Tv, Name = "LG TV SSCR2", Width = 3840, Height = 2160, Supported = [60, 120] });
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Desk1,
+                    Name = "DELL U2720Q",
+                    Width = 2560,
+                    Height = 1440,
+                    Supported = [60, 144],
+                }
+            )
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Desk2,
+                    Name = "DELL U2720Q",
+                    Width = 1920,
+                    Height = 1080,
+                    Supported = [60],
+                }
+            )
+            .Add(
+                new FakeMonitor
+                {
+                    Path = Tv,
+                    Name = "LG TV SSCR2",
+                    Width = 3840,
+                    Height = 2160,
+                    Supported = [60, 120],
+                }
+            );
 
     private static FakeDisplayDevices InDesktopLayout()
     {
@@ -637,7 +702,10 @@ public sealed class DisplayProviderTests
         root.Write(Document);
 
         IReadOnlyList<IModeResourceProvider> providers =
-            [new FakeProvider("theme", "Dark"), new DisplayProvider(machine)];
+        [
+            new FakeProvider("theme", "Dark"),
+            new DisplayProvider(machine),
+        ];
 
         // A fake clock, because this provider's convergence policy settles for
         // well over a second and these tests are about what it does, not how
@@ -646,7 +714,8 @@ public sealed class DisplayProviderTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
     }
 
     private static ModeConfiguration Parse(string json, DisplayProvider display) =>

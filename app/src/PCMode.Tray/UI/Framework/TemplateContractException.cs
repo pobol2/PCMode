@@ -14,5 +14,4 @@ namespace PCMode.Tray.UI.Framework;
 /// hole. Failing at template application instead turns a whole class of
 /// layout mistakes into an immediate, located error.
 /// </remarks>
-public sealed class TemplateContractException(string message)
-    : InvalidOperationException(message);
+public sealed class TemplateContractException(string message) : InvalidOperationException(message);

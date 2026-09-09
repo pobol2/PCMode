@@ -104,10 +104,12 @@ public sealed class DdcMonitorConnection
     /// probed -- see <see cref="TryGetCapabilities"/>, which is what a
     /// provider's own <c>AvailabilityOf</c> does next.
     /// </remarks>
-    public ResourceAvailability Availability => IsConfigured
-        ? ResourceAvailability.Unknown($"monitor '{_alias}' has not been probed yet.")
-        : ResourceAvailability.Disabled(
-            $"no DDC/CI monitor '{_alias}' is configured under '{DdcMonitorCatalog.SettingsPath}'.");
+    public ResourceAvailability Availability =>
+        IsConfigured
+            ? ResourceAvailability.Unknown($"monitor '{_alias}' has not been probed yet.")
+            : ResourceAvailability.Disabled(
+                $"no DDC/CI monitor '{_alias}' is configured under '{DdcMonitorCatalog.SettingsPath}'."
+            );
 
     /// <summary>
     /// This monitor's capabilities, bounded, or the reason they could not be
@@ -125,8 +127,8 @@ public sealed class DdcMonitorConnection
             {
                 capabilities = DdcCapabilities.None;
                 problem =
-                    $"monitor '{_alias}' did not answer a DDC/CI capability request within " +
-                    $"{ProbeTimeout.TotalSeconds:0.#}s. It may be asleep, disconnected, or not present.";
+                    $"monitor '{_alias}' did not answer a DDC/CI capability request within "
+                    + $"{ProbeTimeout.TotalSeconds:0.#}s. It may be asleep, disconnected, or not present.";
                 return false;
             }
 
@@ -161,7 +163,9 @@ public sealed class DdcMonitorConnection
         }
     }
 
-    private string Require() => _devicePath
+    private string Require() =>
+        _devicePath
         ?? throw new InvalidOperationException(
-            $"No DDC/CI monitor is configured for '{_alias}'. Add one under '{DdcMonitorCatalog.SettingsPath}'.");
+            $"No DDC/CI monitor is configured for '{_alias}'. Add one under '{DdcMonitorCatalog.SettingsPath}'."
+        );
 }

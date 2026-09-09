@@ -13,8 +13,7 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 public sealed class HierarchyActivationTests
 {
-    private const string Document =
-        """
+    private const string Document = """
         {
           "schemaVersion": 1,
           "spaces": [
@@ -76,7 +75,8 @@ public sealed class HierarchyActivationTests
             Engine = new ModeEngine(
                 ModeConfiguration.LoadOrCreate(Root.Path, providers),
                 new ModeStateStore(Root.StateFile),
-                providers);
+                providers
+            );
         }
 
         public TemporaryRoot Root { get; }
@@ -145,11 +145,10 @@ public sealed class HierarchyActivationTests
         // dropped, so a person can see why the transition was short.
         Assert.Equal(
             TransitionStepStatus.AlreadyCorrect,
-            outcome.Steps.Single(step => step.Resource == "display").Status);
+            outcome.Steps.Single(step => step.Resource == "display").Status
+        );
 
-        Assert.Equal(
-            TransitionStepStatus.Applied,
-            outcome.Steps.Single(step => step.Resource == "audio").Status);
+        Assert.Equal(TransitionStepStatus.Applied, outcome.Steps.Single(step => step.Resource == "audio").Status);
 
         Assert.Equal(["Speakers", "Soundbar"], world.Audio.Applied);
     }
@@ -216,7 +215,8 @@ public sealed class HierarchyActivationTests
         string document = Document.Replace(
             "{ \"id\": \"movies\", \"name\": \"Movies\"",
             "{ \"id\": \"movies\", \"name\": \"Movies\", \"enabled\": false",
-            StringComparison.Ordinal);
+            StringComparison.Ordinal
+        );
 
         using var world = new World(document);
 

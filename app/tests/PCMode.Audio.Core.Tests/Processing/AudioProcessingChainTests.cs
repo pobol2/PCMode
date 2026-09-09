@@ -10,18 +10,11 @@ public sealed class AudioProcessingChainTests
     [Fact]
     public void Processors_run_in_declared_order()
     {
-        var samples = new[]
-        {
-            1.0f
-        };
+        var samples = new[] { 1.0f };
 
-        var chain = new AudioProcessingChain(
-            new AddProcessor(1.0f),
-            new MultiplyProcessor(2.0f));
+        var chain = new AudioProcessingChain(new AddProcessor(1.0f), new MultiplyProcessor(2.0f));
 
-        var block = new AudioBlock(
-            samples,
-            new AudioFormat(48_000, 1));
+        var block = new AudioBlock(samples, new AudioFormat(48_000, 1));
 
         chain.Process(block);
 
@@ -31,17 +24,11 @@ public sealed class AudioProcessingChainTests
     [Fact]
     public void Empty_chain_is_a_no_op()
     {
-        var samples = new[]
-        {
-            0.25f,
-            -0.5f
-        };
+        var samples = new[] { 0.25f, -0.5f };
 
         var chain = new AudioProcessingChain();
 
-        var block = new AudioBlock(
-            samples,
-            new AudioFormat(48_000, 2));
+        var block = new AudioBlock(samples, new AudioFormat(48_000, 2));
 
         chain.Process(block);
 

@@ -23,7 +23,8 @@ public sealed class TransitionPlanTests
             Mode("Desk", ("theme", "Light"), ("cursor", "Center"), ("audio", "Speakers")),
             new FakeProvider("theme"),
             new FakeProvider("cursor"),
-            new FakeProvider("audio"));
+            new FakeProvider("audio")
+        );
 
         Assert.Equal(["theme", "cursor", "audio"], Keys(plan));
     }
@@ -37,7 +38,8 @@ public sealed class TransitionPlanTests
         TransitionPlan plan = Plan(
             Mode("Film", ("cursor", "Corner"), ("display", "TVOnly")),
             new FakeProvider("cursor") { RunsAfter = ["display"] },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Equal(["display", "cursor"], Keys(plan));
     }
@@ -51,7 +53,8 @@ public sealed class TransitionPlanTests
             Mode("Quiet", ("theme", "Dark"), ("cursor", "Corner")),
             new FakeProvider("theme"),
             new FakeProvider("cursor") { RunsAfter = ["display"] },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Equal(["theme", "cursor"], Keys(plan));
         Assert.DoesNotContain(plan.Steps, step => step.Key == "display");
@@ -95,7 +98,8 @@ public sealed class TransitionPlanTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Equal(["display", "audio"], Keys(plan));
 
@@ -120,7 +124,8 @@ public sealed class TransitionPlanTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Equal(["audio"], Keys(plan));
         Assert.Empty(plan.Added);
@@ -146,7 +151,8 @@ public sealed class TransitionPlanTests
                     ["TVOnly"] = [new ResourceRequirement("theme", "Dark")],
                 },
             },
-            new FakeProvider("theme"));
+            new FakeProvider("theme")
+        );
 
         Assert.Equal(["theme", "display", "audio"], Keys(plan));
         Assert.Equal(["display", "theme"], plan.Added.Select(step => step.Key).Order());
@@ -166,7 +172,8 @@ public sealed class TransitionPlanTests
                 {
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
-            });
+            }
+        );
 
         Assert.Equal(["display", "audio"], Keys(plan));
         Assert.Empty(plan.Added);
@@ -185,7 +192,8 @@ public sealed class TransitionPlanTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Equal(["display", "audio"], Keys(plan));
     }
@@ -207,7 +215,8 @@ public sealed class TransitionPlanTests
                 {
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
-            });
+            }
+        );
 
         Assert.Contains("Desktop", problem, StringComparison.Ordinal);
         Assert.Contains("TVOnly", problem, StringComparison.Ordinal);
@@ -235,7 +244,8 @@ public sealed class TransitionPlanTests
                     ["Dark"] = [new ResourceRequirement("display", "Desktop")],
                 },
             },
-            new FakeProvider("display"));
+            new FakeProvider("display")
+        );
 
         Assert.Contains("TVOnly", problem, StringComparison.Ordinal);
         Assert.Contains("Desktop", problem, StringComparison.Ordinal);
@@ -252,7 +262,8 @@ public sealed class TransitionPlanTests
                 {
                     ["TV"] = [new ResourceRequirement("television", "On")],
                 },
-            });
+            }
+        );
 
         Assert.Contains("television", problem, StringComparison.Ordinal);
     }
@@ -271,7 +282,8 @@ public sealed class TransitionPlanTests
                     ["TV"] = [new ResourceRequirement("display", "Nonsense")],
                 },
             },
-            new FakeProvider("display") { Allowed = ["Desktop", "TVOnly"] });
+            new FakeProvider("display") { Allowed = ["Desktop", "TVOnly"] }
+        );
 
         Assert.Contains("Nonsense", problem, StringComparison.Ordinal);
     }
@@ -284,7 +296,8 @@ public sealed class TransitionPlanTests
         string problem = Rejected(
             Mode("Loop", ("audio", "TV"), ("display", "TVOnly")),
             new FakeProvider("audio") { RunsAfter = ["display"] },
-            new FakeProvider("display") { RunsAfter = ["audio"] });
+            new FakeProvider("display") { RunsAfter = ["audio"] }
+        );
 
         Assert.Contains("audio", problem, StringComparison.Ordinal);
         Assert.Contains("display", problem, StringComparison.Ordinal);
@@ -306,7 +319,8 @@ public sealed class TransitionPlanTests
                     ["TV"] = [new ResourceRequirement("display", "TVOnly")],
                 },
             },
-            new FakeProvider("display") { RunsAfter = ["audio"] });
+            new FakeProvider("display") { RunsAfter = ["audio"] }
+        );
 
         Assert.Contains("audio", problem, StringComparison.Ordinal);
         Assert.Contains("display", problem, StringComparison.Ordinal);
@@ -319,7 +333,8 @@ public sealed class TransitionPlanTests
             Mode("Loop", ("a", "1"), ("b", "1"), ("c", "1")),
             new FakeProvider("a") { RunsAfter = ["c"] },
             new FakeProvider("b") { RunsAfter = ["a"] },
-            new FakeProvider("c") { RunsAfter = ["b"] });
+            new FakeProvider("c") { RunsAfter = ["b"] }
+        );
 
         Assert.Contains("cannot be ordered", problem, StringComparison.Ordinal);
     }
@@ -329,9 +344,7 @@ public sealed class TransitionPlanTests
     {
         // A programming slip in a provider, not a configuration a user can
         // write. Refusing every transition over it would be a poor trade.
-        TransitionPlan plan = Plan(
-            Mode("Odd", ("theme", "Dark")),
-            new FakeProvider("theme") { RunsAfter = ["theme"] });
+        TransitionPlan plan = Plan(Mode("Odd", ("theme", "Dark")), new FakeProvider("theme") { RunsAfter = ["theme"] });
 
         Assert.Equal(["theme"], Keys(plan));
     }
@@ -351,7 +364,8 @@ public sealed class TransitionPlanTests
     {
         string problem = Rejected(
             Mode("Broken", ("theme", "Purple")),
-            new FakeProvider("theme") { Allowed = ["Light", "Dark"] });
+            new FakeProvider("theme") { Allowed = ["Light", "Dark"] }
+        );
 
         Assert.Contains("Purple", problem, StringComparison.Ordinal);
     }
@@ -398,8 +412,7 @@ public sealed class TransitionPlanTests
     /// A configuration in the shape a machine would really have, read by the
     /// real providers.
     /// </summary>
-    private const string RealDocument =
-        """
+    private const string RealDocument = """
         {
           "schemaVersion": 1,
           "providers": {
@@ -420,12 +433,12 @@ public sealed class TransitionPlanTests
         """;
 
     private static IModeResourceProvider[] RealProviders() =>
-    [
-        new FakeProvider("theme") { Allowed = ["Light", "Dark"] },
-        new CursorProvider(new FakeCursor(), new FakeDisplay(new DisplayRect(0, 0, 1920, 1080))),
-        new AudioProvider(new FakeAudioEndpoints()),
-        new DisplayProvider(new FakeDisplayDevices()),
-    ];
+        [
+            new FakeProvider("theme") { Allowed = ["Light", "Dark"] },
+            new CursorProvider(new FakeCursor(), new FakeDisplay(new DisplayRect(0, 0, 1920, 1080))),
+            new AudioProvider(new FakeAudioEndpoints()),
+            new DisplayProvider(new FakeDisplayDevices()),
+        ];
 
     /// <summary>
     /// A mode, and the very providers that were configured from the document it
@@ -457,7 +470,8 @@ public sealed class TransitionPlanTests
                 DisplayName = name,
                 DisplayPath = name,
                 Identity = new TargetIdentity("space", name.ToLowerInvariant(), null),
-            });
+            }
+        );
 
     private static IReadOnlyList<string> Keys(TransitionPlan plan) => [.. plan.Steps.Select(step => step.Key)];
 

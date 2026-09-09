@@ -21,13 +21,15 @@ public sealed record TrayMenuState(
     string? CurrentKey,
     string CurrentLabel,
     bool IsIdle,
-    bool CanShowPicker);
+    bool CanShowPicker
+);
 
 public sealed record TrayMenuActions(
     Func<string, Task> ApplyTarget,
     Action ShowPicker,
     Action OpenPCMode,
-    Func<Task> Exit);
+    Func<Task> Exit
+);
 
 /// <summary>
 /// Builds the native tray menu from the running engine's targets, without
@@ -74,9 +76,7 @@ public static class TrayMenu
                 {
                     Checked = string.Equals(target.Key, state.CurrentKey, StringComparison.OrdinalIgnoreCase),
                     Enabled = state.IsIdle && target.Enabled,
-                    ToolTipText = target.Enabled
-                        ? target.DisplayPath
-                        : $"{target.DisplayPath} (disabled in Spaces)",
+                    ToolTipText = target.Enabled ? target.DisplayPath : $"{target.DisplayPath} (disabled in Spaces)",
                 };
 
                 string captured = target.Key;
@@ -87,7 +87,8 @@ public static class TrayMenu
             // Ticked when something inside it is, so the current Space is
             // visible without opening every submenu.
             group.Checked = space.Any(target =>
-                string.Equals(target.Key, state.CurrentKey, StringComparison.OrdinalIgnoreCase));
+                string.Equals(target.Key, state.CurrentKey, StringComparison.OrdinalIgnoreCase)
+            );
 
             menu.Items.Add(group);
         }
@@ -123,11 +124,12 @@ public static class TrayMenu
     /// the Activity it belongs to, so a Source is never a bare word with no
     /// context.
     /// </summary>
-    private static string LabelOf(ConfiguredTarget target) => target switch
-    {
-        { SourceName: not null } => $"{target.ActivityName} — {target.SourceName}",
-        _ => target.ActivityName!,
-    };
+    private static string LabelOf(ConfiguredTarget target) =>
+        target switch
+        {
+            { SourceName: not null } => $"{target.ActivityName} — {target.SourceName}",
+            _ => target.ActivityName!,
+        };
 
     /// <summary>The tray icon's tooltip text, capped to what Windows allows.</summary>
     public static string StatusText(string currentLabel)

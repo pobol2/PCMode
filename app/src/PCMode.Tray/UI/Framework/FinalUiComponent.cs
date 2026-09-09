@@ -18,6 +18,7 @@ public sealed class FinalUiComponent : ContentControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(FinalUiComponent),
-            new FrameworkPropertyMetadata(typeof(FinalUiComponent)));
+            new FrameworkPropertyMetadata(typeof(FinalUiComponent))
+        );
     }
 }

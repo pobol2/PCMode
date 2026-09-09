@@ -94,7 +94,8 @@ public sealed class DisplayLayoutTests
     public void Round_trips_through_the_configuration_store_unchanged_when_left_at_the_default()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "display": { "monitors": { "A": "\\\\?\\DISPLAY#1", "B": "\\\\?\\DISPLAY#2" } } },
@@ -102,7 +103,8 @@ public sealed class DisplayLayoutTests
                 { "id": "desktop", "name": "Desktop", "resources": {} }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
             root.Path,
@@ -110,7 +112,8 @@ public sealed class DisplayLayoutTests
             [
                 new LayoutMonitorEdit("A", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
                 new LayoutMonitorEdit("B", Primary: false, Direction: "RightOf", Anchor: "A", RefreshHz: null),
-            ]);
+            ]
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -128,7 +131,8 @@ public sealed class DisplayLayoutTests
     public void Round_trips_a_centered_offset_placement_through_the_configuration_store()
     {
         using var root = new TemporaryRoot();
-        root.Write("""
+        root.Write(
+            """
             {
               "schemaVersion": 1,
               "providers": { "display": { "monitors": { "A": "\\\\?\\DISPLAY#1", "B": "\\\\?\\DISPLAY#2" } } },
@@ -136,7 +140,8 @@ public sealed class DisplayLayoutTests
                 { "id": "desktop", "name": "Desktop", "resources": {} }
               ] } ]
             }
-            """);
+            """
+        );
 
         ModeSaveOutcome outcome = LayoutConfigurationStore.Save(
             root.Path,
@@ -144,9 +149,16 @@ public sealed class DisplayLayoutTests
             [
                 new LayoutMonitorEdit("A", Primary: true, Direction: null, Anchor: null, RefreshHz: null),
                 new LayoutMonitorEdit(
-                    "B", Primary: false, Direction: "RightOf", Anchor: "A", RefreshHz: null,
-                    Alignment: "Center", Offset: -15),
-            ]);
+                    "B",
+                    Primary: false,
+                    Direction: "RightOf",
+                    Anchor: "A",
+                    RefreshHz: null,
+                    Alignment: "Center",
+                    Offset: -15
+                ),
+            ]
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 

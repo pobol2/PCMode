@@ -63,7 +63,8 @@ public sealed record HardwareItem(
     IReadOnlyList<HardwareDetail> Details,
     string? Identifier = null,
     string? Alias = null,
-    string Category = "")
+    string Category = ""
+)
 {
     /// <summary>Whether this item is something PCMode's configuration can name at all.</summary>
     public bool SupportsAlias => Identifier is not null;
@@ -78,10 +79,7 @@ public sealed record HardwareItem(
 /// the display API refusing a query. Null is the ordinary case, including a
 /// category that genuinely found nothing.
 /// </param>
-public sealed record HardwareCategoryResult(
-    string Category,
-    IReadOnlyList<HardwareItem> Items,
-    string? Problem);
+public sealed record HardwareCategoryResult(string Category, IReadOnlyList<HardwareItem> Items, string? Problem);
 
 /// <summary>One category of hardware this build knows how to look for.</summary>
 /// <remarks>

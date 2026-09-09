@@ -1,8 +1,9 @@
 using System.Windows.Interop;
 using System.Windows.Threading;
 using PCMode.Picker;
-using PCMode.Tray.Platform.Input;
 using PCMode.Tray.Elements.Settings;
+using PCMode.Tray.Platform.Input;
+using PCMode.Tray.Platform.Picker;
 
 namespace PCMode.Tray.Picker;
 
@@ -14,9 +15,7 @@ namespace PCMode.Tray.Picker;
 /// applies straight through <see cref="PCMode.Engine.EngineRuntime"/>, the
 /// same as <c>Platform/TrayIcon/TrayMenu.cs</c>'s <c>TrayMenuActions</c>.
 /// </remarks>
-public sealed record PickerHostActions(
-    Func<string?> CurrentTargetKey,
-    Func<string, Task> ApplyTarget);
+public sealed record PickerHostActions(Func<string?> CurrentTargetKey, Func<string, Task> ApplyTarget);
 
 /// <summary>
 /// The native shell's global input: the hotkeys, the controller and the wheel.
@@ -66,7 +65,8 @@ public sealed class PickerHost : IDisposable
         PickerWindow window,
         XInputReader? gamepads,
         ControllerPoller? controller,
-        DispatcherTimer? polling)
+        DispatcherTimer? polling
+    )
     {
         _actions = actions;
         _messages = messages;
@@ -103,18 +103,21 @@ public sealed class PickerHost : IDisposable
         IReadOnlyList<DirectShortcut> shortcuts,
         PickerMonitorChoice monitorChoice,
         bool pollController,
-        out string? refusal)
+        out string? refusal
+    )
     {
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(favorites);
         ArgumentNullException.ThrowIfNull(shortcuts);
 
-        var messages = new HwndSource(new HwndSourceParameters("PCMode input")
-        {
-            ParentWindow = MessageOnlyParent,
-            Width = 0,
-            Height = 0,
-        });
+        var messages = new HwndSource(
+            new HwndSourceParameters("PCMode input")
+            {
+                ParentWindow = MessageOnlyParent,
+                Width = 0,
+                Height = 0,
+            }
+        );
 
         var hotkeys = new GlobalHotkeys(messages.Handle);
 

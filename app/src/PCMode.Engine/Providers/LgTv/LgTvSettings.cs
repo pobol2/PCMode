@@ -62,14 +62,14 @@ public sealed record LgTvSettings
 
     /// <summary>Every input id a television may be pointed at, in socket order.</summary>
     public static readonly IReadOnlyList<string> HdmiInputIds =
-        [.. Enumerable.Range(1, HighestHdmiInput).Select(number => $"HDMI_{number}")];
+    [
+        .. Enumerable.Range(1, HighestHdmiInput).Select(number => $"HDMI_{number}"),
+    ];
 
     /// <summary>The answer for a machine with no television configured.</summary>
     public static readonly LgTvSettings Disabled = new();
 
-    private LgTvSettings()
-    {
-    }
+    private LgTvSettings() { }
 
     /// <summary>Whether there is a television to talk to at all.</summary>
     public bool Enabled { get; private init; }
@@ -123,12 +123,10 @@ public sealed record LgTvSettings
         new Dictionary<string, LgTvProfile>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The configured input names, in name order.</summary>
-    public IReadOnlyList<string> InputNames =>
-        [.. Inputs.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> InputNames => [.. Inputs.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>The configured profile names, in name order.</summary>
-    public IReadOnlyList<string> ProfileNames =>
-        [.. Profiles.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> ProfileNames => [.. Profiles.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>The profile a mode named, if there is one.</summary>
     public LgTvProfile? ProfileFor(string name) =>
@@ -252,8 +250,10 @@ public sealed record LgTvSettings
             }
             else if (property.NameEquals("macAddress"))
             {
-                if (!TryReadText(property, "macAddress", out string? written, out problem) ||
-                    !TryNormaliseMac(written!, out mac, out problem))
+                if (
+                    !TryReadText(property, "macAddress", out string? written, out problem)
+                    || !TryNormaliseMac(written!, out mac, out problem)
+                )
                 {
                     return false;
                 }
@@ -306,9 +306,9 @@ public sealed record LgTvSettings
                 // Refused rather than ignored, like every other unknown field. A
                 // dropped one is a setting the user believes they have written.
                 problem =
-                    $"'{SettingsPath}' does not understand '{property.Name}'. It takes " +
-                    "'enabled', 'host', 'macAddress', 'inputs', 'profileInput', 'profiles', " +
-                    "'safeDisplayTarget' and 'displayMonitor'.";
+                    $"'{SettingsPath}' does not understand '{property.Name}'. It takes "
+                    + "'enabled', 'host', 'macAddress', 'inputs', 'profileInput', 'profiles', "
+                    + "'safeDisplayTarget' and 'displayMonitor'.";
 
                 return false;
             }
@@ -316,20 +316,30 @@ public sealed record LgTvSettings
 
         if (profileInput is not null && !inputs.ContainsKey(profileInput))
         {
-            problem = inputs.Count == 0
-                ? $"'{SettingsPath}.profileInput' is '{profileInput}', and no inputs are defined."
-                : $"'{SettingsPath}.profileInput' is '{profileInput}', which is not one of the " +
-                  $"inputs defined here: {string.Join(", ", inputs.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
+            problem =
+                inputs.Count == 0
+                    ? $"'{SettingsPath}.profileInput' is '{profileInput}', and no inputs are defined."
+                    : $"'{SettingsPath}.profileInput' is '{profileInput}', which is not one of the "
+                        + $"inputs defined here: {string.Join(", ", inputs.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
 
             return false;
         }
 
-        IReadOnlyDictionary<string, LgTvProfile> profiles =
-            new Dictionary<string, LgTvProfile>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, LgTvProfile> profiles = new Dictionary<string, LgTvProfile>(
+            StringComparer.OrdinalIgnoreCase
+        );
 
         if (profileSection is JsonElement declared)
         {
-            if (!LgTvProfile.TryParse(declared, inputs, profileInput, out IReadOnlyDictionary<string, LgTvProfile>? read, out problem))
+            if (
+                !LgTvProfile.TryParse(
+                    declared,
+                    inputs,
+                    profileInput,
+                    out IReadOnlyDictionary<string, LgTvProfile>? read,
+                    out problem
+                )
+            )
             {
                 return false;
             }
@@ -359,8 +369,8 @@ public sealed record LgTvSettings
         if (string.IsNullOrWhiteSpace(host))
         {
             problem =
-                $"'{SettingsPath}' is enabled but has no 'host'. " +
-                "Give the television's address on your network, in quotes.";
+                $"'{SettingsPath}' is enabled but has no 'host'. "
+                + "Give the television's address on your network, in quotes.";
 
             return false;
         }
@@ -379,8 +389,8 @@ public sealed record LgTvSettings
             // socket to be asked. A configuration that can only ever switch it off
             // is a trap that springs the first time somebody selects a TV mode.
             problem =
-                $"'{SettingsPath}' is enabled but has no 'macAddress'. " +
-                "Switching a television on is done with a Wake-on-LAN packet, which needs it.";
+                $"'{SettingsPath}' is enabled but has no 'macAddress'. "
+                + "Switching a television on is done with a Wake-on-LAN packet, which needs it.";
 
             return false;
         }
@@ -404,8 +414,7 @@ public sealed record LgTvSettings
     {
         value = null;
 
-        if (property.Value.ValueKind != JsonValueKind.String ||
-            string.IsNullOrWhiteSpace(property.Value.GetString()))
+        if (property.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(property.Value.GetString()))
         {
             problem = $"'{SettingsPath}.{name}' must be a value in quotes, and not empty.";
             return false;
@@ -416,16 +425,13 @@ public sealed record LgTvSettings
         return true;
     }
 
-    private static bool TryReadInputs(
-        JsonElement element,
-        Dictionary<string, string> inputs,
-        out string? problem)
+    private static bool TryReadInputs(JsonElement element, Dictionary<string, string> inputs, out string? problem)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
             problem =
-                $"'{SettingsPath}.inputs' must be an object mapping a name you choose to " +
-                "the television's input, like { \"PC\": \"HDMI_4\" }.";
+                $"'{SettingsPath}.inputs' must be an object mapping a name you choose to "
+                + "the television's input, like { \"PC\": \"HDMI_4\" }.";
 
             return false;
         }
@@ -442,12 +448,11 @@ public sealed record LgTvSettings
 
             string logical = input.Name.Trim();
 
-            if (input.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(input.Value.GetString()))
+            if (input.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(input.Value.GetString()))
             {
                 problem =
-                    $"'{SettingsPath}.inputs.{logical}' must name one of the television's " +
-                    "inputs, like \"HDMI_4\", in quotes.";
+                    $"'{SettingsPath}.inputs.{logical}' must name one of the television's "
+                    + "inputs, like \"HDMI_4\", in quotes.";
 
                 return false;
             }
@@ -470,9 +475,9 @@ public sealed record LgTvSettings
                 // The readback would have to pick one of them, and whichever it
                 // picked would make the other mode report the wrong input forever.
                 problem =
-                    $"'{SettingsPath}.inputs' points both '{used[id!]}' and '{logical}' at " +
-                    $"'{id}'. One input cannot be two, and nothing could say which of them " +
-                    "the television is currently showing.";
+                    $"'{SettingsPath}.inputs' points both '{used[id!]}' and '{logical}' at "
+                    + $"'{id}'. One input cannot be two, and nothing could say which of them "
+                    + "the television is currently showing.";
 
                 return false;
             }
@@ -499,7 +504,8 @@ public sealed record LgTvSettings
             written.Trim(),
             @"^(?:hdmi[_\- ]?)?([1-9])$",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-            TimeSpan.FromSeconds(1));
+            TimeSpan.FromSeconds(1)
+        );
 
         if (!hdmi.Success)
         {
@@ -529,8 +535,8 @@ public sealed record LgTvSettings
         if (digits.Length != 12 || !digits.All(Uri.IsHexDigit))
         {
             problem =
-                $"'{SettingsPath}.macAddress' is '{written.Trim()}', which is not a MAC address. " +
-                "It needs exactly 12 hexadecimal digits, like AA:BB:CC:DD:EE:FF.";
+                $"'{SettingsPath}.macAddress' is '{written.Trim()}', which is not a MAC address. "
+                + "It needs exactly 12 hexadecimal digits, like AA:BB:CC:DD:EE:FF.";
 
             return false;
         }
@@ -584,11 +590,10 @@ public sealed record LgTvCatalog
 
     public static readonly LgTvCatalog Empty = new(
         new Dictionary<string, LgTvSettings>(StringComparer.OrdinalIgnoreCase),
-        null);
+        null
+    );
 
-    private LgTvCatalog(
-        IReadOnlyDictionary<string, LgTvSettings> televisions,
-        string? defaultName)
+    private LgTvCatalog(IReadOnlyDictionary<string, LgTvSettings> televisions, string? defaultName)
     {
         Televisions = televisions;
         DefaultName = defaultName;
@@ -598,8 +603,7 @@ public sealed record LgTvCatalog
 
     public string? DefaultName { get; }
 
-    public IReadOnlyList<string> Names =>
-        [.. Televisions.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> Names => [.. Televisions.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     public LgTvSettings DefaultSettings =>
         DefaultName is not null && Televisions.TryGetValue(DefaultName, out LgTvSettings? settings)
@@ -607,8 +611,7 @@ public sealed record LgTvCatalog
             : LgTvSettings.Disabled;
 
     public LgTvSettings? SettingsFor(string name) =>
-        !string.IsNullOrWhiteSpace(name) &&
-        Televisions.TryGetValue(name.Trim(), out LgTvSettings? settings)
+        !string.IsNullOrWhiteSpace(name) && Televisions.TryGetValue(name.Trim(), out LgTvSettings? settings)
             ? settings
             : null;
 
@@ -636,10 +639,12 @@ public sealed record LgTvCatalog
         {
             using JsonDocument document = JsonDocument.Parse(json, DocumentReadOptions);
 
-            if (!TryFindProperty(document.RootElement, "providers", out JsonElement providers) ||
-                providers.ValueKind != JsonValueKind.Object ||
-                !TryFindProperty(providers, LgTvSettings.SectionKey, out JsonElement section) ||
-                section.ValueKind != JsonValueKind.Object)
+            if (
+                !TryFindProperty(document.RootElement, "providers", out JsonElement providers)
+                || providers.ValueKind != JsonValueKind.Object
+                || !TryFindProperty(providers, LgTvSettings.SectionKey, out JsonElement section)
+                || section.ValueKind != JsonValueKind.Object
+            )
             {
                 return LgTvDeclarations.None;
             }
@@ -668,8 +673,8 @@ public sealed record LgTvCatalog
             }
 
             string? requested =
-                TryFindProperty(section, DefaultProperty, out JsonElement declared) &&
-                declared.ValueKind == JsonValueKind.String
+                TryFindProperty(section, DefaultProperty, out JsonElement declared)
+                && declared.ValueKind == JsonValueKind.String
                     ? declared.GetString()?.Trim()
                     : null;
 
@@ -698,9 +703,9 @@ public sealed record LgTvCatalog
             return false;
         }
 
-        bool collectionShape = element.EnumerateObject().Any(property =>
-            property.NameEquals(DefaultProperty) ||
-            property.NameEquals(TelevisionsProperty));
+        bool collectionShape = element
+            .EnumerateObject()
+            .Any(property => property.NameEquals(DefaultProperty) || property.NameEquals(TelevisionsProperty));
 
         if (!collectionShape)
         {
@@ -714,7 +719,8 @@ public sealed record LgTvCatalog
                 {
                     [DefaultTelevisionName] = legacy!,
                 },
-                DefaultTelevisionName);
+                DefaultTelevisionName
+            );
 
             return true;
         }
@@ -732,8 +738,10 @@ public sealed record LgTvCatalog
                     continue;
                 }
 
-                if (property.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                if (
+                    property.Value.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(property.Value.GetString())
+                )
                 {
                     problem = $"'{LgTvSettings.SettingsPath}.{DefaultProperty}' must be a television name in quotes.";
                     return false;
@@ -748,8 +756,8 @@ public sealed record LgTvCatalog
             else
             {
                 problem =
-                    $"'{LgTvSettings.SettingsPath}' does not understand '{property.Name}' in the named-TV form. " +
-                    $"It takes '{DefaultProperty}' and '{TelevisionsProperty}'.";
+                    $"'{LgTvSettings.SettingsPath}' does not understand '{property.Name}' in the named-TV form. "
+                    + $"It takes '{DefaultProperty}' and '{TelevisionsProperty}'.";
 
                 return false;
             }
@@ -763,7 +771,8 @@ public sealed record LgTvCatalog
 
         if (declared.ValueKind != JsonValueKind.Object)
         {
-            problem = $"'{LgTvSettings.SettingsPath}.{TelevisionsProperty}' must be an object keyed by television name.";
+            problem =
+                $"'{LgTvSettings.SettingsPath}.{TelevisionsProperty}' must be an object keyed by television name.";
             return false;
         }
 
@@ -782,16 +791,15 @@ public sealed record LgTvCatalog
             if (!LgTvSettings.TryParse(television.Value, out LgTvSettings? tv, out string? televisionProblem))
             {
                 problem =
-                    $"Television '{name}' in '{LgTvSettings.SettingsPath}.{TelevisionsProperty}' is invalid. " +
-                    televisionProblem;
+                    $"Television '{name}' in '{LgTvSettings.SettingsPath}.{TelevisionsProperty}' is invalid. "
+                    + televisionProblem;
 
                 return false;
             }
 
             if (!televisions.TryAdd(name, tv!))
             {
-                problem =
-                    $"'{LgTvSettings.SettingsPath}.{TelevisionsProperty}' defines '{name}' more than once.";
+                problem = $"'{LgTvSettings.SettingsPath}.{TelevisionsProperty}' defines '{name}' more than once.";
                 return false;
             }
         }
@@ -810,12 +818,14 @@ public sealed record LgTvCatalog
             return true;
         }
 
-        if (requestedDefault is not null &&
-            !televisions.Keys.Any(name => string.Equals(name, requestedDefault, StringComparison.OrdinalIgnoreCase)))
+        if (
+            requestedDefault is not null
+            && !televisions.Keys.Any(name => string.Equals(name, requestedDefault, StringComparison.OrdinalIgnoreCase))
+        )
         {
             problem =
-                $"'{LgTvSettings.SettingsPath}.{DefaultProperty}' names '{requestedDefault}', which is not one of: " +
-                $"{string.Join(", ", televisions.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
+                $"'{LgTvSettings.SettingsPath}.{DefaultProperty}' names '{requestedDefault}', which is not one of: "
+                + $"{string.Join(", ", televisions.Keys.Order(StringComparer.OrdinalIgnoreCase))}.";
             return false;
         }
 
@@ -848,7 +858,8 @@ public sealed record LgTvCatalog
         if (requested is not null)
         {
             string? named = names.FirstOrDefault(name =>
-                string.Equals(name, requested, StringComparison.OrdinalIgnoreCase));
+                string.Equals(name, requested, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (named is not null)
             {
@@ -905,4 +916,3 @@ public readonly record struct LgTvDeclarations(IReadOnlyList<string> Names, stri
     public bool IsDefault(string name) =>
         DefaultName is not null && string.Equals(name, DefaultName, StringComparison.OrdinalIgnoreCase);
 }
-

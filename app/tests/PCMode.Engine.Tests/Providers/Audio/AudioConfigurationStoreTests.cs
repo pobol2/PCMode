@@ -60,10 +60,11 @@ public sealed class AudioConfigurationStoreTests
 
         ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(
             root.Path,
-            new AudioTargetEdit("Party", [
-                new AudioRouteEdit("Soundbar", Volume: 0.4),
-                new AudioRouteEdit("Speakers", DelayMs: 68, Gain: 0.8),
-            ]));
+            new AudioTargetEdit(
+                "Party",
+                [new AudioRouteEdit("Soundbar", Volume: 0.4), new AudioRouteEdit("Speakers", DelayMs: 68, Gain: 0.8)]
+            )
+        );
 
         Assert.True(outcome.Success, outcome.Problem);
 
@@ -85,13 +86,20 @@ public sealed class AudioConfigurationStoreTests
     {
         using var root = new TemporaryRoot(Document);
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(
+                    root.Path,
+                    new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")])
+                )
+                .Success
+        );
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Desk", [new AudioRouteEdit("Speakers")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(root.Path, new AudioTargetEdit("Desk", [new AudioRouteEdit("Speakers")]))
+                .Success
+        );
 
         Assert.Equal(["Desk", "Party"], ReadProvider(root).Targets.Select(target => target.Name));
     }
@@ -104,14 +112,20 @@ public sealed class AudioConfigurationStoreTests
         // and the validation the writer runs would refuse the whole edit.
         using var root = new TemporaryRoot(DocumentNamingParty);
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(
+                    root.Path,
+                    new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")])
+                )
+                .Success
+        );
 
         ModeSaveOutcome renamed = AudioConfigurationStore.SaveTarget(
             root.Path,
             new AudioTargetEdit("Everywhere", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")]),
-            previousName: "Party");
+            previousName: "Party"
+        );
 
         Assert.True(renamed.Success, renamed.Problem);
 
@@ -119,7 +133,8 @@ public sealed class AudioConfigurationStoreTests
 
         Assert.Equal(
             "Everywhere",
-            configuration.Find("Desktop")!.Resources.Single(r => r.Key == AudioProvider.ResourceKey).Value);
+            configuration.Find("Desktop")!.Resources.Single(r => r.Key == AudioProvider.ResourceKey).Value
+        );
 
         Assert.Equal("Everywhere", Assert.Single(ReadProvider(root).Targets).Name);
     }
@@ -129,9 +144,14 @@ public sealed class AudioConfigurationStoreTests
     {
         using var root = new TemporaryRoot(DocumentNamingParty);
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(
+                    root.Path,
+                    new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")])
+                )
+                .Success
+        );
 
         ModeSaveOutcome removed = AudioConfigurationStore.RemoveTarget(root.Path, "Party");
 
@@ -147,9 +167,14 @@ public sealed class AudioConfigurationStoreTests
     {
         using var root = new TemporaryRoot(Document);
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(
+                    root.Path,
+                    new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Speakers")])
+                )
+                .Success
+        );
 
         Assert.True(AudioConfigurationStore.RemoveTarget(root.Path, "party").Success);
         Assert.Empty(ReadProvider(root).Targets);
@@ -160,9 +185,14 @@ public sealed class AudioConfigurationStoreTests
     {
         using var root = new TemporaryRoot(Document);
 
-        Assert.True(AudioConfigurationStore.SaveTarget(
-            root.Path, new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Headphones")]))
-            .Success);
+        Assert.True(
+            AudioConfigurationStore
+                .SaveTarget(
+                    root.Path,
+                    new AudioTargetEdit("Party", [new AudioRouteEdit("Soundbar"), new AudioRouteEdit("Headphones")])
+                )
+                .Success
+        );
 
         ModeSaveOutcome outcome = AudioConfigurationStore.RemoveOutput(root.Path, "Soundbar");
 
@@ -196,13 +226,19 @@ public sealed class AudioConfigurationStoreTests
     [InlineData("Party", "Speakers", 9000, 1.0, "delay")]
     [InlineData("Party", "Speakers", 0, 99.0, "gain")]
     public void Refuses_an_edit_a_person_could_not_have_meant(
-        string name, string output, int delayMs, double gain, string mentions)
+        string name,
+        string output,
+        int delayMs,
+        double gain,
+        string mentions
+    )
     {
         using var root = new TemporaryRoot(Document);
 
         ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(
             root.Path,
-            new AudioTargetEdit(name, [new AudioRouteEdit(output, delayMs, gain)]));
+            new AudioTargetEdit(name, [new AudioRouteEdit(output, delayMs, gain)])
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains(mentions, outcome.Problem!, StringComparison.OrdinalIgnoreCase);
@@ -218,7 +254,8 @@ public sealed class AudioConfigurationStoreTests
 
         ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(
             root.Path,
-            new AudioTargetEdit("Party", [new AudioRouteEdit("Speakers"), new AudioRouteEdit("speakers")]));
+            new AudioTargetEdit("Party", [new AudioRouteEdit("Speakers"), new AudioRouteEdit("speakers")])
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains("different outputs", outcome.Problem!, StringComparison.Ordinal);
@@ -233,10 +270,11 @@ public sealed class AudioConfigurationStoreTests
 
         ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(
             root.Path,
-            new AudioTargetEdit("Party", [
-                new AudioRouteEdit("Speakers", Required: false),
-                new AudioRouteEdit("Soundbar", Required: false),
-            ]));
+            new AudioTargetEdit(
+                "Party",
+                [new AudioRouteEdit("Speakers", Required: false), new AudioRouteEdit("Soundbar", Required: false)]
+            )
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains("required", outcome.Problem!, StringComparison.OrdinalIgnoreCase);
@@ -252,7 +290,8 @@ public sealed class AudioConfigurationStoreTests
 
         ModeSaveOutcome outcome = AudioConfigurationStore.SaveTarget(
             root.Path,
-            new AudioTargetEdit("Speakers", [new AudioRouteEdit("Soundbar")]));
+            new AudioTargetEdit("Speakers", [new AudioRouteEdit("Soundbar")])
+        );
 
         Assert.False(outcome.Success);
         Assert.Contains("Speakers", outcome.Problem!, StringComparison.Ordinal);
@@ -266,22 +305,20 @@ public sealed class AudioConfigurationStoreTests
 
         using JsonDocument document = JsonDocument.Parse(json);
 
-        JsonElement audio = document.RootElement
-            .GetProperty("providers")
-            .GetProperty("audio");
+        JsonElement audio = document.RootElement.GetProperty("providers").GetProperty("audio");
 
         Assert.True(provider.TryConfigure(audio, out string? problem), problem);
 
         return provider;
     }
 
-    private static (ModeConfiguration Configuration, IReadOnlyList<IModeResourceProvider> Providers)
-        ReadConfiguration(TemporaryRoot root)
+    private static (ModeConfiguration Configuration, IReadOnlyList<IModeResourceProvider> Providers) ReadConfiguration(
+        TemporaryRoot root
+    )
     {
         (string json, string path) = ModeConfiguration.ReadOrCreate(root.Path);
 
-        IReadOnlyList<IModeResourceProvider> providers =
-            EngineBootstrap.ProductionProviders(root.Path, json);
+        IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(root.Path, json);
 
         return (ModeConfiguration.Parse(json, providers, path), providers);
     }

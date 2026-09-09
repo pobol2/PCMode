@@ -108,8 +108,8 @@ internal static class DisplayLayoutCursorLink
         Value(resources, key) is string current && string.Equals(current, value, StringComparison.OrdinalIgnoreCase);
 
     private static string? Value(IReadOnlyList<ResourceAssignment> resources, string key) =>
-        resources.FirstOrDefault(assignment =>
-            string.Equals(assignment.Key, key, StringComparison.OrdinalIgnoreCase)) is { Clears: false } found
+        resources.FirstOrDefault(assignment => string.Equals(assignment.Key, key, StringComparison.OrdinalIgnoreCase))
+            is { Clears: false } found
             ? found.Value
             : null;
 }

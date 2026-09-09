@@ -82,9 +82,7 @@ public sealed class MonitorSectionViewModelTests
 
         Assert.True(section.HasBinding);
         Assert.Equal("Desk Right", section.Alias);
-        Assert.Equal(
-            "SOME-OTHER-DEVICE",
-            DdcMonitorConfigurationStore.Read(root.Path)["Desk Right"]);
+        Assert.Equal("SOME-OTHER-DEVICE", DdcMonitorConfigurationStore.Read(root.Path)["Desk Right"]);
     }
 
     [Fact]
@@ -211,12 +209,14 @@ public sealed class MonitorSectionViewModelTests
     [Fact]
     public void A_television_no_display_claims_is_offered_for_linking_and_adopts_this_one()
     {
-        using var root = new TemporaryConfigurationRoot("""
+        using var root = new TemporaryConfigurationRoot(
+            """
             {"schemaVersion":1,"spaces":[{"id":"desk","name":"Desk","activities":[
               {"id":"desktop","name":"Desktop","resources":{}}]}],
              "providers":{"lgTv":{"default":"Spare","televisions":{"Spare":{
                "enabled":false,"host":"192.0.2.44","macAddress":"AA:BB:CC:DD:EE:01"}}}}}
-            """);
+            """
+        );
 
         var section = new MonitorTelevisionSectionViewModel(Workspaces.At(root.Path), () => { });
         section.Load(MonitorWithDevicePath("TV", TvPath));
@@ -332,27 +332,35 @@ public sealed class MonitorSectionViewModelTests
     {
         Assert.Equal(
             "Not paired. Use Pair.",
-            MonitorTelevisionSectionViewModel.DescribePowerState(
-                new LgTvObservation(LgTvObservationStatus.Unpaired)));
+            MonitorTelevisionSectionViewModel.DescribePowerState(new LgTvObservation(LgTvObservationStatus.Unpaired))
+        );
         Assert.StartsWith(
             "Unreachable.",
             MonitorTelevisionSectionViewModel.DescribePowerState(
-                new LgTvObservation(LgTvObservationStatus.Unreachable, Problem: "No route.")),
-            StringComparison.Ordinal);
+                new LgTvObservation(LgTvObservationStatus.Unreachable, Problem: "No route.")
+            ),
+            StringComparison.Ordinal
+        );
         Assert.StartsWith(
             "Power state unknown.",
             MonitorTelevisionSectionViewModel.DescribePowerState(
-                new LgTvObservation(LgTvObservationStatus.Unknown, Problem: "Still changing.")),
-            StringComparison.Ordinal);
+                new LgTvObservation(LgTvObservationStatus.Unknown, Problem: "Still changing.")
+            ),
+            StringComparison.Ordinal
+        );
         Assert.StartsWith(
             "Could not read power state.",
             MonitorTelevisionSectionViewModel.DescribePowerState(
-                new LgTvObservation(LgTvObservationStatus.Error, Problem: "Refused.")),
-            StringComparison.Ordinal);
+                new LgTvObservation(LgTvObservationStatus.Error, Problem: "Refused.")
+            ),
+            StringComparison.Ordinal
+        );
         Assert.Equal(
             "Off.",
             MonitorTelevisionSectionViewModel.DescribePowerState(
-                new LgTvObservation(LgTvObservationStatus.Observed, TvPowerProvider.Off)));
+                new LgTvObservation(LgTvObservationStatus.Observed, TvPowerProvider.Off)
+            )
+        );
     }
 
     private static LayoutMonitorRow MonitorWithDevicePath(string name, string devicePath)
@@ -361,7 +369,8 @@ public sealed class MonitorSectionViewModelTests
 
         row.SetDisplayDetails(
             new DisplayMonitorInfo($"{name} Monitor", devicePath, true, false, 0, 0, 1920, 1080, 60.0, [], name),
-            new DisplayMonitorMapping(name, devicePath, DisplayMappingState.Ready));
+            new DisplayMonitorMapping(name, devicePath, DisplayMappingState.Ready)
+        );
 
         return row;
     }

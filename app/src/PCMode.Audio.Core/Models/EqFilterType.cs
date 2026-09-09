@@ -6,5 +6,5 @@ public enum EqFilterType
     LowShelf,
     HighShelf,
     LowPass,
-    HighPass
+    HighPass,
 }

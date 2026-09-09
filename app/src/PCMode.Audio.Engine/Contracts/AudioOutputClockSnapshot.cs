@@ -8,36 +8,28 @@ public readonly record struct AudioOutputClockSnapshot
 
     public ulong QpcPosition100Nanoseconds { get; }
 
-    public double QueuedFrameCount =>
-        SubmittedFramePosition -
-        PlayedFramePosition;
+    public double QueuedFrameCount => SubmittedFramePosition - PlayedFramePosition;
 
     public AudioOutputClockSnapshot(
         double playedFramePosition,
         long submittedFramePosition,
-        ulong qpcPosition100Nanoseconds = 0)
+        ulong qpcPosition100Nanoseconds = 0
+    )
     {
-        if (!double.IsFinite(
-                playedFramePosition) ||
-            playedFramePosition < 0.0)
+        if (!double.IsFinite(playedFramePosition) || playedFramePosition < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(playedFramePosition));
+            throw new ArgumentOutOfRangeException(nameof(playedFramePosition));
         }
 
         if (submittedFramePosition < 0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(submittedFramePosition));
+            throw new ArgumentOutOfRangeException(nameof(submittedFramePosition));
         }
 
-        PlayedFramePosition =
-            playedFramePosition;
+        PlayedFramePosition = playedFramePosition;
 
-        SubmittedFramePosition =
-            submittedFramePosition;
+        SubmittedFramePosition = submittedFramePosition;
 
-        QpcPosition100Nanoseconds =
-            qpcPosition100Nanoseconds;
+        QpcPosition100Nanoseconds = qpcPosition100Nanoseconds;
     }
 }

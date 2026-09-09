@@ -58,10 +58,7 @@ namespace PCMode.Engine;
 /// target is wanted, resolves its aliases to endpoints, hands it over, and
 /// reports what came back.
 /// </remarks>
-public sealed class AudioProvider :
-    IConfigurableProvider,
-    IDependentProvider,
-    IHealthReportingProvider
+public sealed class AudioProvider : IConfigurableProvider, IDependentProvider, IHealthReportingProvider
 {
     /// <summary>The resource key a mode names.</summary>
     public const string ResourceKey = "audio";
@@ -72,16 +69,20 @@ public sealed class AudioProvider :
     private readonly IAudioEndpoints _endpoints;
     private readonly IAudioRuntime _runtime;
 
-    private IReadOnlyDictionary<string, string> _devices =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, string> _devices = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>The configured Audio Targets, keyed by the name a mode asks for.</summary>
-    private IReadOnlyDictionary<string, AudioTargetSettings> _targets =
-        new Dictionary<string, AudioTargetSettings>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, AudioTargetSettings> _targets = new Dictionary<string, AudioTargetSettings>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>The configured processing profiles, keyed by name.</summary>
-    private IReadOnlyDictionary<string, AudioProcessingProfileSettings> _profiles =
-        new Dictionary<string, AudioProcessingProfileSettings>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, AudioProcessingProfileSettings> _profiles = new Dictionary<
+        string,
+        AudioProcessingProfileSettings
+    >(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The exact Windows name of the virtual endpoint, when one is written.</summary>
     private string? _virtualEndpointName;
@@ -94,13 +95,13 @@ public sealed class AudioProvider :
     /// almost every device has nothing here and the mapping is what this provider
     /// is actually about.
     /// </remarks>
-    private IReadOnlyDictionary<string, IReadOnlyList<ResourceRequirement>> _requires =
-        new Dictionary<string, IReadOnlyList<ResourceRequirement>>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, IReadOnlyList<ResourceRequirement>> _requires = new Dictionary<
+        string,
+        IReadOnlyList<ResourceRequirement>
+    >(StringComparer.OrdinalIgnoreCase);
 
     public AudioProvider()
-        : this(new CoreAudioEndpoints())
-    {
-    }
+        : this(new CoreAudioEndpoints()) { }
 
     /// <param name="runtime">
     /// Who owns the audio Host. Shared across every engine this process builds,
@@ -206,18 +207,18 @@ public sealed class AudioProvider :
     /// instant after the change can report a device that is about to be replaced
     /// by whatever Windows preferred.
     /// </remarks>
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 6,
-        RetryInterval = TimeSpan.FromSeconds(2),
-        PollInterval = TimeSpan.FromMilliseconds(250),
-        Settle = TimeSpan.FromMilliseconds(500),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 6,
+            RetryInterval = TimeSpan.FromSeconds(2),
+            PollInterval = TimeSpan.FromMilliseconds(250),
+            Settle = TimeSpan.FromMilliseconds(500),
+        };
 
     /// <summary>The configured logical names, in name order.</summary>
-    public IReadOnlyList<string> DeviceNames =>
-        [.. _devices.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+    public IReadOnlyList<string> DeviceNames => [.. _devices.Keys.Order(StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>The configured Audio Targets, in name order.</summary>
     public IReadOnlyList<AudioTargetSettings> Targets =>
@@ -235,7 +236,8 @@ public sealed class AudioProvider :
 
     /// <summary>That processing profile, or null for a name nothing defines.</summary>
     public AudioProcessingProfileSettings? Profile(string? name) =>
-        !string.IsNullOrWhiteSpace(name) && _profiles.TryGetValue(name.Trim(), out AudioProcessingProfileSettings? found)
+        !string.IsNullOrWhiteSpace(name)
+        && _profiles.TryGetValue(name.Trim(), out AudioProcessingProfileSettings? found)
             ? found
             : null;
 
@@ -319,12 +321,14 @@ public sealed class AudioProvider :
 
             if (property.NameEquals("virtualEndpoint"))
             {
-                if (property.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                if (
+                    property.Value.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(property.Value.GetString())
+                )
                 {
                     problem =
-                        $"'{AudioVirtualEndpoint.SettingsPath}' must be the exact device name Windows shows " +
-                        "in Sound settings for the PCMode virtual audio endpoint, in quotes.";
+                        $"'{AudioVirtualEndpoint.SettingsPath}' must be the exact device name Windows shows "
+                        + "in Sound settings for the PCMode virtual audio endpoint, in quotes.";
 
                     return false;
                 }
@@ -346,8 +350,8 @@ public sealed class AudioProvider :
             if (!property.NameEquals("devices"))
             {
                 problem =
-                    $"'providers.audio' does not understand '{property.Name}'. " +
-                    "It takes 'devices', 'targets', 'profiles' and 'virtualEndpoint'.";
+                    $"'providers.audio' does not understand '{property.Name}'. "
+                    + "It takes 'devices', 'targets', 'profiles' and 'virtualEndpoint'.";
 
                 return false;
             }
@@ -355,20 +359,23 @@ public sealed class AudioProvider :
             if (property.Value.ValueKind != JsonValueKind.Object)
             {
                 problem =
-                    $"'{SettingsPath}' must be an object mapping a name you choose to the exact " +
-                    "device name Windows shows in Sound settings.";
+                    $"'{SettingsPath}' must be an object mapping a name you choose to the exact "
+                    + "device name Windows shows in Sound settings.";
 
                 return false;
             }
 
             foreach (JsonProperty device in property.Value.EnumerateObject())
             {
-                if (!TryReadDevice(
+                if (
+                    !TryReadDevice(
                         device,
                         out string? logical,
                         out string? endpoint,
                         out IReadOnlyList<ResourceRequirement>? needs,
-                        out problem))
+                        out problem
+                    )
+                )
                 {
                     return false;
                 }
@@ -397,11 +404,14 @@ public sealed class AudioProvider :
         IReadOnlyDictionary<string, AudioProcessingProfileSettings> resolvedProfiles =
             profiles ?? new Dictionary<string, AudioProcessingProfileSettings>(StringComparer.OrdinalIgnoreCase);
 
-        IReadOnlyDictionary<string, AudioTargetSettings>? configured =
-            new Dictionary<string, AudioTargetSettings>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyDictionary<string, AudioTargetSettings>? configured = new Dictionary<string, AudioTargetSettings>(
+            StringComparer.OrdinalIgnoreCase
+        );
 
-        if (targets is JsonElement written &&
-            !AudioTargetSettings.TryParse(written, parsed, resolvedProfiles, out configured, out problem))
+        if (
+            targets is JsonElement written
+            && !AudioTargetSettings.TryParse(written, parsed, resolvedProfiles, out configured, out problem)
+        )
         {
             return false;
         }
@@ -426,8 +436,8 @@ public sealed class AudioProvider :
         if (_devices.Count == 0)
         {
             problem =
-                $"'{value.Trim()}' cannot be applied because no audio devices are defined. " +
-                $"Add one under '{SettingsPath}'.";
+                $"'{value.Trim()}' cannot be applied because no audio devices are defined. "
+                + $"Add one under '{SettingsPath}'.";
 
             return false;
         }
@@ -435,8 +445,8 @@ public sealed class AudioProvider :
         if (!_devices.ContainsKey(value.Trim()) && !_targets.ContainsKey(value.Trim()))
         {
             problem =
-                $"'{value.Trim()}' is not an audio device. " +
-                $"'{SettingsPath}' defines: {string.Join(", ", SelectableNames)}.";
+                $"'{value.Trim()}' is not an audio device. "
+                + $"'{SettingsPath}' defines: {string.Join(", ", SelectableNames)}.";
 
             return false;
         }
@@ -600,7 +610,8 @@ public sealed class AudioProvider :
 
         AudioTarget composed = target.Compose(
             output => Resolve(_devices[output], active),
-            profileName => _profiles[profileName].ToProfile());
+            profileName => _profiles[profileName].ToProfile()
+        );
 
         // Read before anything changes, so a failure partway through has
         // something to restore. Best-effort: a read that cannot be taken simply
@@ -651,9 +662,10 @@ public sealed class AudioProvider :
             if (now is null || !string.Equals(now.Id, virtualEndpointId, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Windows did not accept the PCMode virtual audio endpoint as the playback device, so " +
-                    $"'{target.Name}' has nothing to play. It reports " +
-                    (now is null ? "no default playback device." : $"'{now.Name}'."));
+                    $"Windows did not accept the PCMode virtual audio endpoint as the playback device, so "
+                        + $"'{target.Name}' has nothing to play. It reports "
+                        + (now is null ? "no default playback device." : $"'{now.Name}'.")
+                );
             }
         }
         catch
@@ -694,7 +706,8 @@ public sealed class AudioProvider :
         double gain,
         double? volume,
         string? profileName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (Target(targetName) is not AudioTargetSettings target)
         {
@@ -703,7 +716,10 @@ public sealed class AudioProvider :
 
         if (!target.Uses(routeOutput))
         {
-            throw new ArgumentException($"'{routeOutput}' is not one of '{targetName}''s outputs.", nameof(routeOutput));
+            throw new ArgumentException(
+                $"'{routeOutput}' is not one of '{targetName}''s outputs.",
+                nameof(routeOutput)
+            );
         }
 
         ParametricEqProfile? parametricEq = profileName is null ? null : _profiles[profileName].ToProfile();
@@ -716,7 +732,8 @@ public sealed class AudioProvider :
             muted: gain <= 0,
             delay,
             new AudioProcessingProfile(AudioTargetSettings.GainDecibels(gain), parametricEq),
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     /// <summary>
@@ -743,9 +760,7 @@ public sealed class AudioProvider :
         {
             restore();
         }
-        catch (Exception)
-        {
-        }
+        catch (Exception) { }
     }
 
     private AudioEndpoint? SafeReadDefault()
@@ -782,7 +797,9 @@ public sealed class AudioProvider :
         catch (Exception exception)
         {
             throw new InvalidOperationException(
-                $"The volume of '{logical}' could not be set. {exception.Message}", exception);
+                $"The volume of '{logical}' could not be set. {exception.Message}",
+                exception
+            );
         }
     }
 
@@ -822,20 +839,27 @@ public sealed class AudioProvider :
 
         if (health.Input is AudioInputHealth input)
         {
-            written.Add($"Input {input.Kind}/{input.State}" + (input.Format is AudioFormat format
-                ? $" {format.SampleRate} Hz x{format.ChannelCount}"
-                : string.Empty));
+            written.Add(
+                $"Input {input.Kind}/{input.State}"
+                    + (
+                        input.Format is AudioFormat format
+                            ? $" {format.SampleRate} Hz x{format.ChannelCount}"
+                            : string.Empty
+                    )
+            );
         }
 
         foreach (AudioRouteHealth route in health.Routes)
         {
-            written.Add(string.Create(
-                CultureInfo.InvariantCulture,
-                $"Route {route.EndpointId} {route.State}/{route.EndpointState} " +
-                $"({route.Requirement}), delay {route.ConfiguredDelay.TotalMilliseconds:0} ms, " +
-                $"offset {route.ClockOffsetMilliseconds ?? 0:0.0} ms, drift {route.DriftCorrectionPpm:0.0} ppm, " +
-                $"underruns {route.UnderrunCount}, resyncs {route.ResyncCount}") +
-                (route.LastFailure is null ? string.Empty : $", last failure: {route.LastFailure.Message}"));
+            written.Add(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"Route {route.EndpointId} {route.State}/{route.EndpointState} "
+                        + $"({route.Requirement}), delay {route.ConfiguredDelay.TotalMilliseconds:0} ms, "
+                        + $"offset {route.ClockOffsetMilliseconds ?? 0:0.0} ms, drift {route.DriftCorrectionPpm:0.0} ppm, "
+                        + $"underruns {route.UnderrunCount}, resyncs {route.ResyncCount}"
+                ) + (route.LastFailure is null ? string.Empty : $", last failure: {route.LastFailure.Message}")
+            );
         }
 
         if (health.LastFailure is AudioFailure failure)
@@ -845,6 +869,14 @@ public sealed class AudioProvider :
 
         return string.Join(". ", written) + ".";
     }
+
+    /// <summary>
+    /// Each currently running Audio Target route's waveform envelope. Never
+    /// touches Core Audio's own device enumeration, unlike <see cref="Discover"/>,
+    /// so a waveform redraw loop can call this many times a second.
+    /// </summary>
+    public Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken) =>
+        _runtime.WaveformAsync(cancellationToken);
 
     /// <summary>
     /// What audio looks like on this machine right now.
@@ -877,7 +909,8 @@ public sealed class AudioProvider :
             var unknown = _devices.ToDictionary(
                 device => device.Key,
                 device => new AudioDeviceMapping(device.Key, device.Value, AudioMappingState.Unknown, Matches: 0),
-                StringComparer.OrdinalIgnoreCase);
+                StringComparer.OrdinalIgnoreCase
+            );
 
             return new AudioSnapshot(
                 Available: false,
@@ -885,17 +918,21 @@ public sealed class AudioProvider :
                 [],
                 [.. unknown.Values],
                 [.. Targets.Select(target => Describe(target, unknown, runtime))],
-                runtime);
+                runtime
+            );
         }
 
         var endpoints = new List<AudioEndpointInfo>(live.Count);
 
         foreach (AudioEndpoint endpoint in live)
         {
-            endpoints.Add(new AudioEndpointInfo(
-                endpoint.Name,
-                current is not null && string.Equals(endpoint.Id, current.Id, StringComparison.Ordinal),
-                AudioVirtualEndpoint.IsVirtualEndpointName(endpoint.Name, _virtualEndpointName)));
+            endpoints.Add(
+                new AudioEndpointInfo(
+                    endpoint.Name,
+                    current is not null && string.Equals(endpoint.Id, current.Id, StringComparison.Ordinal),
+                    AudioVirtualEndpoint.IsVirtualEndpointName(endpoint.Name, _virtualEndpointName)
+                )
+            );
         }
 
         var mappings = new Dictionary<string, AudioDeviceMapping>(StringComparer.OrdinalIgnoreCase);
@@ -903,7 +940,8 @@ public sealed class AudioProvider :
         foreach ((string logical, string endpoint) in _devices)
         {
             int matches = live.Count(candidate =>
-                string.Equals(candidate.Name, endpoint, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.Name, endpoint, StringComparison.OrdinalIgnoreCase)
+            );
 
             mappings[logical] = new AudioDeviceMapping(
                 logical,
@@ -914,7 +952,8 @@ public sealed class AudioProvider :
                     0 => AudioMappingState.Missing,
                     _ => AudioMappingState.Ambiguous,
                 },
-                matches);
+                matches
+            );
         }
 
         return new AudioSnapshot(
@@ -923,7 +962,8 @@ public sealed class AudioProvider :
             endpoints,
             [.. mappings.Values],
             [.. Targets.Select(target => Describe(target, mappings, runtime))],
-            runtime);
+            runtime
+        );
     }
 
     /// <summary>
@@ -938,7 +978,8 @@ public sealed class AudioProvider :
     private AudioTargetStatus Describe(
         AudioTargetSettings target,
         IReadOnlyDictionary<string, AudioDeviceMapping> mappings,
-        AudioRuntimeStatus runtime)
+        AudioRuntimeStatus runtime
+    )
     {
         bool active = runtime.IsRunning(target.Name);
 
@@ -959,37 +1000,38 @@ public sealed class AudioProvider :
             // never stores one.
             AudioRouteHealth? health = index < routeHealth.Count ? routeHealth[index] : null;
 
-            routes.Add(new AudioTargetRouteStatus(
-                route.Output,
-                mapping?.EndpointName ?? string.Empty,
-                mapping?.State ?? AudioMappingState.Unknown,
-                route.DelayMs,
-                route.Gain,
-                route.Volume,
-                route.Required,
-                route.Profile,
-                health?.State,
-                health?.LastFailure?.Message));
+            routes.Add(
+                new AudioTargetRouteStatus(
+                    route.Output,
+                    mapping?.EndpointName ?? string.Empty,
+                    mapping?.State ?? AudioMappingState.Unknown,
+                    route.DelayMs,
+                    route.Gain,
+                    route.Volume,
+                    route.Required,
+                    route.Profile,
+                    health?.State,
+                    health?.LastFailure?.Message
+                )
+            );
         }
 
-        AudioTargetState state = !runtime.Reachable
-            ? AudioTargetState.Unavailable
-            : !active
-                ? AudioTargetState.Stopped
-                : runtime.Health?.State switch
-                {
-                    AudioHealthState.Healthy => AudioTargetState.Running,
-                    AudioHealthState.Degraded => AudioTargetState.Degraded,
-                    AudioHealthState.Failed => AudioTargetState.Failed,
-                    _ => AudioTargetState.Stopped,
-                };
+        AudioTargetState state =
+            !runtime.Reachable ? AudioTargetState.Unavailable
+            : !active ? AudioTargetState.Stopped
+            : runtime.Health?.State switch
+            {
+                AudioHealthState.Healthy => AudioTargetState.Running,
+                AudioHealthState.Degraded => AudioTargetState.Degraded,
+                AudioHealthState.Failed => AudioTargetState.Failed,
+                _ => AudioTargetState.Stopped,
+            };
 
         string? problem = state switch
         {
             AudioTargetState.Unavailable => runtime.Problem,
-            AudioTargetState.Failed or AudioTargetState.Degraded =>
-                runtime.Health?.LastFailure?.Message ??
-                routes.FirstOrDefault(route => route.Problem is not null)?.Problem,
+            AudioTargetState.Failed or AudioTargetState.Degraded => runtime.Health?.LastFailure?.Message
+                ?? routes.FirstOrDefault(route => route.Problem is not null)?.Problem,
             _ => null,
         };
 
@@ -1003,8 +1045,7 @@ public sealed class AudioProvider :
     {
         List<AudioEndpoint> matches =
         [
-            .. active.Where(endpoint =>
-                string.Equals(endpoint.Name, endpointName, StringComparison.OrdinalIgnoreCase)),
+            .. active.Where(endpoint => string.Equals(endpoint.Name, endpointName, StringComparison.OrdinalIgnoreCase)),
         ];
 
         if (matches.Count == 0)
@@ -1013,10 +1054,13 @@ public sealed class AudioProvider :
             // that is switched off and the second usual cause is a name that is
             // one character out, and the list tells the two apart at a glance.
             throw new InvalidOperationException(
-                $"No active playback device is named '{endpointName}'. " +
-                (active.Count == 0
-                    ? "Windows reports no active playback devices at all."
-                    : $"Active right now: {string.Join(", ", active.Select(endpoint => $"'{endpoint.Name}'"))}."));
+                $"No active playback device is named '{endpointName}'. "
+                    + (
+                        active.Count == 0
+                            ? "Windows reports no active playback devices at all."
+                            : $"Active right now: {string.Join(", ", active.Select(endpoint => $"'{endpoint.Name}'"))}."
+                    )
+            );
         }
 
         if (matches.Count > 1)
@@ -1026,9 +1070,10 @@ public sealed class AudioProvider :
             // is a coin toss that looks like a working feature until the day it
             // lands the other way.
             throw new InvalidOperationException(
-                $"{matches.Count} active playback devices are all named '{endpointName}', " +
-                "so there is no way to tell which one was meant. " +
-                "Rename one in Windows Sound settings.");
+                $"{matches.Count} active playback devices are all named '{endpointName}', "
+                    + "so there is no way to tell which one was meant. "
+                    + "Rename one in Windows Sound settings."
+            );
         }
 
         return matches[0].Id;
@@ -1055,7 +1100,8 @@ public sealed class AudioProvider :
         out string? logical,
         out string? endpoint,
         out IReadOnlyList<ResourceRequirement>? requires,
-        out string? problem)
+        out string? problem
+    )
     {
         logical = null;
         endpoint = null;
@@ -1083,8 +1129,8 @@ public sealed class AudioProvider :
         if (device.Value.ValueKind != JsonValueKind.String)
         {
             problem =
-                $"'{SettingsPath}.{named}' must be the exact device name Windows shows " +
-                "in Sound settings, in quotes.";
+                $"'{SettingsPath}.{named}' must be the exact device name Windows shows "
+                + "in Sound settings, in quotes.";
 
             return false;
         }
@@ -1097,8 +1143,8 @@ public sealed class AudioProvider :
             // exists, so every mode using it validates, and the failure waits
             // until a transition is half way through.
             problem =
-                $"'{SettingsPath}.{named}' is empty. It needs the exact device name " +
-                "Windows shows in Sound settings.";
+                $"'{SettingsPath}.{named}' is empty. It needs the exact device name "
+                + "Windows shows in Sound settings.";
 
             return false;
         }
@@ -1119,7 +1165,8 @@ public sealed class AudioProvider :
         JsonElement written,
         out string? endpoint,
         out IReadOnlyList<ResourceRequirement>? requires,
-        out string? problem)
+        out string? problem
+    )
     {
         endpoint = null;
         requires = [];
@@ -1130,12 +1177,11 @@ public sealed class AudioProvider :
         {
             if (field.NameEquals("device"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem =
-                        $"{where}.device must be the exact device name Windows shows " +
-                        "in Sound settings, in quotes.";
+                        $"{where}.device must be the exact device name Windows shows "
+                        + "in Sound settings, in quotes.";
 
                     return false;
                 }
@@ -1163,8 +1209,8 @@ public sealed class AudioProvider :
             // exists, so every mode using it validates, and the failure waits
             // until a transition is half way through.
             problem =
-                $"{where} says what it needs but not what it is. Add \"device\": " +
-                "the exact name Windows shows in Sound settings.";
+                $"{where} says what it needs but not what it is. Add \"device\": "
+                + "the exact name Windows shows in Sound settings.";
 
             return false;
         }
@@ -1191,9 +1237,9 @@ public sealed class AudioProvider :
             if (!seen.TryAdd(endpoint, logical))
             {
                 problem =
-                    $"'{SettingsPath}' points both '{seen[endpoint]}' and '{logical}' at " +
-                    $"'{endpoint}'. One device cannot be two, and nothing could say which " +
-                    "of them the machine is currently in.";
+                    $"'{SettingsPath}' points both '{seen[endpoint]}' and '{logical}' at "
+                    + $"'{endpoint}'. One device cannot be two, and nothing could say which "
+                    + "of them the machine is currently in.";
 
                 return false;
             }

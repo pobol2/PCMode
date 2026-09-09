@@ -28,8 +28,9 @@ internal static class RegionRuntime
                 if (!region.Admits(block.GetType()))
                 {
                     throw new TemplateContractException(
-                        $"Region '{region.Name}' realized {block.GetType().Name}, which it does not " +
-                        $"admit. Allowed: {region.Describe()}.");
+                        $"Region '{region.Name}' realized {block.GetType().Name}, which it does not "
+                            + $"admit. Allowed: {region.Describe()}."
+                    );
                 }
 
                 continue;
@@ -40,16 +41,18 @@ internal static class RegionRuntime
                 if (!region.Terminal)
                 {
                     throw new TemplateContractException(
-                        $"Region '{region.Name}' realized a FinalUiComponent, but it is declared to hold " +
-                        $"only child blocks. Allowed: {region.Describe()}.");
+                        $"Region '{region.Name}' realized a FinalUiComponent, but it is declared to hold "
+                            + $"only child blocks. Allowed: {region.Describe()}."
+                    );
                 }
 
                 continue;
             }
 
             throw new TemplateContractException(
-                $"Region '{region.Name}' realized raw WPF content ({child.GetType().Name}). " +
-                "Terminal leaves must be wrapped explicitly in FinalUiComponent.");
+                $"Region '{region.Name}' realized raw WPF content ({child.GetType().Name}). "
+                    + "Terminal leaves must be wrapped explicitly in FinalUiComponent."
+            );
         }
     }
 

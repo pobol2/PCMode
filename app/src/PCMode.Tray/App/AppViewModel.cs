@@ -7,9 +7,7 @@ public sealed class AppViewModel : ObservableObject
 {
     private object? _currentPage;
 
-    public AppViewModel(
-        NavigationState navigation,
-        ElementCatalog elements)
+    public AppViewModel(NavigationState navigation, ElementCatalog elements)
     {
         ArgumentNullException.ThrowIfNull(navigation);
         ArgumentNullException.ThrowIfNull(elements);
@@ -18,8 +16,7 @@ public sealed class AppViewModel : ObservableObject
         Elements = elements;
 
         Navigation.PropertyChanged += OnNavigationPropertyChanged;
-        Navigation.SelectedEntry = Navigation.Items.Single(
-            entry => entry.Page == PageId.Home);
+        Navigation.SelectedEntry = Navigation.Items.Single(entry => entry.Page == PageId.Home);
     }
 
     public NavigationState Navigation { get; }
@@ -33,12 +30,9 @@ public sealed class AppViewModel : ObservableObject
         private set => SetProperty(ref _currentPage, value);
     }
 
-    private void OnNavigationPropertyChanged(
-        object? sender,
-        System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnNavigationPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(NavigationState.SelectedEntry)
-            || Navigation.SelectedEntry is not { } selection)
+        if (e.PropertyName != nameof(NavigationState.SelectedEntry) || Navigation.SelectedEntry is not { } selection)
         {
             return;
         }

@@ -12,10 +12,7 @@ public sealed class ControllerDiscoveryTests
     [Fact]
     public async Task Controller_section_reports_all_xinput_slots_and_connection_details()
     {
-        var source = new FakeControllers
-        {
-            Connected = new GamepadCapabilities("Gamepad", Wireless: true),
-        };
+        var source = new FakeControllers { Connected = new GamepadCapabilities("Gamepad", Wireless: true) };
         var section = new ControllerDiscoveryViewModel(new FakeWorkspace(), source);
 
         await section.ScanAsync();

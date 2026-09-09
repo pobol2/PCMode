@@ -57,10 +57,12 @@ public readonly record struct PickerColor(byte Red, byte Green, byte Blue)
             digits = digits[1..];
         }
 
-        if (digits.Length != 6 ||
-            !byte.TryParse(digits[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte red) ||
-            !byte.TryParse(digits[2..4], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte green) ||
-            !byte.TryParse(digits[4..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte blue))
+        if (
+            digits.Length != 6
+            || !byte.TryParse(digits[..2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte red)
+            || !byte.TryParse(digits[2..4], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte green)
+            || !byte.TryParse(digits[4..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte blue)
+        )
         {
             throw new FormatException($"'{hex}' is not a six-digit RRGGBB colour.");
         }
@@ -152,52 +154,52 @@ public sealed class FavoriteSet
     public IReadOnlyList<ModeFavorite> All { get; }
 
     /// <summary>The four favorites shipped out of the box.</summary>
-    public static FavoriteSet Default { get; } = Create(
-    [
-        new ModeFavorite
-        {
-            Id = "desktop",
-            Direction = PickerDirection.Up,
-            ModeName = "Desktop",
-            Label = "Desktop",
-            Color = PickerColor.Parse("0078D4"),
-            Icon = FavoriteIcon.Monitor,
-            Hotkey = 'd',
-            IconOffset = new PickerPoint(0.000, -0.020),
-        },
-        new ModeFavorite
-        {
-            Id = "youtube",
-            Direction = PickerDirection.Right,
-            ModeName = "YouTube",
-            Label = "YouTube",
-            Color = PickerColor.Parse("FF0033"),
-            Icon = FavoriteIcon.PlayTile,
-            Hotkey = 'y',
-            IconOffset = new PickerPoint(0.000, -0.030),
-        },
-        new ModeFavorite
-        {
-            Id = "gaming",
-            Direction = PickerDirection.Down,
-            ModeName = "Gaming",
-            Label = "Gaming",
-            Color = PickerColor.Parse("171A21"),
-            Icon = FavoriteIcon.Gamepad,
-            Hotkey = 'g',
-        },
-        new ModeFavorite
-        {
-            Id = "movie",
-            Direction = PickerDirection.Left,
-            ModeName = "Movie",
-            Label = "Movie",
-            Color = PickerColor.Parse("7B5BF5"),
-            Icon = FavoriteIcon.FilmStrip,
-            Hotkey = 'm',
-            IconOffset = new PickerPoint(0.000, -0.030),
-        },
-    ]);
+    public static FavoriteSet Default { get; } =
+        Create([
+            new ModeFavorite
+            {
+                Id = "desktop",
+                Direction = PickerDirection.Up,
+                ModeName = "Desktop",
+                Label = "Desktop",
+                Color = PickerColor.Parse("0078D4"),
+                Icon = FavoriteIcon.Monitor,
+                Hotkey = 'd',
+                IconOffset = new PickerPoint(0.000, -0.020),
+            },
+            new ModeFavorite
+            {
+                Id = "youtube",
+                Direction = PickerDirection.Right,
+                ModeName = "YouTube",
+                Label = "YouTube",
+                Color = PickerColor.Parse("FF0033"),
+                Icon = FavoriteIcon.PlayTile,
+                Hotkey = 'y',
+                IconOffset = new PickerPoint(0.000, -0.030),
+            },
+            new ModeFavorite
+            {
+                Id = "gaming",
+                Direction = PickerDirection.Down,
+                ModeName = "Gaming",
+                Label = "Gaming",
+                Color = PickerColor.Parse("171A21"),
+                Icon = FavoriteIcon.Gamepad,
+                Hotkey = 'g',
+            },
+            new ModeFavorite
+            {
+                Id = "movie",
+                Direction = PickerDirection.Left,
+                ModeName = "Movie",
+                Label = "Movie",
+                Color = PickerColor.Parse("7B5BF5"),
+                Icon = FavoriteIcon.FilmStrip,
+                Hotkey = 'm',
+                IconOffset = new PickerPoint(0.000, -0.030),
+            },
+        ]);
 
     public ModeFavorite this[PickerDirection direction] => _byDirection[direction];
 
@@ -220,24 +222,22 @@ public sealed class FavoriteSet
             {
                 throw new ArgumentException(
                     $"The picker needs exactly one favorite per direction; {direction} has {count}.",
-                    nameof(favorites));
+                    nameof(favorites)
+                );
             }
         }
 
         Duplicate(all.Select(favorite => favorite.Id), StringComparer.OrdinalIgnoreCase, "identity");
 
         Duplicate(
-            all.Where(favorite => favorite.Hotkey is not null)
-               .Select(favorite => favorite.Hotkey!.Value.ToString()),
+            all.Where(favorite => favorite.Hotkey is not null).Select(favorite => favorite.Hotkey!.Value.ToString()),
             StringComparer.OrdinalIgnoreCase,
-            "hotkey");
+            "hotkey"
+        );
 
         // Compass order, so All can be enumerated for rendering and for a
         // stable command line without every caller sorting it again.
-        ModeFavorite[] ordered =
-        [
-            .. all.OrderBy(favorite => (int)favorite.Direction)
-        ];
+        ModeFavorite[] ordered = [.. all.OrderBy(favorite => (int)favorite.Direction)];
 
         return new FavoriteSet(ordered);
 
@@ -245,16 +245,18 @@ public sealed class FavoriteSet
         {
             string[] repeated =
             [
-                .. values.GroupBy(value => value, comparer)
-                         .Where(group => group.Count() > 1)
-                         .Select(group => group.Key)
+                .. values
+                    .GroupBy(value => value, comparer)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key),
             ];
 
             if (repeated.Length > 0)
             {
                 throw new ArgumentException(
                     $"Two favorites share the same {what}: {string.Join(", ", repeated)}.",
-                    nameof(favorites));
+                    nameof(favorites)
+                );
             }
         }
     }
@@ -268,10 +270,12 @@ public sealed class FavoriteSet
         string.IsNullOrWhiteSpace(modeName)
             ? null
             : All.FirstOrDefault(favorite =>
-                string.Equals(favorite.ModeName, modeName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(favorite.ModeName, modeName, StringComparison.OrdinalIgnoreCase)
+            );
 
     /// <summary>The favorite a direct hotkey letter belongs to, if any.</summary>
     public ModeFavorite? ByHotkey(char letter) =>
         All.FirstOrDefault(favorite =>
-            favorite.Hotkey is char key && char.ToUpperInvariant(key) == char.ToUpperInvariant(letter));
+            favorite.Hotkey is char key && char.ToUpperInvariant(key) == char.ToUpperInvariant(letter)
+        );
 }

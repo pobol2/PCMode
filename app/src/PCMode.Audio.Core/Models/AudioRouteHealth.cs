@@ -7,7 +7,7 @@ public enum AudioRouteHealthState
     Healthy,
     Degraded,
     Unavailable,
-    Failed
+    Failed,
 }
 
 public sealed class AudioRouteHealth
@@ -27,11 +27,7 @@ public sealed class AudioRouteHealth
     public double ClockOffsetFrames { get; }
 
     public double? ClockOffsetMilliseconds =>
-        Format is { SampleRate: > 0 } format
-            ? ClockOffsetFrames /
-              format.SampleRate *
-              1000.0
-            : null;
+        Format is { SampleRate: > 0 } format ? ClockOffsetFrames / format.SampleRate * 1000.0 : null;
 
     public double DriftCorrectionPpm { get; }
 
@@ -125,145 +121,96 @@ public sealed class AudioRouteHealth
         double longestOutputWriteMilliseconds,
         double longestOutputBufferWaitMilliseconds,
         AudioProcessingProfile processing,
-        AudioFailure? lastFailure)
+        AudioFailure? lastFailure
+    )
     {
-        ArgumentNullException.ThrowIfNull(
-            processing);
+        ArgumentNullException.ThrowIfNull(processing);
 
-        if (!double.IsFinite(
-                clockOffsetFrames))
+        if (!double.IsFinite(clockOffsetFrames))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(clockOffsetFrames));
+            throw new ArgumentOutOfRangeException(nameof(clockOffsetFrames));
         }
 
-        if (!double.IsFinite(
-                driftCorrectionPpm))
+        if (!double.IsFinite(driftCorrectionPpm))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(driftCorrectionPpm));
+            throw new ArgumentOutOfRangeException(nameof(driftCorrectionPpm));
         }
 
-        if (!double.IsFinite(
-                resampleRatio) ||
-            resampleRatio <= 0.0)
+        if (!double.IsFinite(resampleRatio) || resampleRatio <= 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(resampleRatio));
+            throw new ArgumentOutOfRangeException(nameof(resampleRatio));
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            underrunCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(underrunCount);
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            resyncCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(resyncCount);
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            stallRecoveryCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(stallRecoveryCount);
 
-        if (!double.IsFinite(
-                longestProcessGapMilliseconds) ||
-            longestProcessGapMilliseconds <
-                0.0)
+        if (!double.IsFinite(longestProcessGapMilliseconds) || longestProcessGapMilliseconds < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(longestProcessGapMilliseconds));
+            throw new ArgumentOutOfRangeException(nameof(longestProcessGapMilliseconds));
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            outputRecoveryFadeCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(outputRecoveryFadeCount);
 
-        ArgumentOutOfRangeException.ThrowIfNegative(
-            outputEndpointDryCount);
+        ArgumentOutOfRangeException.ThrowIfNegative(outputEndpointDryCount);
 
-        if (!double.IsFinite(
-                longestOutputSubmitGapMilliseconds) ||
-            longestOutputSubmitGapMilliseconds <
-                0.0)
+        if (!double.IsFinite(longestOutputSubmitGapMilliseconds) || longestOutputSubmitGapMilliseconds < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(longestOutputSubmitGapMilliseconds));
+            throw new ArgumentOutOfRangeException(nameof(longestOutputSubmitGapMilliseconds));
         }
 
-        if (!double.IsFinite(
-                longestOutputWriteMilliseconds) ||
-            longestOutputWriteMilliseconds <
-                0.0)
+        if (!double.IsFinite(longestOutputWriteMilliseconds) || longestOutputWriteMilliseconds < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(longestOutputWriteMilliseconds));
+            throw new ArgumentOutOfRangeException(nameof(longestOutputWriteMilliseconds));
         }
 
-        if (!double.IsFinite(
-                longestOutputBufferWaitMilliseconds) ||
-            longestOutputBufferWaitMilliseconds <
-                0.0)
+        if (!double.IsFinite(longestOutputBufferWaitMilliseconds) || longestOutputBufferWaitMilliseconds < 0.0)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(longestOutputBufferWaitMilliseconds));
+            throw new ArgumentOutOfRangeException(nameof(longestOutputBufferWaitMilliseconds));
         }
 
-        EndpointId =
-            endpointId;
+        EndpointId = endpointId;
 
-        Requirement =
-            requirement;
+        Requirement = requirement;
 
-        State =
-            state;
+        State = state;
 
-        EndpointState =
-            endpointState;
+        EndpointState = endpointState;
 
-        Format =
-            format;
+        Format = format;
 
-        ConfiguredDelay =
-            configuredDelay;
+        ConfiguredDelay = configuredDelay;
 
-        ClockOffsetFrames =
-            clockOffsetFrames;
+        ClockOffsetFrames = clockOffsetFrames;
 
-        DriftCorrectionPpm =
-            driftCorrectionPpm;
+        DriftCorrectionPpm = driftCorrectionPpm;
 
-        ResampleRatio =
-            resampleRatio;
+        ResampleRatio = resampleRatio;
 
-        IsResynchronizing =
-            isResynchronizing;
+        IsResynchronizing = isResynchronizing;
 
-        UnderrunCount =
-            underrunCount;
+        UnderrunCount = underrunCount;
 
-        ResyncCount =
-            resyncCount;
+        ResyncCount = resyncCount;
 
-        StallRecoveryCount =
-            stallRecoveryCount;
+        StallRecoveryCount = stallRecoveryCount;
 
-        LongestProcessGapMilliseconds =
-            longestProcessGapMilliseconds;
+        LongestProcessGapMilliseconds = longestProcessGapMilliseconds;
 
-        OutputRecoveryFadeCount =
-            outputRecoveryFadeCount;
+        OutputRecoveryFadeCount = outputRecoveryFadeCount;
 
-        OutputEndpointDryCount =
-            outputEndpointDryCount;
+        OutputEndpointDryCount = outputEndpointDryCount;
 
-        LongestOutputSubmitGapMilliseconds =
-            longestOutputSubmitGapMilliseconds;
+        LongestOutputSubmitGapMilliseconds = longestOutputSubmitGapMilliseconds;
 
-        LongestOutputWriteMilliseconds =
-            longestOutputWriteMilliseconds;
+        LongestOutputWriteMilliseconds = longestOutputWriteMilliseconds;
 
-        LongestOutputBufferWaitMilliseconds =
-            longestOutputBufferWaitMilliseconds;
+        LongestOutputBufferWaitMilliseconds = longestOutputBufferWaitMilliseconds;
 
-        Processing =
-            processing;
+        Processing = processing;
 
-        LastFailure =
-            lastFailure;
+        LastFailure = lastFailure;
     }
 }

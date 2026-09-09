@@ -73,7 +73,8 @@ public sealed class PickerGeometry
         double hubRadius,
         double separatorWidth,
         Dictionary<PickerDirection, PickerPoint> iconCenters,
-        Dictionary<PickerDirection, PickerRect> labelBoxes)
+        Dictionary<PickerDirection, PickerRect> labelBoxes
+    )
     {
         WindowBounds = windowBounds;
         Scale = scale;
@@ -130,14 +131,15 @@ public sealed class PickerGeometry
     /// on straight up. Drawing and hit testing have to agree about the compass,
     /// which they only do when it is stated once, here.
     /// </remarks>
-    public static double StartAngle(PickerDirection direction) => direction switch
-    {
-        PickerDirection.Up => -135,
-        PickerDirection.Right => -45,
-        PickerDirection.Down => 45,
-        PickerDirection.Left => 135,
-        _ => throw new ArgumentOutOfRangeException(nameof(direction)),
-    };
+    public static double StartAngle(PickerDirection direction) =>
+        direction switch
+        {
+            PickerDirection.Up => -135,
+            PickerDirection.Right => -45,
+            PickerDirection.Down => 45,
+            PickerDirection.Left => 135,
+            _ => throw new ArgumentOutOfRangeException(nameof(direction)),
+        };
 
     public const double WedgeSweep = 90;
 
@@ -154,7 +156,8 @@ public sealed class PickerGeometry
         PixelRect workArea,
         double scale,
         FavoriteSet favorites,
-        PickerTuning? tuning = null)
+        PickerTuning? tuning = null
+    )
     {
         ArgumentNullException.ThrowIfNull(favorites);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(scale, 0);
@@ -180,7 +183,8 @@ public sealed class PickerGeometry
             workArea.Left + ((workArea.Width - canvasPixels) / 2),
             workArea.Top + ((workArea.Height - canvasPixels) / 2),
             canvasPixels,
-            canvasPixels);
+            canvasPixels
+        );
 
         int hubPixels = MakeEven((int)Math.Round(wheelPixels * settings.HubDiameterFraction));
 
@@ -200,8 +204,13 @@ public sealed class PickerGeometry
         double hubIconSize = Units(Math.Max(24, (int)Math.Round(wheelPixels * settings.HubIconSizeFraction)));
         double hubIconStroke = Units(Math.Max(2, (int)Math.Round(wheelPixels * settings.HubIconStrokeFraction)));
 
-        (Dictionary<PickerDirection, PickerPoint> icons, Dictionary<PickerDirection, PickerRect> labels) =
-            BuildContent(favorites, settings, center, wheel, iconSize);
+        (Dictionary<PickerDirection, PickerPoint> icons, Dictionary<PickerDirection, PickerRect> labels) = BuildContent(
+            favorites,
+            settings,
+            center,
+            wheel,
+            iconSize
+        );
 
         return new PickerGeometry(
             window,
@@ -213,7 +222,8 @@ public sealed class PickerGeometry
             Units(hubPixels) / 2.0,
             Units(Math.Max(3, (int)Math.Round(wheelPixels * settings.SeparatorFraction))),
             icons,
-            labels)
+            labels
+        )
         {
             LabelFontSize = labelFont,
             HubFontSize = hubFont,
@@ -271,15 +281,14 @@ public sealed class PickerGeometry
         double dx = point.X - Center;
         double dy = point.Y - Center;
 
-        PickerDirection direction = Math.Abs(dx) > Math.Abs(dy)
-            ? (dx > 0 ? PickerDirection.Right : PickerDirection.Left)
-            : (dy > 0 ? PickerDirection.Down : PickerDirection.Up);
+        PickerDirection direction =
+            Math.Abs(dx) > Math.Abs(dy)
+                ? (dx > 0 ? PickerDirection.Right : PickerDirection.Left)
+                : (dy > 0 ? PickerDirection.Down : PickerDirection.Up);
 
         double radius = OuterRadius(direction, selected);
 
-        return (dx * dx) + (dy * dy) > radius * radius
-            ? PickerHit.None
-            : new PickerHit(PickerHitKind.Wedge, direction);
+        return (dx * dx) + (dy * dy) > radius * radius ? PickerHit.None : new PickerHit(PickerHitKind.Wedge, direction);
     }
 
     /// <summary>
@@ -289,8 +298,10 @@ public sealed class PickerGeometry
     public double WedgeDiameter(double amount) =>
         WheelDiameter + (2 * SelectedExtension * Math.Clamp(amount, 0.0, 1.0));
 
-    private static (Dictionary<PickerDirection, PickerPoint> Icons, Dictionary<PickerDirection, PickerRect> Labels)
-        BuildContent(FavoriteSet favorites, PickerTuning tuning, double center, double wheel, double iconSize)
+    private static (
+        Dictionary<PickerDirection, PickerPoint> Icons,
+        Dictionary<PickerDirection, PickerRect> Labels
+    ) BuildContent(FavoriteSet favorites, PickerTuning tuning, double center, double wheel, double iconSize)
     {
         double contentRadius = (wheel / 2.0) * tuning.ContentRadiusFraction;
         double labelGap = wheel * tuning.LabelGapFraction;
@@ -317,7 +328,8 @@ public sealed class PickerGeometry
 
             var iconCenter = new PickerPoint(
                 anchor.X + (wheel * favorite.IconOffset.X),
-                anchor.Y + (wheel * favorite.IconOffset.Y));
+                anchor.Y + (wheel * favorite.IconOffset.Y)
+            );
 
             icons[favorite.Direction] = iconCenter;
 
@@ -327,7 +339,8 @@ public sealed class PickerGeometry
                 iconCenter.X - (labelWidth / 2.0) + (wheel * favorite.LabelOffset.X),
                 iconCenter.Y + (iconSize / 2.0) + labelGap + (wheel * favorite.LabelOffset.Y),
                 labelWidth,
-                labelHeight);
+                labelHeight
+            );
         }
 
         return (icons, labels);

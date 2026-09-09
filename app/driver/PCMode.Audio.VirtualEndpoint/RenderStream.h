@@ -130,49 +130,46 @@ struct PCMODE_STREAM_CONTEXT
     WDFTIMER PacketTimer;
 };
 
-WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(
-    PCMODE_STREAM_CONTEXT,
-    PCModeGetStreamContext);
+WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(PCMODE_STREAM_CONTEXT, PCModeGetStreamContext);
 
 EVT_ACX_STREAM_PREPARE_HARDWARE
-    PCModeEvtStreamPrepareHardware;
+PCModeEvtStreamPrepareHardware;
 
 EVT_ACX_STREAM_RELEASE_HARDWARE
-    PCModeEvtStreamReleaseHardware;
+PCModeEvtStreamReleaseHardware;
 
 EVT_ACX_STREAM_RUN
-    PCModeEvtStreamRun;
+PCModeEvtStreamRun;
 
 EVT_ACX_STREAM_PAUSE
-    PCModeEvtStreamPause;
+PCModeEvtStreamPause;
 
 EVT_ACX_STREAM_ALLOCATE_RTPACKETS
-    PCModeEvtStreamAllocateRtPackets;
+PCModeEvtStreamAllocateRtPackets;
 
 EVT_ACX_STREAM_FREE_RTPACKETS
-    PCModeEvtStreamFreeRtPackets;
+PCModeEvtStreamFreeRtPackets;
 
 EVT_ACX_STREAM_SET_RENDER_PACKET
-    PCModeEvtStreamSetRenderPacket;
+PCModeEvtStreamSetRenderPacket;
 
 EVT_ACX_STREAM_GET_CURRENT_PACKET
-    PCModeEvtStreamGetCurrentPacket;
+PCModeEvtStreamGetCurrentPacket;
 
 EVT_ACX_STREAM_GET_PRESENTATION_POSITION
-    PCModeEvtStreamGetPresentationPosition;
+PCModeEvtStreamGetPresentationPosition;
 
 EVT_ACX_STREAM_GET_HW_LATENCY
-    PCModeEvtStreamGetHwLatency;
+PCModeEvtStreamGetHwLatency;
 
 EVT_WDF_TIMER
-    PCModeEvtPacketTimer;
+PCModeEvtPacketTimer;
 
 EVT_WDF_OBJECT_CONTEXT_CLEANUP
-    PCModeEvtStreamContextCleanup;
+PCModeEvtStreamContextCleanup;
 
 NTSTATUS
-PCModeCreateRenderStream(
-    _In_ WDFDEVICE Device,
-    _In_ ACXCIRCUIT Circuit,
-    _Inout_ PACXSTREAM_INIT StreamInit,
-    _In_ ACXDATAFORMAT Format);
+PCModeCreateRenderStream(_In_ WDFDEVICE Device,
+                         _In_ ACXCIRCUIT Circuit,
+                         _Inout_ PACXSTREAM_INIT StreamInit,
+                         _In_ ACXDATAFORMAT Format);

@@ -54,9 +54,7 @@ public sealed class ObservableEditableRowTests
         private string _name = string.Empty;
 
         public TestRow(Action onChanged)
-            : base(onChanged)
-        {
-        }
+            : base(onChanged) { }
 
         public string Name
         {

@@ -22,12 +22,11 @@ public sealed class ElementCatalogTests
     [Fact]
     public void Navigable_page_without_an_element_is_rejected()
     {
-        var catalog = new ElementCatalog(
-            CompletePairs().Where(pair => pair.Key != PageId.Audio));
+        var catalog = new ElementCatalog(CompletePairs().Where(pair => pair.Key != PageId.Audio));
 
-        InvalidOperationException failure =
-            Assert.Throws<InvalidOperationException>(
-                () => catalog.Validate(NavigationRegistry.Items));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            catalog.Validate(NavigationRegistry.Items)
+        );
 
         Assert.Contains("Audio", failure.Message, StringComparison.Ordinal);
         Assert.Contains("no composed Element", failure.Message, StringComparison.Ordinal);
@@ -36,17 +35,13 @@ public sealed class ElementCatalogTests
     [Fact]
     public void Composed_element_without_navigation_is_rejected()
     {
-        KeyValuePair<PageId, object>[] pairs =
-        [
-            .. CompletePairs(),
-            KeyValuePair.Create((PageId)999, new object()),
-        ];
+        KeyValuePair<PageId, object>[] pairs = [.. CompletePairs(), KeyValuePair.Create((PageId)999, new object())];
 
         var catalog = new ElementCatalog(pairs);
 
-        InvalidOperationException failure =
-            Assert.Throws<InvalidOperationException>(
-                () => catalog.Validate(NavigationRegistry.Items));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            catalog.Validate(NavigationRegistry.Items)
+        );
 
         Assert.Contains("999", failure.Message, StringComparison.Ordinal);
         Assert.Contains("not navigable", failure.Message, StringComparison.Ordinal);
@@ -61,8 +56,7 @@ public sealed class ElementCatalogTests
             KeyValuePair.Create(PageId.Home, new object()),
         ];
 
-        InvalidOperationException failure =
-            Assert.Throws<InvalidOperationException>(() => new ElementCatalog(pairs));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => new ElementCatalog(pairs));
 
         Assert.Contains("more than one Element", failure.Message, StringComparison.Ordinal);
     }
@@ -70,6 +64,5 @@ public sealed class ElementCatalogTests
     private static ElementCatalog CompleteCatalog() => new(CompletePairs());
 
     private static IEnumerable<KeyValuePair<PageId, object>> CompletePairs() =>
-        NavigationRegistry.Items.Select(
-            item => KeyValuePair.Create(item.Page, new object()));
+        NavigationRegistry.Items.Select(item => KeyValuePair.Create(item.Page, new object()));
 }

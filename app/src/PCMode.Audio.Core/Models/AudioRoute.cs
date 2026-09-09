@@ -3,7 +3,7 @@ namespace PCMode.Audio.Core.Models;
 public enum AudioRouteRequirement
 {
     Required,
-    Optional
+    Optional,
 }
 
 public sealed class AudioRoute
@@ -28,68 +28,52 @@ public sealed class AudioRoute
         float volume = 1.0f,
         bool muted = false,
         TimeSpan delay = default,
-        AudioProcessingProfile? processing = null)
+        AudioProcessingProfile? processing = null
+    )
     {
         if (endpointId == default)
         {
-            throw new ArgumentException(
-                "Endpoint ID must be specified.",
-                nameof(endpointId));
+            throw new ArgumentException("Endpoint ID must be specified.", nameof(endpointId));
         }
 
-        if (!Enum.IsDefined(
-                typeof(AudioRouteRequirement),
-                requirement))
+        if (!Enum.IsDefined(typeof(AudioRouteRequirement), requirement))
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(requirement));
+            throw new ArgumentOutOfRangeException(nameof(requirement));
         }
 
-        if (!float.IsFinite(volume) ||
-            volume < 0.0f ||
-            volume > 1.0f)
+        if (!float.IsFinite(volume) || volume < 0.0f || volume > 1.0f)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(volume),
                 volume,
-                "Volume must be a finite value between 0.0 and 1.0.");
+                "Volume must be a finite value between 0.0 and 1.0."
+            );
         }
 
         if (delay < TimeSpan.Zero)
         {
-            throw new ArgumentOutOfRangeException(
-                nameof(delay),
-                delay,
-                "Delay cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Delay cannot be negative.");
         }
 
-        if (delay >
-            TimeSpan.FromMilliseconds(
-                MaximumDelayMilliseconds))
+        if (delay > TimeSpan.FromMilliseconds(MaximumDelayMilliseconds))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(delay),
                 delay,
-                $"Delay cannot exceed {MaximumDelayMilliseconds} ms.");
+                $"Delay cannot exceed {MaximumDelayMilliseconds} ms."
+            );
         }
 
-        EndpointId =
-            endpointId;
+        EndpointId = endpointId;
 
-        Requirement =
-            requirement;
+        Requirement = requirement;
 
-        Volume =
-            volume;
+        Volume = volume;
 
-        Muted =
-            muted;
+        Muted = muted;
 
-        Delay =
-            delay;
+        Delay = delay;
 
-        Processing =
-            processing ??
-            AudioProcessingProfile.Flat;
+        Processing = processing ?? AudioProcessingProfile.Flat;
     }
 }

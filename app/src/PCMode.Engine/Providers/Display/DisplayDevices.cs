@@ -30,7 +30,8 @@ public sealed record ActiveDisplay(
     int Y,
     int Width,
     int Height,
-    double RefreshHz)
+    double RefreshHz
+)
 {
     /// <summary>
     /// Whether this is the primary display, by Windows' own definition of the

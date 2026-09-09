@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using PCMode.Tray.UI.Framework;
-using PCMode.Tray.Tests.UI.Construction.Fixtures;
 using PCMode.Tray.Tests;
+using PCMode.Tray.Tests.UI.Construction.Fixtures;
+using PCMode.Tray.UI.Framework;
 
 namespace PCMode.Tray.Tests.UI.Construction;
 
@@ -44,14 +44,13 @@ public sealed class LayoutSwapTests
 
             var sideBySide = new ContentControl { Content = Probe.Page() };
             Wpf.Realize(sideBySide);
-            Wpf.Descendants<FixtureRootBlock>(sideBySide).Single().Template =
-                Probe.Layout("FixtureRootSideBySideLayout");
+            Wpf.Descendants<FixtureRootBlock>(sideBySide).Single().Template = Probe.Layout(
+                "FixtureRootSideBySideLayout"
+            );
             Wpf.Realize(sideBySide);
 
             Assert.Equal(Rendered(stacked), Rendered(sideBySide));
-            Assert.Equal(
-                ["Displays", "Dell U2720Q", "LG C2", "Resolution", "Scaling"],
-                Rendered(sideBySide));
+            Assert.Equal(["Displays", "Dell U2720Q", "LG C2", "Resolution", "Scaling"], Rendered(sideBySide));
         });
     }
 
@@ -70,8 +69,7 @@ public sealed class LayoutSwapTests
             };
             Wpf.Realize(block);
 
-            var items = (RepeatedRegion)
-                block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
+            var items = (RepeatedRegion)block.Template.FindName(FixtureRootBlock.ItemsRegion, block);
 
             Assert.Same(page.Items, items.ItemsSource);
             Assert.Equal(2, items.Items.Count);

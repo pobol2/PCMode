@@ -18,59 +18,29 @@ public sealed record DriverStatus(
     ulong BytesRendered,
     ulong PacketsDropped,
     ulong DiscontinuityCount,
-    string? Failure)
+    string? Failure
+)
 {
-    public static DriverStatus
-        Unavailable(
-            string failure)
+    public static DriverStatus Unavailable(string failure)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            failure);
+        ArgumentException.ThrowIfNullOrWhiteSpace(failure);
 
         return new DriverStatus(
-            Available:
-                false,
-
-            DeviceStarted:
-                false,
-
-            StreamRunning:
-                false,
-
-            PcmConsumerConnected:
-                false,
-
-            ActiveStreams:
-                0,
-
-            ProtocolMajor:
-                0,
-
-            ProtocolMinor:
-                0,
-
-            Capabilities:
-                DriverCapabilities.None,
-
-            PreferredFormat:
-                null,
-
-            CurrentFormat:
-                null,
-
-            PacketsRendered:
-                0,
-
-            BytesRendered:
-                0,
-
-            PacketsDropped:
-                0,
-
-            DiscontinuityCount:
-                0,
-
-            Failure:
-                failure);
+            Available: false,
+            DeviceStarted: false,
+            StreamRunning: false,
+            PcmConsumerConnected: false,
+            ActiveStreams: 0,
+            ProtocolMajor: 0,
+            ProtocolMinor: 0,
+            Capabilities: DriverCapabilities.None,
+            PreferredFormat: null,
+            CurrentFormat: null,
+            PacketsRendered: 0,
+            BytesRendered: 0,
+            PacketsDropped: 0,
+            DiscontinuityCount: 0,
+            Failure: failure
+        );
     }
 }

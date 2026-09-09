@@ -1,9 +1,7 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
-    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
+                    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures">
     <!--
         Layouts that break the region contract on purpose. They live in the
         tests, not the framework: they are what the enforcement tests point at,
@@ -46,5 +44,4 @@
             <fixtures:FixtureDetailBlock />
         </StackPanel>
     </ControlTemplate>
-
 </ResourceDictionary>

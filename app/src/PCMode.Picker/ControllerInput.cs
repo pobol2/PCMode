@@ -46,8 +46,7 @@ public readonly record struct ControllerCommand(ControllerAction Action, PickerD
 
     public static ControllerCommand Activate => new(ControllerAction.Activate);
 
-    public static ControllerCommand Select(PickerDirection direction) =>
-        new(ControllerAction.Select, direction);
+    public static ControllerCommand Select(PickerDirection direction) => new(ControllerAction.Select, direction);
 }
 
 /// <summary>

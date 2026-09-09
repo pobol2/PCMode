@@ -10,18 +10,21 @@ public enum CaseRgbDeviceState
 }
 
 public sealed record CaseRgbConfiguredDevice(int Index, string Mode, string? Identity);
+
 public sealed record CaseRgbSceneDevice(int Index, string Mode, string Color)
 {
     /// <summary>Optional exact per-LED colours in the controller's SDK LED order.</summary>
     public IReadOnlyList<string>? LedColors { get; init; }
 }
+
 public sealed record CaseRgbScene(string Name, IReadOnlyList<CaseRgbSceneDevice> Devices);
 
 public sealed record CaseRgbDeviceResolution(
     CaseRgbConfiguredDevice Configured,
     CaseRgbDeviceState State,
     OpenRgbControllerInfo? Controller,
-    string Detail);
+    string Detail
+);
 
 /// <summary>Sets case lighting to either one RGB colour or one configured named scene.</summary>
 public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider, IAvailableProvider
@@ -36,8 +39,9 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private string? _executable;
     private IReadOnlyList<CaseRgbConfiguredDevice> _configuredDevices = [];
     private IReadOnlyList<KeyValuePair<int, string>> _devices = [];
-    private IReadOnlyDictionary<string, CaseRgbScene> _scenes =
-        new Dictionary<string, CaseRgbScene>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, CaseRgbScene> _scenes = new Dictionary<string, CaseRgbScene>(
+        StringComparer.OrdinalIgnoreCase
+    );
     private TimeSpan _within = DefaultWithin;
 
     public CaseRgbProvider(IOpenRgbClient client)
@@ -101,8 +105,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             }
             else if (field.NameEquals("executable"))
             {
-                if (field.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(field.Value.GetString()))
+                if (field.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(field.Value.GetString()))
                 {
                     problem = $"'{SettingsPath}.executable' must be a non-empty string when it is present.";
                     return false;
@@ -126,10 +129,12 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             }
             else if (field.NameEquals("within"))
             {
-                if (field.Value.ValueKind != JsonValueKind.Number ||
-                    !field.Value.TryGetInt32(out int milliseconds) ||
-                    milliseconds < 500 ||
-                    milliseconds > 60_000)
+                if (
+                    field.Value.ValueKind != JsonValueKind.Number
+                    || !field.Value.TryGetInt32(out int milliseconds)
+                    || milliseconds < 500
+                    || milliseconds > 60_000
+                )
                 {
                     problem = $"'{SettingsPath}.within' must be a whole number of milliseconds between 500 and 60000.";
                     return false;
@@ -140,16 +145,15 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             else
             {
                 problem =
-                    $"'{SettingsPath}' does not understand '{field.Name}'. " +
-                    "It takes 'enabled', 'executable', 'devices', 'scenes' and 'within'.";
+                    $"'{SettingsPath}' does not understand '{field.Name}'. "
+                    + "It takes 'enabled', 'executable', 'devices', 'scenes' and 'within'.";
                 return false;
             }
         }
 
         if (enabled && (devices is null || devices.Count == 0))
         {
-            problem =
-                $"'{SettingsPath}' is switched on but lists no devices, so there would be nothing to colour.";
+            problem = $"'{SettingsPath}' is switched on but lists no devices, so there would be nothing to colour.";
             return false;
         }
 
@@ -171,8 +175,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         return true;
     }
 
-    public IReadOnlyList<OpenRgbControllerInfo> DiscoverControllers() =>
-        _client.DiscoverControllers(_within);
+    public IReadOnlyList<OpenRgbControllerInfo> DiscoverControllers() => _client.DiscoverControllers(_within);
 
     public IReadOnlyList<CaseRgbDeviceResolution> ResolveConfiguredDevices()
     {
@@ -185,7 +188,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         if (!_enabled)
         {
             return ResourceAvailability.Disabled(
-                $"case lighting is switched off. Set '{SettingsPath}.enabled' to true to use it.");
+                $"case lighting is switched off. Set '{SettingsPath}.enabled' to true to use it."
+            );
         }
 
         if (!TryGetTargetDevices(target, out IReadOnlyList<CaseRgbConfiguredDevice>? configured, out string? invalid))
@@ -213,49 +217,56 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                 _client.Probe(_within);
                 resolutions =
                 [
-                    .. devices.Select(device =>
-                        new CaseRgbDeviceResolution(
-                            device,
-                            CaseRgbDeviceState.Ready,
-                            null,
-                            $"legacy OpenRGB controller index {device.Index} will be used directly.")),
+                    .. devices.Select(device => new CaseRgbDeviceResolution(
+                        device,
+                        CaseRgbDeviceState.Ready,
+                        null,
+                        $"legacy OpenRGB controller index {device.Index} will be used directly."
+                    )),
                 ];
             }
 
             CaseRgbDeviceResolution[] problems =
-                [.. resolutions.Where(resolution => resolution.State != CaseRgbDeviceState.Ready)];
+            [
+                .. resolutions.Where(resolution => resolution.State != CaseRgbDeviceState.Ready),
+            ];
 
             if (problems.Length > 0)
             {
-                return ResourceAvailability.Unavailable(string.Join(
-                    " ",
-                    problems.Select(problem => $"{problem.State}: {problem.Detail}")));
+                return ResourceAvailability.Unavailable(
+                    string.Join(" ", problems.Select(problem => $"{problem.State}: {problem.Detail}"))
+                );
             }
 
-            if (_scenes.TryGetValue(target.Trim(), out CaseRgbScene? scene) &&
-                !TryValidateResolvedScene(scene, resolutions, out string? sceneProblem))
+            if (
+                _scenes.TryGetValue(target.Trim(), out CaseRgbScene? scene)
+                && !TryValidateResolvedScene(scene, resolutions, out string? sceneProblem)
+            )
             {
                 return ResourceAvailability.Unavailable(sceneProblem!);
             }
 
             return new ResourceAvailability(
                 AvailabilityState.Available,
-                $"Ready: {resolutions.Count} configured OpenRGB controller(s) resolved.");
+                $"Ready: {resolutions.Count} configured OpenRGB controller(s) resolved."
+            );
         }
         catch (Exception exception)
         {
             return ResourceAvailability.Unavailable(
-                $"the external OpenRGB SDK server is not reachable on localhost:6742. {exception.Message}");
+                $"the external OpenRGB SDK server is not reachable on localhost:6742. {exception.Message}"
+            );
         }
     }
 
-    public ConvergencePolicy PolicyFor(string target) => new()
-    {
-        Verify = true,
-        MaxAttempts = 1,
-        RetryInterval = TimeSpan.FromSeconds(1),
-        PollInterval = TimeSpan.FromMilliseconds(100),
-    };
+    public ConvergencePolicy PolicyFor(string target) =>
+        new()
+        {
+            Verify = true,
+            MaxAttempts = 1,
+            RetryInterval = TimeSpan.FromSeconds(1),
+            PollInterval = TimeSpan.FromMilliseconds(100),
+        };
 
     public bool IsValidValue(string value, out string? problem)
     {
@@ -280,8 +291,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             return true;
         }
 
-        problem =
-            $"'{target}' is neither a six-digit hex colour (RRGGBB) nor a configured RGB scene.";
+        problem = $"'{target}' is neither a six-digit hex colour (RRGGBB) nor a configured RGB scene.";
         return false;
     }
 
@@ -305,21 +315,25 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             }
 
             IReadOnlyList<OpenRgbControllerInfo> controllers = _client.DiscoverControllers(_within);
-            IReadOnlyList<CaseRgbDeviceResolution> baseResolutions =
-                ResolveConfiguredDevices(_configuredDevices, controllers);
+            IReadOnlyList<CaseRgbDeviceResolution> baseResolutions = ResolveConfiguredDevices(
+                _configuredDevices,
+                controllers
+            );
 
-            if (baseResolutions.Count != _configuredDevices.Count ||
-                baseResolutions.Any(resolution => resolution.State != CaseRgbDeviceState.Ready))
+            if (
+                baseResolutions.Count != _configuredDevices.Count
+                || baseResolutions.Any(resolution => resolution.State != CaseRgbDeviceState.Ready)
+            )
             {
                 return null;
             }
 
             Dictionary<int, int> runtimeIndices = baseResolutions.ToDictionary(
                 resolution => resolution.Configured.Index,
-                resolution => resolution.Controller!.Index);
+                resolution => resolution.Controller!.Index
+            );
 
-            IReadOnlyList<int> indices =
-                [.. _configuredDevices.Select(device => runtimeIndices[device.Index])];
+            IReadOnlyList<int> indices = [.. _configuredDevices.Select(device => runtimeIndices[device.Index])];
 
             IReadOnlyList<OpenRgbDeviceState>? current = _client.ReadStates(indices, _within);
 
@@ -328,13 +342,12 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                 return null;
             }
 
-            Dictionary<int, OpenRgbDeviceState> byIndex =
-                current.ToDictionary(state => state.Index);
+            Dictionary<int, OpenRgbDeviceState> byIndex = current.ToDictionary(state => state.Index);
 
             string[] matchingScenes =
             [
-                .. _scenes.Values
-                    .Where(scene => SceneMatches(scene, runtimeIndices, byIndex))
+                .. _scenes
+                    .Values.Where(scene => SceneMatches(scene, runtimeIndices, byIndex))
                     .Select(scene => scene.Name),
             ];
 
@@ -354,10 +367,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             {
                 OpenRgbDeviceState state = byIndex[resolution.Controller!.Index];
 
-                if (!string.Equals(
-                        state.Mode,
-                        resolution.Configured.Mode,
-                        StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(state.Mode, resolution.Configured.Mode, StringComparison.OrdinalIgnoreCase))
                 {
                     return null;
                 }
@@ -390,7 +400,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         if (!_enabled)
         {
             throw new InvalidOperationException(
-                $"Case lighting is switched off on this machine. Set '{SettingsPath}.enabled' to true first.");
+                $"Case lighting is switched off on this machine. Set '{SettingsPath}.enabled' to true first."
+            );
         }
 
         if (!IsValidValue(value, out string? invalid))
@@ -405,11 +416,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         {
             if (IsRgb(target))
             {
-                _client.SetColor(
-                    ResolveDirectForApply(),
-                    target,
-                    _within,
-                    cancellationToken);
+                _client.SetColor(ResolveDirectForApply(), target, _within, cancellationToken);
                 return;
             }
 
@@ -417,22 +424,24 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             IReadOnlyList<CaseRgbConfiguredDevice> configured = SceneConfiguredDevices(scene);
             IReadOnlyList<CaseRgbDeviceResolution> resolutions = ResolveForApply(configured);
 
-            Dictionary<int, CaseRgbDeviceResolution> byConfiguredIndex =
-                resolutions.ToDictionary(resolution => resolution.Configured.Index);
+            Dictionary<int, CaseRgbDeviceResolution> byConfiguredIndex = resolutions.ToDictionary(resolution =>
+                resolution.Configured.Index
+            );
 
             _client.SetStates(
                 [
-                    .. scene.Devices.Select(device =>
-                        new OpenRgbDeviceTarget(
-                            byConfiguredIndex[device.Index].Controller?.Index ?? device.Index,
-                            device.Mode,
-                            device.Color)
-                        {
-                            LedColors = device.LedColors,
-                        }),
+                    .. scene.Devices.Select(device => new OpenRgbDeviceTarget(
+                        byConfiguredIndex[device.Index].Controller?.Index ?? device.Index,
+                        device.Mode,
+                        device.Color
+                    )
+                    {
+                        LedColors = device.LedColors,
+                    }),
                 ],
                 _within,
-                cancellationToken);
+                cancellationToken
+            );
         }
         catch (OperationCanceledException)
         {
@@ -442,7 +451,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         {
             throw new InvalidOperationException(
                 $"OpenRGB could not set the case lighting to {target}. {exception.Message}",
-                exception);
+                exception
+            );
         }
     }
 
@@ -451,34 +461,36 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         IReadOnlyList<CaseRgbDeviceResolution> resolutions = ResolveForApply(_configuredDevices);
         return
         [
-            .. resolutions.Select(resolution =>
-                new KeyValuePair<int, string>(
-                    resolution.Controller?.Index ?? resolution.Configured.Index,
-                    resolution.Configured.Mode)),
+            .. resolutions.Select(resolution => new KeyValuePair<int, string>(
+                resolution.Controller?.Index ?? resolution.Configured.Index,
+                resolution.Configured.Mode
+            )),
         ];
     }
 
-    private IReadOnlyList<CaseRgbDeviceResolution> ResolveForApply(
-        IReadOnlyList<CaseRgbConfiguredDevice> configured)
+    private IReadOnlyList<CaseRgbDeviceResolution> ResolveForApply(IReadOnlyList<CaseRgbConfiguredDevice> configured)
     {
         if (!configured.Any(device => device.Identity is not null))
         {
             return
             [
-                .. configured.Select(device =>
-                    new CaseRgbDeviceResolution(
-                        device,
-                        CaseRgbDeviceState.Ready,
-                        null,
-                        $"legacy OpenRGB controller index {device.Index} will be used directly.")),
+                .. configured.Select(device => new CaseRgbDeviceResolution(
+                    device,
+                    CaseRgbDeviceState.Ready,
+                    null,
+                    $"legacy OpenRGB controller index {device.Index} will be used directly."
+                )),
             ];
         }
 
-        IReadOnlyList<CaseRgbDeviceResolution> resolutions =
-            ResolveConfiguredDevices(configured, _client.DiscoverControllers(_within));
+        IReadOnlyList<CaseRgbDeviceResolution> resolutions = ResolveConfiguredDevices(
+            configured,
+            _client.DiscoverControllers(_within)
+        );
 
-        CaseRgbDeviceResolution? unresolved =
-            resolutions.FirstOrDefault(resolution => resolution.State != CaseRgbDeviceState.Ready);
+        CaseRgbDeviceResolution? unresolved = resolutions.FirstOrDefault(resolution =>
+            resolution.State != CaseRgbDeviceState.Ready
+        );
 
         if (unresolved is not null)
         {
@@ -490,23 +502,23 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
     private IReadOnlyList<CaseRgbConfiguredDevice> SceneConfiguredDevices(CaseRgbScene scene)
     {
-        Dictionary<int, CaseRgbConfiguredDevice> baseByIndex =
-            _configuredDevices.ToDictionary(device => device.Index);
+        Dictionary<int, CaseRgbConfiguredDevice> baseByIndex = _configuredDevices.ToDictionary(device => device.Index);
 
         return
         [
-            .. scene.Devices.Select(device =>
-                new CaseRgbConfiguredDevice(
-                    device.Index,
-                    device.Mode,
-                    baseByIndex[device.Index].Identity)),
+            .. scene.Devices.Select(device => new CaseRgbConfiguredDevice(
+                device.Index,
+                device.Mode,
+                baseByIndex[device.Index].Identity
+            )),
         ];
     }
 
     private bool TryGetTargetDevices(
         string target,
         out IReadOnlyList<CaseRgbConfiguredDevice>? configured,
-        out string? problem)
+        out string? problem
+    )
     {
         string normalized = (target ?? string.Empty).Trim();
 
@@ -531,7 +543,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
     private static IReadOnlyList<CaseRgbDeviceResolution> ResolveConfiguredDevices(
         IReadOnlyList<CaseRgbConfiguredDevice> configuredDevices,
-        IReadOnlyList<OpenRgbControllerInfo> controllers)
+        IReadOnlyList<OpenRgbControllerInfo> controllers
+    )
     {
         var resolved = new List<CaseRgbDeviceResolution>(configuredDevices.Count);
 
@@ -539,62 +552,77 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         {
             if (configured.Identity is null)
             {
-                OpenRgbControllerInfo? controller =
-                    controllers.FirstOrDefault(candidate => candidate.Index == configured.Index);
+                OpenRgbControllerInfo? controller = controllers.FirstOrDefault(candidate =>
+                    candidate.Index == configured.Index
+                );
 
                 if (controller is null)
                 {
-                    resolved.Add(new CaseRgbDeviceResolution(
-                        configured,
-                        CaseRgbDeviceState.Missing,
-                        null,
-                        $"legacy OpenRGB controller index {configured.Index} is not currently present."));
+                    resolved.Add(
+                        new CaseRgbDeviceResolution(
+                            configured,
+                            CaseRgbDeviceState.Missing,
+                            null,
+                            $"legacy OpenRGB controller index {configured.Index} is not currently present."
+                        )
+                    );
                     continue;
                 }
 
                 if (!HasMode(controller, configured.Mode))
                 {
-                    resolved.Add(new CaseRgbDeviceResolution(
-                        configured,
-                        CaseRgbDeviceState.Missing,
-                        controller,
-                        $"controller {configured.Index} ('{controller.Name}') is present but mode '{configured.Mode}' is missing."));
+                    resolved.Add(
+                        new CaseRgbDeviceResolution(
+                            configured,
+                            CaseRgbDeviceState.Missing,
+                            controller,
+                            $"controller {configured.Index} ('{controller.Name}') is present but mode '{configured.Mode}' is missing."
+                        )
+                    );
                     continue;
                 }
 
-                resolved.Add(new CaseRgbDeviceResolution(
-                    configured,
-                    CaseRgbDeviceState.Ready,
-                    controller,
-                    $"legacy index {configured.Index} resolves to '{controller.Name}'."));
+                resolved.Add(
+                    new CaseRgbDeviceResolution(
+                        configured,
+                        CaseRgbDeviceState.Ready,
+                        controller,
+                        $"legacy index {configured.Index} resolves to '{controller.Name}'."
+                    )
+                );
                 continue;
             }
 
             OpenRgbControllerInfo[] matches =
             [
-                .. controllers.Where(controller => string.Equals(
-                    controller.Identity,
-                    configured.Identity,
-                    StringComparison.OrdinalIgnoreCase)),
+                .. controllers.Where(controller =>
+                    string.Equals(controller.Identity, configured.Identity, StringComparison.OrdinalIgnoreCase)
+                ),
             ];
 
             if (matches.Length == 0)
             {
-                resolved.Add(new CaseRgbDeviceResolution(
-                    configured,
-                    CaseRgbDeviceState.Missing,
-                    null,
-                    $"configured OpenRGB identity '{configured.Identity}' is not currently present."));
+                resolved.Add(
+                    new CaseRgbDeviceResolution(
+                        configured,
+                        CaseRgbDeviceState.Missing,
+                        null,
+                        $"configured OpenRGB identity '{configured.Identity}' is not currently present."
+                    )
+                );
                 continue;
             }
 
             if (matches.Length > 1)
             {
-                resolved.Add(new CaseRgbDeviceResolution(
-                    configured,
-                    CaseRgbDeviceState.Ambiguous,
-                    null,
-                    $"configured OpenRGB identity '{configured.Identity}' matches {matches.Length} controllers."));
+                resolved.Add(
+                    new CaseRgbDeviceResolution(
+                        configured,
+                        CaseRgbDeviceState.Ambiguous,
+                        null,
+                        $"configured OpenRGB identity '{configured.Identity}' matches {matches.Length} controllers."
+                    )
+                );
                 continue;
             }
 
@@ -602,19 +630,25 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
             if (!HasMode(match, configured.Mode))
             {
-                resolved.Add(new CaseRgbDeviceResolution(
-                    configured,
-                    CaseRgbDeviceState.Missing,
-                    match,
-                    $"controller '{match.Name}' resolved by identity but mode '{configured.Mode}' is missing."));
+                resolved.Add(
+                    new CaseRgbDeviceResolution(
+                        configured,
+                        CaseRgbDeviceState.Missing,
+                        match,
+                        $"controller '{match.Name}' resolved by identity but mode '{configured.Mode}' is missing."
+                    )
+                );
                 continue;
             }
 
-            resolved.Add(new CaseRgbDeviceResolution(
-                configured,
-                CaseRgbDeviceState.Ready,
-                match,
-                $"'{match.Name}' resolved to current SDK controller index {match.Index}."));
+            resolved.Add(
+                new CaseRgbDeviceResolution(
+                    configured,
+                    CaseRgbDeviceState.Ready,
+                    match,
+                    $"'{match.Name}' resolved to current SDK controller index {match.Index}."
+                )
+            );
         }
 
         return resolved;
@@ -623,22 +657,24 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private static bool SceneMatches(
         CaseRgbScene scene,
         IReadOnlyDictionary<int, int> runtimeIndices,
-        IReadOnlyDictionary<int, OpenRgbDeviceState> current)
+        IReadOnlyDictionary<int, OpenRgbDeviceState> current
+    )
     {
         foreach (CaseRgbSceneDevice expected in scene.Devices)
         {
             int runtimeIndex = runtimeIndices[expected.Index];
 
-            if (!current.TryGetValue(runtimeIndex, out OpenRgbDeviceState? actual) ||
-                !string.Equals(actual.Mode, expected.Mode, StringComparison.OrdinalIgnoreCase))
+            if (
+                !current.TryGetValue(runtimeIndex, out OpenRgbDeviceState? actual)
+                || !string.Equals(actual.Mode, expected.Mode, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return false;
             }
 
             if (expected.LedColors is { Count: > 0 } expectedLeds)
             {
-                if (actual.LedColors is not { } actualLeds ||
-                    actualLeds.Count != expectedLeds.Count)
+                if (actual.LedColors is not { } actualLeds || actualLeds.Count != expectedLeds.Count)
                 {
                     return false;
                 }
@@ -663,7 +699,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private static bool TryValidateResolvedScene(
         CaseRgbScene scene,
         IReadOnlyList<CaseRgbDeviceResolution> resolutions,
-        out string? problem)
+        out string? problem
+    )
     {
         Dictionary<int, OpenRgbControllerInfo> controllers = resolutions
             .Where(resolution => resolution.Controller is not null)
@@ -692,8 +729,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             if (controller.Leds.Count != ledColors.Count)
             {
                 problem =
-                    $"OpenRGB controller '{controller.Name}' currently exposes {controller.Leds.Count} LED(s), " +
-                    $"but scene '{scene.Name}' contains {ledColors.Count} LED colour(s).";
+                    $"OpenRGB controller '{controller.Name}' currently exposes {controller.Leds.Count} LED(s), "
+                    + $"but scene '{scene.Name}' contains {ledColors.Count} LED colour(s).";
                 return false;
             }
         }
@@ -708,7 +745,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private static bool ValidateScenes(
         IReadOnlyList<CaseRgbConfiguredDevice> configuredDevices,
         IReadOnlyDictionary<string, CaseRgbScene> scenes,
-        out string? problem)
+        out string? problem
+    )
     {
         HashSet<int> configuredIndices = [.. configuredDevices.Select(device => device.Index)];
         var signatures = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -723,12 +761,13 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                 int[] unknown = [.. sceneIndices.Except(configuredIndices).Order()];
 
                 string detail = string.Join(
-                    " ",
-                    missing.Length > 0 ? $"Missing device(s): {string.Join(", ", missing)}." : string.Empty,
-                    unknown.Length > 0 ? $"Unknown device(s): {string.Join(", ", unknown)}." : string.Empty).Trim();
+                        " ",
+                        missing.Length > 0 ? $"Missing device(s): {string.Join(", ", missing)}." : string.Empty,
+                        unknown.Length > 0 ? $"Unknown device(s): {string.Join(", ", unknown)}." : string.Empty
+                    )
+                    .Trim();
 
-                problem =
-                    $"RGB scene '{scene.Name}' must define exactly the configured RGB controllers. {detail}";
+                problem = $"RGB scene '{scene.Name}' must define exactly the configured RGB controllers. {detail}";
                 return false;
             }
 
@@ -736,8 +775,7 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             {
                 if (!IsRgb(device.Color))
                 {
-                    problem =
-                        $"RGB scene '{scene.Name}' needs a six-digit RGB colour for controller {device.Index}.";
+                    problem = $"RGB scene '{scene.Name}' needs a six-digit RGB colour for controller {device.Index}.";
                     return false;
                 }
 
@@ -764,8 +802,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             if (signatures.TryGetValue(signature, out string? duplicate))
             {
                 problem =
-                    $"RGB scenes '{duplicate}' and '{scene.Name}' describe the same controller state, " +
-                    "so readback could not tell them apart.";
+                    $"RGB scenes '{duplicate}' and '{scene.Name}' describe the same controller state, "
+                    + "so readback could not tell them apart.";
                 return false;
             }
 
@@ -779,18 +817,23 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private static string SceneSignature(CaseRgbScene scene) =>
         string.Join(
             "|",
-            scene.Devices
-                .OrderBy(device => device.Index)
+            scene
+                .Devices.OrderBy(device => device.Index)
                 .Select(device =>
-                    $"{device.Index}:{device.Mode.ToUpperInvariant()}:{device.Color.ToUpperInvariant()}:" +
-                    (device.LedColors is { Count: > 0 } ledColors
-                        ? string.Join(",", ledColors.Select(color => color.ToUpperInvariant()))
-                        : "-")));
+                    $"{device.Index}:{device.Mode.ToUpperInvariant()}:{device.Color.ToUpperInvariant()}:"
+                    + (
+                        device.LedColors is { Count: > 0 } ledColors
+                            ? string.Join(",", ledColors.Select(color => color.ToUpperInvariant()))
+                            : "-"
+                    )
+                )
+        );
 
     private static bool TryReadDevices(
         JsonElement written,
         out List<CaseRgbConfiguredDevice>? devices,
-        out string? problem)
+        out string? problem
+    )
     {
         devices = null;
 
@@ -808,8 +851,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             if (!TryReadIndex(device.Name, out int index))
             {
                 problem =
-                    $"'{SettingsPath}.devices' has a key '{device.Name}' that is not a device number. " +
-                    "OpenRGB numbers its SDK controllers from 0.";
+                    $"'{SettingsPath}.devices' has a key '{device.Name}' that is not a device number. "
+                    + "OpenRGB numbers its SDK controllers from 0.";
                 return false;
             }
 
@@ -838,8 +881,10 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                     }
                     else if (field.NameEquals("identity"))
                     {
-                        if (field.Value.ValueKind != JsonValueKind.String ||
-                            string.IsNullOrWhiteSpace(field.Value.GetString()))
+                        if (
+                            field.Value.ValueKind != JsonValueKind.String
+                            || string.IsNullOrWhiteSpace(field.Value.GetString())
+                        )
                         {
                             problem = $"'{SettingsPath}.devices.{index}.identity' must be a non-empty string.";
                             return false;
@@ -850,8 +895,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                     else
                     {
                         problem =
-                            $"'{SettingsPath}.devices.{index}' does not understand '{field.Name}'. " +
-                            "It takes 'mode' and optional 'identity'.";
+                            $"'{SettingsPath}.devices.{index}' does not understand '{field.Name}'. "
+                            + "It takes 'mode' and optional 'identity'.";
                         return false;
                     }
                 }
@@ -866,8 +911,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
             if (string.IsNullOrWhiteSpace(mode))
             {
                 problem =
-                    $"'{SettingsPath}.devices.{index}' has no lighting mode. " +
-                    "It is commonly 'Direct' or 'Static', and depends on the device.";
+                    $"'{SettingsPath}.devices.{index}' has no lighting mode. "
+                    + "It is commonly 'Direct' or 'Static', and depends on the device.";
                 return false;
             }
 
@@ -886,7 +931,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
     private static bool TryReadScenes(
         JsonElement written,
         out Dictionary<string, CaseRgbScene>? scenes,
-        out string? problem)
+        out string? problem
+    )
     {
         scenes = null;
 
@@ -917,7 +963,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
             if (sceneProperty.Value.ValueKind != JsonValueKind.Object)
             {
-                problem = $"'{SettingsPath}.scenes.{name}' must map device numbers to mode/color objects with optional per-LED colours.";
+                problem =
+                    $"'{SettingsPath}.scenes.{name}' must map device numbers to mode/color objects with optional per-LED colours.";
                 return false;
             }
 
@@ -969,7 +1016,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                     {
                         if (field.Value.ValueKind != JsonValueKind.Array)
                         {
-                            problem = $"'{SettingsPath}.scenes.{name}.{index}.leds' must be an array of six-digit RGB strings.";
+                            problem =
+                                $"'{SettingsPath}.scenes.{name}.{index}.leds' must be an array of six-digit RGB strings.";
                             return false;
                         }
 
@@ -977,9 +1025,11 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
                         foreach (JsonElement led in field.Value.EnumerateArray())
                         {
-                            if (led.ValueKind != JsonValueKind.String ||
-                                led.GetString() is not string ledColor ||
-                                !IsRgb(ledColor.Trim()))
+                            if (
+                                led.ValueKind != JsonValueKind.String
+                                || led.GetString() is not string ledColor
+                                || !IsRgb(ledColor.Trim())
+                            )
                             {
                                 problem =
                                     $"'{SettingsPath}.scenes.{name}.{index}.leds' must contain only six-digit RGB strings.";
@@ -998,8 +1048,8 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
                     else
                     {
                         problem =
-                            $"'{SettingsPath}.scenes.{name}.{index}' does not understand '{field.Name}'. " +
-                            "It takes 'mode', 'color' and optional 'leds'.";
+                            $"'{SettingsPath}.scenes.{name}.{index}' does not understand '{field.Name}'. "
+                            + "It takes 'mode', 'color' and optional 'leds'.";
                         return false;
                     }
                 }
@@ -1012,15 +1062,11 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
                 if (color is null || !IsRgb(color))
                 {
-                    problem =
-                        $"'{SettingsPath}.scenes.{name}.{index}.color' must be six hexadecimal digits (RRGGBB).";
+                    problem = $"'{SettingsPath}.scenes.{name}.{index}.color' must be six hexadecimal digits (RRGGBB).";
                     return false;
                 }
 
-                var sceneDevice = new CaseRgbSceneDevice(index, mode, color)
-                {
-                    LedColors = ledColors,
-                };
+                var sceneDevice = new CaseRgbSceneDevice(index, mode, color) { LedColors = ledColors };
 
                 if (!devices.TryAdd(index, sceneDevice))
                 {
@@ -1049,12 +1095,15 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
 
     private static bool TryReadIndex(string text, out int index)
     {
-        if (!int.TryParse(
+        if (
+            !int.TryParse(
                 text,
                 System.Globalization.NumberStyles.None,
                 System.Globalization.CultureInfo.InvariantCulture,
-                out index) ||
-            index < 0)
+                out index
+            )
+            || index < 0
+        )
         {
             index = -1;
             return false;
@@ -1063,6 +1112,5 @@ public sealed class CaseRgbProvider : IConfigurableProvider, IConvergentProvider
         return true;
     }
 
-    private static bool IsRgb(string value) =>
-        value.Length == 6 && value.All(char.IsAsciiHexDigit);
+    private static bool IsRgb(string value) => value.Length == 6 && value.All(char.IsAsciiHexDigit);
 }

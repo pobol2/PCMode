@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using PCMode.Engine;
 using PCMode.Tray.Elements.Configuration;
+using PCMode.Tray.Platform.Picker;
+using PCMode.Tray.Platform.Themes;
 
 namespace PCMode.Tray.Elements.Settings;
 
@@ -59,7 +61,8 @@ public sealed class SettingsViewModel : ObservableObject, IPageLifecycle
         ApplicationSettingsStore? store,
         Action<ApplicationSettings>? onSaved = null,
         IGamepadCapabilitiesSource? controllers = null,
-        Action? openGuidedSetup = null)
+        Action? openGuidedSetup = null
+    )
     {
         ArgumentNullException.ThrowIfNull(workspace);
 
@@ -68,9 +71,7 @@ public sealed class SettingsViewModel : ObservableObject, IPageLifecycle
         _onSaved = onSaved;
         _openGuidedSetup = openGuidedSetup;
         ControllerDiscovery = new ControllerDiscoveryViewModel(workspace, controllers);
-        _liveRefresh = new LiveRefreshTimer(
-            LiveStatusInterval,
-            () => ControllerDiscovery.ScanAsync());
+        _liveRefresh = new LiveRefreshTimer(LiveStatusInterval, () => ControllerDiscovery.ScanAsync());
 
         MonitorOptions =
         [
@@ -96,6 +97,21 @@ public sealed class SettingsViewModel : ObservableObject, IPageLifecycle
         _selectedMonitor = MonitorOptions[0];
         _selectedTheme = ThemeOptions[0];
         _selectedLaunchBehavior = LaunchBehaviorOptions[0];
+
+        SaveCommand = new RelayCommand(Save, () => CanEdit);
+        DiscardCommand = new RelayCommand(Refresh);
+        RescanControllersCommand = new AsyncRelayCommand(
+            ControllerDiscovery.ScanAsync,
+            () => ControllerDiscovery.CanScan
+        );
+        OpenGuidedSetupCommand = new RelayCommand(OpenGuidedSetup, () => ShowGuidedSetup);
+        ControllerDiscovery.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ControllerDiscoveryViewModel.CanScan))
+            {
+                (RescanControllersCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            }
+        };
     }
 
     public IReadOnlyList<PickerMonitorOption> MonitorOptions { get; }
@@ -105,6 +121,14 @@ public sealed class SettingsViewModel : ObservableObject, IPageLifecycle
     public IReadOnlyList<ApplicationThemeOption> ThemeOptions { get; }
 
     public ControllerDiscoveryViewModel ControllerDiscovery { get; }
+
+    public System.Windows.Input.ICommand SaveCommand { get; }
+
+    public System.Windows.Input.ICommand DiscardCommand { get; }
+
+    public System.Windows.Input.ICommand RescanControllersCommand { get; }
+
+    public System.Windows.Input.ICommand OpenGuidedSetupCommand { get; }
 
     public ObservableCollection<ConfiguredTarget> Targets { get; } = [];
 

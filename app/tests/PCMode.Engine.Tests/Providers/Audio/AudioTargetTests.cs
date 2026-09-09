@@ -19,8 +19,7 @@ public sealed class AudioTargetTests
     private const string Television = "LG TV (NVIDIA High Definition Audio)";
     private const string VirtualEndpoint = "PCMode Audio (PCMode Virtual Audio Endpoint)";
 
-    private const string Settings =
-        $$"""
+    private const string Settings = $$"""
         {
           "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" },
           "targets": {
@@ -72,7 +71,10 @@ public sealed class AudioTargetTests
     [Theory]
     [InlineData("""{"devices":{"A":"x"},"targets":{"T":{"outputs":[{"output":"B"}]}}}""", "does not define")]
     [InlineData("""{"devices":{"A":"x"},"targets":{"T":{"outputs":[]}}}""", "at least one")]
-    [InlineData("""{"devices":{"A":"x"},"targets":{"T":{"outputs":[{"output":"A"},{"output":"a"}]}}}""", "more than once")]
+    [InlineData(
+        """{"devices":{"A":"x"},"targets":{"T":{"outputs":[{"output":"A"},{"output":"a"}]}}}""",
+        "more than once"
+    )]
     [InlineData("""{"devices":{"A":"x"},"targets":{"A":{"outputs":[{"output":"A"}]}}}""", "name of its own")]
     [InlineData("""{"devices":{"A":"x"},"targets":{"T":{"outputs":[{"output":"A","delayMs":5000}]}}}""", "between")]
     [InlineData("""{"devices":{"A":"x"},"targets":{"T":{"outputs":[{"output":"A","gain":9}]}}}""", "between")]
@@ -99,20 +101,23 @@ public sealed class AudioTargetTests
         // survives this output failing", not "leave that television off".
         var provider = new AudioProvider(new FakeAudioEndpoints());
 
-        Assert.Null(Configure(
-            provider,
-            """
-            {
-              "devices": {
-                "Desk": "Speakers (Realtek)",
-                "TV": { "device": "Digital Audio (HDMI)", "requires": { "display": "TVOnly" } }
-              },
-              "targets": { "Party": { "outputs": [
-                { "output": "Desk" },
-                { "output": "TV", "required": false }
-              ] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                """
+                {
+                  "devices": {
+                    "Desk": "Speakers (Realtek)",
+                    "TV": { "device": "Digital Audio (HDMI)", "requires": { "display": "TVOnly" } }
+                  },
+                  "targets": { "Party": { "outputs": [
+                    { "output": "Desk" },
+                    { "output": "TV", "required": false }
+                  ] } }
+                }
+                """
+            )
+        );
 
         ResourceRequirement needed = Assert.Single(provider.RequirementsFor("Party"));
 
@@ -173,14 +178,17 @@ public sealed class AudioTargetTests
         FakeAudioEndpoints endpoints = Endpoints();
         var provider = new AudioProvider(endpoints, new FakeAudioRuntime());
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "devices": { "Headphones": "{{Speakers}}" },
-              "targets": { "Quiet": { "outputs": [ { "output": "Headphones", "gain": 0 } ] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "devices": { "Headphones": "{{Speakers}}" },
+                  "targets": { "Quiet": { "outputs": [ { "output": "Headphones", "gain": 0 } ] } }
+                }
+                """
+            )
+        );
 
         AudioTarget composed = Assert.Single(provider.Targets).Compose(_ => endpoints.IdOf(0));
 
@@ -217,8 +225,9 @@ public sealed class AudioTargetTests
 
         AudioProvider provider = Provider(endpoints, out _);
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("Party", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("Party", CancellationToken.None)
+        );
 
         Assert.Contains("did not accept", failure.Message, StringComparison.Ordinal);
         Assert.Equal(0.9, endpoints.Volumes[endpoints.IdOf(0)]);
@@ -250,8 +259,9 @@ public sealed class AudioTargetTests
         var endpoints = new FakeAudioEndpoints(Speakers, Television);
         AudioProvider provider = Provider(endpoints, out FakeAudioRuntime runtime);
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("Party", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("Party", CancellationToken.None)
+        );
 
         Assert.Contains("virtual audio endpoint is not present", failure.Message, StringComparison.Ordinal);
         Assert.Empty(runtime.Applied);
@@ -265,11 +275,13 @@ public sealed class AudioTargetTests
     [Fact]
     public void Refuses_to_guess_which_endpoint_is_pcmode_s_own()
     {
-        var endpoints = new FakeAudioEndpoints(Speakers, Television, VirtualEndpoint)
-            .Add("Headphones (PCMode Virtual Audio Endpoint)");
+        var endpoints = new FakeAudioEndpoints(Speakers, Television, VirtualEndpoint).Add(
+            "Headphones (PCMode Virtual Audio Endpoint)"
+        );
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => Provider(endpoints, out _).Apply("Party", CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            Provider(endpoints, out _).Apply("Party", CancellationToken.None)
+        );
 
         Assert.Contains(AudioVirtualEndpoint.SettingsPath, failure.Message, StringComparison.Ordinal);
     }
@@ -281,15 +293,18 @@ public sealed class AudioTargetTests
 
         var provider = new AudioProvider(endpoints, new FakeAudioRuntime());
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "virtualEndpoint": "PCMode Audio (two)",
-              "devices": { "Headphones": "{{Speakers}}" },
-              "targets": { "Party": { "outputs": [ { "output": "Headphones" } ] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "virtualEndpoint": "PCMode Audio (two)",
+                  "devices": { "Headphones": "{{Speakers}}" },
+                  "targets": { "Party": { "outputs": [ { "output": "Headphones" } ] } }
+                }
+                """
+            )
+        );
 
         provider.Apply("Party", CancellationToken.None);
 
@@ -306,18 +321,22 @@ public sealed class AudioTargetTests
 
         var provider = new AudioProvider(endpoints, new FakeAudioRuntime());
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" },
-              "targets": { "Party": { "outputs": [ { "output": "TV" }, { "output": "Headphones" } ] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" },
+                  "targets": { "Party": { "outputs": [ { "output": "TV" }, { "output": "Headphones" } ] } }
+                }
+                """
+            )
+        );
 
         // The television is off, so its endpoint is not there at all.
-        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(
-            () => provider.Apply("Party", CancellationToken.None));
+        InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() =>
+            provider.Apply("Party", CancellationToken.None)
+        );
 
         Assert.Contains(Television, missing.Message, StringComparison.Ordinal);
     }
@@ -419,7 +438,8 @@ public sealed class AudioTargetTests
 
         Assert.Equal(
             TransitionStepStatus.AlreadyCorrect,
-            Assert.Single(again.Steps, step => step.Resource == AudioProvider.ResourceKey).Status);
+            Assert.Single(again.Steps, step => step.Resource == AudioProvider.ResourceKey).Status
+        );
     }
 
     [Fact]
@@ -479,17 +499,20 @@ public sealed class AudioTargetTests
         var runtime = new FakeAudioRuntime();
         var provider = new AudioProvider(endpoints, runtime);
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" },
-              "targets": { "Party": { "outputs": [
-                { "output": "TV" },
-                { "output": "Headphones", "required": false }
-              ] } }
-            }
-            """));
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "devices": { "Headphones": "{{Speakers}}", "TV": "{{Television}}" },
+                  "targets": { "Party": { "outputs": [
+                    { "output": "TV" },
+                    { "output": "Headphones", "required": false }
+                  ] } }
+                }
+                """
+            )
+        );
 
         provider.Apply("Party", CancellationToken.None);
         runtime.Health = AudioHealthState.Degraded;
@@ -537,20 +560,23 @@ public sealed class AudioTargetTests
         var runtime = new FakeAudioRuntime();
         var provider = new AudioProvider(endpoints, runtime);
 
-        Assert.Null(Configure(
-            provider,
-            $$"""
-            {
-              "devices": { "Headphones": "{{Speakers}}" },
-              "profiles": {
-                "Warm": {
-                  "preampGainDb": -2,
-                  "bands": [ { "type": "lowShelf", "frequencyHz": 200, "gainDb": 3, "q": 0.7 } ]
+        Assert.Null(
+            Configure(
+                provider,
+                $$"""
+                {
+                  "devices": { "Headphones": "{{Speakers}}" },
+                  "profiles": {
+                    "Warm": {
+                      "preampGainDb": -2,
+                      "bands": [ { "type": "lowShelf", "frequencyHz": 200, "gainDb": 3, "q": 0.7 } ]
+                    }
+                  },
+                  "targets": { "Solo": { "outputs": [ { "output": "Headphones", "profile": "Warm" } ] } }
                 }
-              },
-              "targets": { "Solo": { "outputs": [ { "output": "Headphones", "profile": "Warm" } ] } }
-            }
-            """));
+                """
+            )
+        );
 
         provider.Apply("Solo", CancellationToken.None);
 
@@ -572,7 +598,8 @@ public sealed class AudioTargetTests
               "devices": { "A": "x" },
               "targets": { "T": { "outputs": [ { "output": "A", "profile": "Missing" } ] } }
             }
-            """);
+            """
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("Missing", problem, StringComparison.Ordinal);
@@ -595,7 +622,8 @@ public sealed class AudioTargetTests
             0.6,
             volume: 0.3,
             profileName: null,
-            CancellationToken.None);
+            CancellationToken.None
+        );
 
         AudioEndpointId calibrated = Assert.Single(runtime.Recalibrated);
 
@@ -609,16 +637,9 @@ public sealed class AudioTargetTests
 
         provider.Apply("Party", CancellationToken.None);
 
-        Assert.Throws<ArgumentException>(
-            () =>
-                provider.Recalibrate(
-                    "Party",
-                    "NotARoute",
-                    TimeSpan.Zero,
-                    1.0,
-                    null,
-                    null,
-                    CancellationToken.None));
+        Assert.Throws<ArgumentException>(() =>
+            provider.Recalibrate("Party", "NotARoute", TimeSpan.Zero, 1.0, null, null, CancellationToken.None)
+        );
     }
 
     [Fact]
@@ -638,12 +659,10 @@ public sealed class AudioTargetTests
 
     // ---- helpers ------------------------------------------------------------
 
-    private static AudioTargetStatus Status(AudioProvider provider) =>
-        Assert.Single(provider.Discover().Targets);
+    private static AudioTargetStatus Status(AudioProvider provider) => Assert.Single(provider.Discover().Targets);
 
     /// <summary>Speakers, television and PCMode's own endpoint, in that order.</summary>
-    private static FakeAudioEndpoints Endpoints() =>
-        new(Speakers, Television, VirtualEndpoint);
+    private static FakeAudioEndpoints Endpoints() => new(Speakers, Television, VirtualEndpoint);
 
     private static AudioProvider Provider(FakeAudioEndpoints endpoints, out FakeAudioRuntime runtime)
     {
@@ -667,8 +686,7 @@ public sealed class AudioTargetTests
         return problem;
     }
 
-    private static readonly string Document =
-        $$"""
+    private static readonly string Document = $$"""
         {
           "schemaVersion": 1,
           "providers": {
@@ -693,7 +711,10 @@ public sealed class AudioTargetTests
         root.Write(Document);
 
         IReadOnlyList<IModeResourceProvider> providers =
-            [new FakeProvider("theme", "Dark"), new AudioProvider(endpoints, runtime)];
+        [
+            new FakeProvider("theme", "Dark"),
+            new AudioProvider(endpoints, runtime),
+        ];
 
         // A fake clock, because this provider retries six times over twelve
         // seconds when a device is missing, and these tests are about what it
@@ -702,7 +723,8 @@ public sealed class AudioTargetTests
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
     }
 
     /// <summary>A runtime that counts how often it was asked anything.</summary>
@@ -718,9 +740,10 @@ public sealed class AudioTargetTests
             return AudioRuntimeStatus.Unreachable("nothing");
         }
 
-        public void Apply(AudioTarget target, CancellationToken cancellationToken)
-        {
-        }
+        public Task<IReadOnlyList<AudioRouteWaveform>> WaveformAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AudioRouteWaveform>>([]);
+
+        public void Apply(AudioTarget target, CancellationToken cancellationToken) { }
 
         public void Recalibrate(
             AudioEndpointId endpointId,
@@ -728,16 +751,11 @@ public sealed class AudioTargetTests
             bool muted,
             TimeSpan delay,
             AudioProcessingProfile processing,
-            CancellationToken cancellationToken)
-        {
-        }
+            CancellationToken cancellationToken
+        ) { }
 
-        public void Stop()
-        {
-        }
+        public void Stop() { }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

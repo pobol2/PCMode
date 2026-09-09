@@ -16,8 +16,7 @@ namespace PCMode.Tray.UI.Tree;
 /// The caller reads the selection back out and decides what to do with it.
 /// </remarks>
 [Region(ContentRegion, Terminal = true)]
-[DependencyProperty<IEnumerable>("Items",
-    Description = "One entry per navigable page.")]
+[DependencyProperty<IEnumerable>("Items", Description = "One entry per navigable page.")]
 public partial class PageNavigationBlock : FunctionalBlock
 {
     public const string ContentRegion = "PART_ContentRegion";
@@ -26,15 +25,16 @@ public partial class PageNavigationBlock : FunctionalBlock
     /// Hand-written rather than generated because it carries a change
     /// callback so the caller can observe that the selection moved.
     /// </remarks>
-    public static readonly DependencyProperty SelectedEntryProperty =
-        DependencyProperty.Register(
-            nameof(SelectedEntry),
-            typeof(object),
-            typeof(PageNavigationBlock),
-            new FrameworkPropertyMetadata(
-                null,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
-                OnSelectedEntryChanged));
+    public static readonly DependencyProperty SelectedEntryProperty = DependencyProperty.Register(
+        nameof(SelectedEntry),
+        typeof(object),
+        typeof(PageNavigationBlock),
+        new FrameworkPropertyMetadata(
+            null,
+            FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+            OnSelectedEntryChanged
+        )
+    );
 
     /// <summary>The entry currently selected, or null before the first one is.</summary>
     public object? SelectedEntry

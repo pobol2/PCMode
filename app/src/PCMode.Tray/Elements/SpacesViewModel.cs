@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using PCMode.Engine;
 using PCMode.Picker;
 using PCMode.Tray.Elements.Configuration;
@@ -32,11 +33,7 @@ public static class ResourceRequirementChoice
     public const string Cleared = "Not set here";
 
     public static IReadOnlyList<ResourceRequirementOption> ForSpace { get; } =
-    [
-        new(Unset, "Not configured"),
-        new(Required, "Always apply"),
-        new(Optional, "Best effort"),
-    ];
+    [new(Unset, "Not configured"), new(Required, "Always apply"), new(Optional, "Best effort")];
 
     public static IReadOnlyList<ResourceRequirementOption> ForInheritingLevel { get; } =
     [
@@ -80,7 +77,8 @@ public sealed class EditableResourceViewModel : INotifyPropertyChanged
         IReadOnlyList<string>? choices = null,
         string? availabilityMessage = null,
         string? inheritedFrom = null,
-        string? inheritedValue = null)
+        string? inheritedValue = null
+    )
     {
         Key = key;
         DisplayName = displayName;
@@ -129,9 +127,7 @@ public sealed class EditableResourceViewModel : INotifyPropertyChanged
 
     public string? InheritedValue { get; }
 
-    public string? InheritedMessage => HasInheritedMessage
-        ? $"Inherited from {InheritedFrom}: {InheritedValue}"
-        : null;
+    public string? InheritedMessage => HasInheritedMessage ? $"Inherited from {InheritedFrom}: {InheritedValue}" : null;
 
     public bool HasInheritedMessage =>
         !string.IsNullOrWhiteSpace(InheritedFrom) && !string.IsNullOrWhiteSpace(InheritedValue);
@@ -173,14 +169,14 @@ public sealed class EditableResourceViewModel : INotifyPropertyChanged
 
     /// <summary>Whether this level sets a value of its own, so the value box means something.</summary>
     public bool IsConfigured =>
-        string.Equals(Requirement, ResourceRequirementChoice.Required, StringComparison.Ordinal) ||
-        string.Equals(Requirement, ResourceRequirementChoice.Optional, StringComparison.Ordinal);
+        string.Equals(Requirement, ResourceRequirementChoice.Required, StringComparison.Ordinal)
+        || string.Equals(Requirement, ResourceRequirementChoice.Optional, StringComparison.Ordinal);
 
     public bool IsOptional => string.Equals(Requirement, ResourceRequirementChoice.Optional, StringComparison.Ordinal);
 
     public bool IsInherited =>
-        string.Equals(Requirement, ResourceRequirementChoice.Inherited, StringComparison.Ordinal) &&
-        HasInheritedMessage;
+        string.Equals(Requirement, ResourceRequirementChoice.Inherited, StringComparison.Ordinal)
+        && HasInheritedMessage;
 
     public bool IsExcluded => string.Equals(Requirement, ResourceRequirementChoice.Cleared, StringComparison.Ordinal);
 
@@ -198,15 +194,12 @@ public sealed class EditableResourceViewModel : INotifyPropertyChanged
         }
     }
 
-    public string StateSummary => IsOptional
-        ? "Controlled here Â· Best effort"
-        : IsConfigured
-            ? "Controlled here"
-            : IsInherited
-                ? InheritedMessage!
-                : IsExcluded
-                    ? "Not controlled for this target"
-                    : "Not added";
+    public string StateSummary =>
+        IsOptional ? "Controlled here Â· Best effort"
+        : IsConfigured ? "Controlled here"
+        : IsInherited ? InheritedMessage!
+        : IsExcluded ? "Not controlled for this target"
+        : "Not added";
 
     public void ControlHere() => Requirement = ResourceRequirementChoice.Required;
 
@@ -216,13 +209,14 @@ public sealed class EditableResourceViewModel : INotifyPropertyChanged
     public void ExcludeInherited() => Requirement = ResourceRequirementChoice.Cleared;
 
     /// <summary>What this level's choice is, as the store understands it.</summary>
-    public ResourceEdit Edit => Requirement switch
-    {
-        ResourceRequirementChoice.Required => ResourceEdit.Of(Selected.Trim(), optional: false),
-        ResourceRequirementChoice.Optional => ResourceEdit.Of(Selected.Trim(), optional: true),
-        ResourceRequirementChoice.Cleared => ResourceEdit.Cleared,
-        _ => ResourceEdit.Inherited,
-    };
+    public ResourceEdit Edit =>
+        Requirement switch
+        {
+            ResourceRequirementChoice.Required => ResourceEdit.Of(Selected.Trim(), optional: false),
+            ResourceRequirementChoice.Optional => ResourceEdit.Of(Selected.Trim(), optional: true),
+            ResourceRequirementChoice.Cleared => ResourceEdit.Cleared,
+            _ => ResourceEdit.Inherited,
+        };
 
     private void RaiseChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -263,8 +257,9 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     private readonly ApplicationSettingsStore? _settingsStore;
     private readonly Action<ApplicationSettings>? _onApplicationSettingsChanged;
     private readonly List<EditableResourceViewModel> _editable = [];
-    private Dictionary<string, (string Value, string Requirement)> _loadedSnapshot =
-        new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, (string Value, string Requirement)> _loadedSnapshot = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     private HierarchyNodeViewModel? _selected;
     private bool _canMoveUp;
@@ -301,7 +296,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         EngineRuntime? runtime = null,
         ApplicationSettingsStore? settingsStore = null,
         Action<ApplicationSettings>? onApplicationSettingsChanged = null,
-        IConfigurationPrompts? prompts = null)
+        IConfigurationPrompts? prompts = null
+    )
         : base(workspace, prompts)
     {
         _runtime = runtime;
@@ -310,28 +306,78 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         _pickerPositionOptions = StandardPickerPositions();
         _selectedPickerPosition = _pickerPositionOptions[0];
 
+        MoveUpCommand = new RelayCommand(() => MoveSelected(up: true), () => CanMoveUp);
+        MoveDownCommand = new RelayCommand(() => MoveSelected(up: false), () => CanMoveDown);
+        ToggleEnabledCommand = new RelayCommand(
+            () =>
+            {
+                if (Selected is { IsActivatable: true } selected)
+                {
+                    SetTargetEnabled(selected, !selected.TargetEnabled);
+                }
+            },
+            () => Selected is { IsActivatable: true }
+        );
+        ActivateCommand = new AsyncRelayCommand(
+            async () =>
+            {
+                await ActivateSelectedAsync().ConfigureAwait(true);
+            },
+            () => CanActivateSelected
+        );
+
         TreePresentation = new ConfigurationPagePresentation(
             "Spaces",
-            new ConfigurationSelectorPresentation("Spaces and activities", Nodes, ShowCreateButton: false, SelectCommand: SelectItemCommand),
+            new ConfigurationSelectorPresentation(
+                "Spaces and activities",
+                Nodes,
+                ShowCreateButton: false,
+                SelectCommand: SelectItemCommand
+            ),
             ConfigurationEditorPresentation.Create(
                 essential:
                 [
                     new("Target", new TerminalElementContent("Selected space, activity, or source", this)),
-                    new("Controlled settings", new TerminalElementContent("Settings controlled at this hierarchy level", ConfiguredSettings)),
+                    new(
+                        "Controlled settings",
+                        new TerminalElementContent("Settings controlled at this hierarchy level", ConfiguredSettings)
+                    ),
                 ],
                 advanced:
                 [
-                    new("Inherited settings", new TerminalElementContent("Settings inherited from parent levels", InheritedSettings), IsCollapsible: true),
-                    new("Available settings", new TerminalElementContent("Settings available to control here", AddableSettings), IsCollapsible: true),
+                    new(
+                        "Inherited settings",
+                        new TerminalElementContent("Settings inherited from parent levels", InheritedSettings),
+                        IsCollapsible: true
+                    ),
+                    new(
+                        "Available settings",
+                        new TerminalElementContent("Settings available to control here", AddableSettings),
+                        IsCollapsible: true
+                    ),
                 ],
                 extra:
                 [
-                    new("Quick access", new TerminalElementContent("Picker favorite and direct shortcut", this), IsCollapsible: true),
-                ]));
+                    new(
+                        "Quick access",
+                        new TerminalElementContent("Picker favorite and direct shortcut", this),
+                        IsCollapsible: true
+                    ),
+                ]
+            )
+        );
     }
 
     /// <summary>Every Space, Activity and Source, in configuration order.</summary>
     public ObservableCollection<HierarchyNodeViewModel> Nodes { get; } = [];
+
+    public ICommand MoveUpCommand { get; }
+
+    public ICommand MoveDownCommand { get; }
+
+    public ICommand ToggleEnabledCommand { get; }
+
+    public ICommand ActivateCommand { get; }
 
     /// <summary>Settings this level actively applies, grouped by page.</summary>
     public ObservableCollection<EditableResourceGroup> ConfiguredSettings { get; } = [];
@@ -371,6 +417,11 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
             OnPropertyChanged(nameof(CanActivateSelected));
             OnPropertyChanged(nameof(ShowsPickerConfiguration));
 
+            (MoveUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (MoveDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (ToggleEnabledCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (ActivateCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+
             if (value is not null)
             {
                 Load(value);
@@ -390,24 +441,37 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     public bool CanMoveUp
     {
         get => _canMoveUp;
-        private set => SetProperty(ref _canMoveUp, value);
+        private set
+        {
+            if (SetProperty(ref _canMoveUp, value))
+            {
+                (MoveUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     /// <summary>Whether the selected node can move later among its siblings.</summary>
     public bool CanMoveDown
     {
         get => _canMoveDown;
-        private set => SetProperty(ref _canMoveDown, value);
+        private set
+        {
+            if (SetProperty(ref _canMoveDown, value))
+            {
+                (MoveDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     /// <summary>The duplicate action in the words of the selected hierarchy level.</summary>
-    public string DuplicateLabel => Selected?.Level switch
-    {
-        NodeLevel.Space => "Duplicate space",
-        NodeLevel.Activity => "Duplicate activity",
-        NodeLevel.Source => "Duplicate source",
-        _ => "Duplicate",
-    };
+    public string DuplicateLabel =>
+        Selected?.Level switch
+        {
+            NodeLevel.Space => "Duplicate space",
+            NodeLevel.Activity => "Duplicate activity",
+            NodeLevel.Source => "Duplicate source",
+            _ => "Duplicate",
+        };
 
     public bool CanDuplicate => Selected is not null;
 
@@ -417,13 +481,10 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
     public bool CanAddSource => Selected?.Address.ActivityId is not null;
 
-    public string AddActivityLabel => Selected is null
-        ? "Activity"
-        : $"Activity in {SpaceNameOf(Selected)}";
+    public string AddActivityLabel => Selected is null ? "Activity" : $"Activity in {SpaceNameOf(Selected)}";
 
-    public string AddSourceLabel => Selected?.Address.ActivityId is null
-        ? "Source"
-        : $"Source in {ActivityNameOf(Selected)}";
+    public string AddSourceLabel =>
+        Selected?.Address.ActivityId is null ? "Source" : $"Source in {ActivityNameOf(Selected)}";
 
     /// <summary>Picker assignments exist only for activatable Activities and Sources.</summary>
     public bool ShowsPickerConfiguration => _settingsStore is not null && Selected is { IsActivatable: true };
@@ -453,18 +514,15 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         set => SetDirtyProperty(ref _directShortcutKeys, value ?? string.Empty);
     }
 
-    public override bool CanSave =>
-        Selected is not null &&
-        HasUnsavedChanges &&
-        !IsBusy;
+    public override bool CanSave => Selected is not null && HasUnsavedChanges && !IsBusy;
 
     /// <summary>Whether the selected level resolves to an enabled target that can be transitioned to.</summary>
     public bool CanActivateSelected =>
-        _runtime is not null &&
-        Selected is { } selected &&
-        ActivationTargetFor(selected) is not null &&
-        !HasUnsavedChanges &&
-        !IsBusy;
+        _runtime is not null
+        && Selected is { } selected
+        && ActivationTargetFor(selected) is not null
+        && !HasUnsavedChanges
+        && !IsBusy;
 
     public void AddSetting(EditableResourceViewModel resource)
     {
@@ -568,8 +626,9 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         HierarchyNodeViewModel? current = currentKey is null
             ? null
             : Nodes.FirstOrDefault(node =>
-                node.TargetKey is not null &&
-                string.Equals(node.TargetKey, currentKey, StringComparison.OrdinalIgnoreCase));
+                node.TargetKey is not null
+                && string.Equals(node.TargetKey, currentKey, StringComparison.OrdinalIgnoreCase)
+            );
 
         foreach (HierarchyNodeViewModel node in Nodes)
         {
@@ -593,7 +652,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         return Perform(
             () => HierarchyStore.CreateActivity(Workspace.Root, _selected.Address.SpaceId, name),
             $"'{name.Trim()}' created.",
-            name);
+            name
+        );
     }
 
     /// <summary>Adds a Source to the selected Activity, or to the selected Source's Activity.</summary>
@@ -607,7 +667,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         return Perform(
             () => HierarchyStore.CreateSource(Workspace.Root, _selected.Address.SpaceId, activityId, name, kind),
             $"'{name.Trim()}' created.",
-            name);
+            name
+        );
     }
 
     /// <summary>Copies the selected hierarchy level beside the original.</summary>
@@ -621,7 +682,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         return Perform(
             () => HierarchyStore.Duplicate(Workspace.Root, _selected.Address, name),
             $"'{name.Trim()}' duplicated.",
-            name);
+            name
+        );
     }
 
     /// <summary>Renames the selected node.</summary>
@@ -637,7 +699,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         return Perform(
             () => HierarchyStore.Rename(Workspace.Root, _selected.Address, newName),
             $"'{previous}' renamed to '{newName.Trim()}'.",
-            newName);
+            newName
+        );
     }
 
     /// <summary>
@@ -655,7 +718,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
         return Perform(
             () => HierarchyStore.SetEnabled(Workspace.Root, node.Address, enabled),
-            $"'{node.DisplayPath}' {(enabled ? "enabled" : "disabled")}.");
+            $"'{node.DisplayPath}' {(enabled ? "enabled" : "disabled")}."
+        );
     }
 
     /// <summary>
@@ -668,7 +732,9 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     /// reference is left unresolved.
     /// </summary>
     public string? DeleteSelected(
-        IReadOnlyDictionary<string, string>? favoriteReplacements = null, string? startupReplacement = null)
+        IReadOnlyDictionary<string, string>? favoriteReplacements = null,
+        string? startupReplacement = null
+    )
     {
         if (_selected is null)
         {
@@ -680,7 +746,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
         string? problem = Perform(
             () => HierarchyStore.Delete(Workspace.Root, _selected.Address, favoriteReplacements, startupReplacement),
-            $"'{name}' deleted.");
+            $"'{name}' deleted."
+        );
 
         if (problem is null && touchesApplicationSettings && _settingsStore is not null)
         {
@@ -708,7 +775,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         return
         [
             .. _targets.Targets.Where(target =>
-                target.Enabled && !removed.Contains(target.Key, StringComparer.OrdinalIgnoreCase))
+                target.Enabled && !removed.Contains(target.Key, StringComparer.OrdinalIgnoreCase)
+            ),
         ];
     }
 
@@ -733,14 +801,14 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
             ApplicationSettings settings = _settingsStore.Load(_targets);
 
             bool Removed(string? reference) =>
-                _targets.Resolve(reference) is ConfiguredTarget target &&
-                removed.Contains(target.Key, StringComparer.OrdinalIgnoreCase);
+                _targets.Resolve(reference) is ConfiguredTarget target
+                && removed.Contains(target.Key, StringComparer.OrdinalIgnoreCase);
 
             List<string> directions =
             [
-                .. settings.Favorites.All
-                    .Where(favorite => Removed(favorite.ModeName))
-                    .Select(favorite => favorite.Direction.ToString())
+                .. settings
+                    .Favorites.All.Where(favorite => Removed(favorite.ModeName))
+                    .Select(favorite => favorite.Direction.ToString()),
             ];
 
             bool startup = settings.LaunchBehavior == LaunchBehavior.SwitchToMode && Removed(settings.StartupTarget);
@@ -770,8 +838,9 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                 .Where(key =>
                     node.Level == NodeLevel.Space
                         ? key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-                        : string.Equals(key, prefix, StringComparison.OrdinalIgnoreCase) ||
-                          key.StartsWith(prefix + TargetIdentity.Separator, StringComparison.OrdinalIgnoreCase))
+                        : string.Equals(key, prefix, StringComparison.OrdinalIgnoreCase)
+                            || key.StartsWith(prefix + TargetIdentity.Separator, StringComparison.OrdinalIgnoreCase)
+                ),
         ];
     }
 
@@ -783,9 +852,7 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
             return "Choose a space, activity or source first.";
         }
 
-        return Perform(
-            () => HierarchyStore.Move(Workspace.Root, _selected.Address, up),
-            $"'{_selected.Name}' moved.");
+        return Perform(() => HierarchyStore.Move(Workspace.Root, _selected.Address, up), $"'{_selected.Name}' moved.");
     }
 
     /// <summary>
@@ -803,9 +870,11 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
         foreach (EditableResourceViewModel resource in _editable)
         {
-            if (!_loadedSnapshot.TryGetValue(resource.Key, out (string Value, string Requirement) original) ||
-                !string.Equals(original.Value, resource.Selected, StringComparison.Ordinal) ||
-                !string.Equals(original.Requirement, resource.Requirement, StringComparison.Ordinal))
+            if (
+                !_loadedSnapshot.TryGetValue(resource.Key, out (string Value, string Requirement) original)
+                || !string.Equals(original.Value, resource.Selected, StringComparison.Ordinal)
+                || !string.Equals(original.Requirement, resource.Requirement, StringComparison.Ordinal)
+            )
             {
                 edits[resource.Key] = resource.Edit;
             }
@@ -908,8 +977,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
         try
         {
-            TransitionOutcome outcome = await _runtime.Engine
-                .ApplyAsync(target, cancellationToken: cancellationToken)
+            TransitionOutcome outcome = await _runtime
+                .Engine.ApplyAsync(target, cancellationToken: cancellationToken)
                 .ConfigureAwait(true);
 
             StatusMessage = outcome.Message;
@@ -954,12 +1023,10 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         }
 
         return Nodes.FirstOrDefault(candidate =>
-            candidate.IsActivatable &&
-            candidate.TargetEnabled &&
-            string.Equals(
-                candidate.Address.SpaceId,
-                selected.Address.SpaceId,
-                StringComparison.OrdinalIgnoreCase));
+            candidate.IsActivatable
+            && candidate.TargetEnabled
+            && string.Equals(candidate.Address.SpaceId, selected.Address.SpaceId, StringComparison.OrdinalIgnoreCase)
+        );
     }
 
     /// <summary>
@@ -1001,8 +1068,15 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         foreach (ConfiguredSpace space in spaces)
         {
             yield return new HierarchyNodeViewModel(
-                new NodeAddress(space.Id), NodeLevel.Space, space.Name, space.Name, null, null, false,
-                hasChildren: space.Activities.Count > 0);
+                new NodeAddress(space.Id),
+                NodeLevel.Space,
+                space.Name,
+                space.Name,
+                null,
+                null,
+                false,
+                hasChildren: space.Activities.Count > 0
+            );
 
             foreach (ConfiguredActivity activity in space.Activities)
             {
@@ -1016,7 +1090,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                     target.Key,
                     null,
                     target.Enabled,
-                    hasChildren: activity.Sources.Count > 0);
+                    hasChildren: activity.Sources.Count > 0
+                );
 
                 foreach (ConfiguredSource source in activity.Sources)
                 {
@@ -1029,23 +1104,34 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                         sourceTarget.DisplayPath,
                         sourceTarget.Key,
                         source.Kind,
-                        sourceTarget.Enabled);
+                        sourceTarget.Enabled
+                    );
                 }
             }
         }
     }
 
     private string SpaceNameOf(HierarchyNodeViewModel node) =>
-        Nodes.FirstOrDefault(candidate =>
-            candidate.Level == NodeLevel.Space &&
-            string.Equals(candidate.Address.SpaceId, node.Address.SpaceId, StringComparison.OrdinalIgnoreCase))?.Name
+        Nodes
+            .FirstOrDefault(candidate =>
+                candidate.Level == NodeLevel.Space
+                && string.Equals(candidate.Address.SpaceId, node.Address.SpaceId, StringComparison.OrdinalIgnoreCase)
+            )
+            ?.Name
         ?? node.Address.SpaceId;
 
     private string ActivityNameOf(HierarchyNodeViewModel node) =>
-        Nodes.FirstOrDefault(candidate =>
-            candidate.Level == NodeLevel.Activity &&
-            string.Equals(candidate.Address.SpaceId, node.Address.SpaceId, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(candidate.Address.ActivityId, node.Address.ActivityId, StringComparison.OrdinalIgnoreCase))?.Name
+        Nodes
+            .FirstOrDefault(candidate =>
+                candidate.Level == NodeLevel.Activity
+                && string.Equals(candidate.Address.SpaceId, node.Address.SpaceId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(
+                    candidate.Address.ActivityId,
+                    node.Address.ActivityId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            ?.Name
         ?? node.Address.ActivityId
         ?? "activity";
 
@@ -1066,7 +1152,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         CanMoveUp = previous is not null && IsSibling(previous, node);
         CanMoveDown = next is not null && IsSibling(next, node);
 
-        (ModeConfiguration? configuration, IReadOnlyList<IModeResourceProvider> providers, string? readProblem) = ReadConfiguration();
+        (ModeConfiguration? configuration, IReadOnlyList<IModeResourceProvider> providers, string? readProblem) =
+            ReadConfiguration();
 
         if (configuration is null)
         {
@@ -1080,28 +1167,40 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         }
 
         IReadOnlyList<ResourceAssignment> own = OwnResourcesOf(configuration.Spaces, node.Address);
-        Dictionary<string, ResourceAssignment> current =
-            own.ToDictionary(resource => resource.Key, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, ResourceAssignment> current = own.ToDictionary(
+            resource => resource.Key,
+            StringComparer.OrdinalIgnoreCase
+        );
 
-        Dictionary<string, (ConfiguredResource Resource, string From)> inherited =
-            InheritedAt(configuration.Spaces, node.Address, space);
+        Dictionary<string, (ConfiguredResource Resource, string From)> inherited = InheritedAt(
+            configuration.Spaces,
+            node.Address,
+            space
+        );
 
-        IReadOnlyList<ResourceRequirementOption> requirementChoices = node.Level == NodeLevel.Space
-            ? ResourceRequirementChoice.ForSpace
-            : ResourceRequirementChoice.ForInheritingLevel;
+        IReadOnlyList<ResourceRequirementOption> requirementChoices =
+            node.Level == NodeLevel.Space
+                ? ResourceRequirementChoice.ForSpace
+                : ResourceRequirementChoice.ForInheritingLevel;
 
         string Label(string key) =>
-            providers.FirstOrDefault(provider =>
-                string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? key;
+            providers
+                .FirstOrDefault(provider => string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase))
+                ?.DisplayName
+            ?? key;
 
         string Category(string key) =>
-            CategoryOf(providers.FirstOrDefault(provider =>
-                string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase)));
+            CategoryOf(
+                providers.FirstOrDefault(provider =>
+                    string.Equals(provider.Key, key, StringComparison.OrdinalIgnoreCase)
+                )
+            );
 
         string? Availability(string key, string value)
         {
             IModeResourceProvider? provider = providers.FirstOrDefault(candidate =>
-                string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (provider is not IAvailableProvider available)
             {
@@ -1115,7 +1214,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         IReadOnlyList<string> ChoicesFor(string key)
         {
             IModeResourceProvider? provider = providers.FirstOrDefault(candidate =>
-                string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.Key, key, StringComparison.OrdinalIgnoreCase)
+            );
 
             return provider switch
             {
@@ -1123,7 +1223,9 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                 AudioProvider audio => audio.SelectableNames,
                 DisplayProvider display => display.LayoutNames,
                 CaseRgbProvider caseRgb =>
-                    [.. caseRgb.Scenes.Keys.OrderBy(name => name, StringComparer.OrdinalIgnoreCase)],
+                [
+                    .. caseRgb.Scenes.Keys.OrderBy(name => name, StringComparer.OrdinalIgnoreCase),
+                ],
                 ApplicationProvider application => application.Definition.CanStop
                     ? [ApplicationProvider.Running, ApplicationProvider.Stopped]
                     : [ApplicationProvider.Running],
@@ -1139,21 +1241,22 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         {
             inherited.TryGetValue(key, out (ConfiguredResource Resource, string From) above);
 
-            _editable.Add(new EditableResourceViewModel(
-                key,
-                Label(key),
-                Category(key),
-                assignment.Value ?? above.Resource?.Value ?? string.Empty,
-                assignment.Clears
-                    ? ResourceRequirementChoice.Cleared
-                    : assignment.Optional
-                        ? ResourceRequirementChoice.Optional
+            _editable.Add(
+                new EditableResourceViewModel(
+                    key,
+                    Label(key),
+                    Category(key),
+                    assignment.Value ?? above.Resource?.Value ?? string.Empty,
+                    assignment.Clears ? ResourceRequirementChoice.Cleared
+                        : assignment.Optional ? ResourceRequirementChoice.Optional
                         : ResourceRequirementChoice.Required,
-                requirementChoices,
-                choices: ChoicesFor(key),
-                availabilityMessage: assignment.Value is null ? null : Availability(key, assignment.Value),
-                inheritedFrom: above.Resource is null ? null : above.From,
-                inheritedValue: above.Resource?.Value));
+                    requirementChoices,
+                    choices: ChoicesFor(key),
+                    availabilityMessage: assignment.Value is null ? null : Availability(key, assignment.Value),
+                    inheritedFrom: above.Resource is null ? null : above.From,
+                    inheritedValue: above.Resource?.Value
+                )
+            );
         }
 
         // What a parent already decided, and this level has not overridden.
@@ -1164,16 +1267,19 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                 continue;
             }
 
-            _editable.Add(new EditableResourceViewModel(
-                key,
-                Label(key),
-                Category(key),
-                resource.Value,
-                ResourceRequirementChoice.Inherited,
-                requirementChoices,
-                choices: ChoicesFor(key),
-                inheritedFrom: from,
-                inheritedValue: resource.Value + (resource.Optional ? " (best effort)" : string.Empty)));
+            _editable.Add(
+                new EditableResourceViewModel(
+                    key,
+                    Label(key),
+                    Category(key),
+                    resource.Value,
+                    ResourceRequirementChoice.Inherited,
+                    requirementChoices,
+                    choices: ChoicesFor(key),
+                    inheritedFrom: from,
+                    inheritedValue: resource.Value + (resource.Optional ? " (best effort)" : string.Empty)
+                )
+            );
         }
 
         // Every resource this machine knows about, offered as addable when this
@@ -1185,14 +1291,19 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                 continue;
             }
 
-            _editable.Add(new EditableResourceViewModel(
-                provider.Key,
-                provider.DisplayName,
-                CategoryOf(provider),
-                string.Empty,
-                node.Level == NodeLevel.Space ? ResourceRequirementChoice.Unset : ResourceRequirementChoice.Inherited,
-                requirementChoices,
-                choices: ChoicesFor(provider.Key)));
+            _editable.Add(
+                new EditableResourceViewModel(
+                    provider.Key,
+                    provider.DisplayName,
+                    CategoryOf(provider),
+                    string.Empty,
+                    node.Level == NodeLevel.Space
+                        ? ResourceRequirementChoice.Unset
+                        : ResourceRequirementChoice.Inherited,
+                    requirementChoices,
+                    choices: ChoicesFor(provider.Key)
+                )
+            );
         }
 
         foreach (EditableResourceViewModel resource in _editable)
@@ -1205,7 +1316,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         _loadedSnapshot = _editable.ToDictionary(
             resource => resource.Key,
             resource => (resource.Selected, resource.Requirement),
-            StringComparer.OrdinalIgnoreCase);
+            StringComparer.OrdinalIgnoreCase
+        );
 
         ClearDirtyState();
     }
@@ -1237,20 +1349,36 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     /// the navigation -- see <c>Navigation.cs</c> -- plus "Other" last for the
     /// handful of resources with no page of their own.
     /// </summary>
-    private static readonly string[] CategoryOrder = ["Applications", "Audio output", "Displays", "Case lighting", "Other"];
+    private static readonly string[] CategoryOrder =
+    [
+        "Applications",
+        "Audio output",
+        "Displays",
+        "Case lighting",
+        "Other",
+    ];
 
     /// <summary>Which page a provider's resource belongs to, or "Other" when none owns it.</summary>
-    private static string CategoryOf(IModeResourceProvider? provider) => provider switch
-    {
-        ApplicationProvider => "Applications",
-        AudioProvider => "Audio output",
-        CursorProvider or DisplayProvider or DdcInputProvider or DdcBrightnessProvider or
-            TvPowerProvider or TvInputProvider or TvProfileProvider or TvSignalProvider => "Displays",
-        CaseRgbProvider => "Case lighting",
-        _ => "Other",
-    };
+    private static string CategoryOf(IModeResourceProvider? provider) =>
+        provider switch
+        {
+            ApplicationProvider => "Applications",
+            AudioProvider => "Audio output",
+            CursorProvider
+            or DisplayProvider
+            or DdcInputProvider
+            or DdcBrightnessProvider
+            or TvPowerProvider
+            or TvInputProvider
+            or TvProfileProvider
+            or TvSignalProvider => "Displays",
+            CaseRgbProvider => "Case lighting",
+            _ => "Other",
+        };
 
-    private static IEnumerable<EditableResourceGroup> GroupByCategory(IReadOnlyList<EditableResourceViewModel> resources)
+    private static IEnumerable<EditableResourceGroup> GroupByCategory(
+        IReadOnlyList<EditableResourceViewModel> resources
+    )
     {
         ILookup<string, EditableResourceViewModel> byCategory = resources.ToLookup(resource => resource.Group);
 
@@ -1335,15 +1463,16 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
             _favoriteDraft = _loadedApplicationSettings.Favorites.All.ToDictionary(favorite => favorite.Direction);
             _loadedFavoriteDirections =
             [
-                .. _favoriteDraft.Values
-                    .Where(favorite => SameTarget(favorite.ModeName, target))
+                .. _favoriteDraft
+                    .Values.Where(favorite => SameTarget(favorite.ModeName, target))
                     .Select(favorite => favorite.Direction),
             ];
             SetPickerPositionSelection(_loadedFavoriteDirections);
             _directShortcutKeys = FormatShortcutKeys(
-                _loadedApplicationSettings.DirectShortcuts
-                    .Where(shortcut => SameTarget(shortcut.Target, target))
-                    .Select(shortcut => shortcut.Key));
+                _loadedApplicationSettings
+                    .DirectShortcuts.Where(shortcut => SameTarget(shortcut.Target, target))
+                    .Select(shortcut => shortcut.Key)
+            );
             _loadedDirectShortcutKeys = _directShortcutKeys;
             OnPropertyChanged(nameof(DirectShortcutKeys));
         }
@@ -1390,20 +1519,21 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     }
 
     private static IReadOnlyList<PickerPositionOption> StandardPickerPositions() =>
-    [
-        new("None", null),
-        new("Top", PickerDirection.Up),
-        new("Right", PickerDirection.Right),
-        new("Bottom", PickerDirection.Down),
-        new("Left", PickerDirection.Left),
-    ];
+        [
+            new("None", null),
+            new("Top", PickerDirection.Up),
+            new("Right", PickerDirection.Right),
+            new("Bottom", PickerDirection.Down),
+            new("Left", PickerDirection.Left),
+        ];
 
-    private static string DisplayDirection(PickerDirection direction) => direction switch
-    {
-        PickerDirection.Up => "Top",
-        PickerDirection.Down => "Bottom",
-        _ => direction.ToString(),
-    };
+    private static string DisplayDirection(PickerDirection direction) =>
+        direction switch
+        {
+            PickerDirection.Up => "Top",
+            PickerDirection.Down => "Bottom",
+            _ => direction.ToString(),
+        };
 
     /// <summary>Assigns the selected target to one picker position, unassigning it from every other.</summary>
     private void SetPickerPosition(PickerDirection? direction)
@@ -1438,19 +1568,20 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         OnPropertyChanged(nameof(CanSave));
     }
 
-    private static ModeFavorite UnassignedFavorite(ModeFavorite appearance) => appearance with
-    {
-        Id = $"{appearance.Direction.ToString().ToLowerInvariant()}-none",
-        ModeName = string.Empty,
-        Label = "Not assigned",
-        Icon = FavoriteIcon.None,
-        Hotkey = null,
-    };
+    private static ModeFavorite UnassignedFavorite(ModeFavorite appearance) =>
+        appearance with
+        {
+            Id = $"{appearance.Direction.ToString().ToLowerInvariant()}-none",
+            ModeName = string.Empty,
+            Label = "Not assigned",
+            Icon = FavoriteIcon.None,
+            Hotkey = null,
+        };
 
     private bool IsPickerDirection(PickerDirection direction) =>
-        _selected?.TargetKey is string target &&
-        _favoriteDraft.TryGetValue(direction, out ModeFavorite? favorite) &&
-        SameTarget(favorite.ModeName, target);
+        _selected?.TargetKey is string target
+        && _favoriteDraft.TryGetValue(direction, out ModeFavorite? favorite)
+        && SameTarget(favorite.ModeName, target);
 
     private bool PickerConfigurationChanged()
     {
@@ -1461,8 +1592,8 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
         HashSet<PickerDirection> current = [.. Enum.GetValues<PickerDirection>().Where(IsPickerDirection)];
 
-        return !_loadedFavoriteDirections.SetEquals(current) ||
-            !string.Equals(_loadedDirectShortcutKeys, DirectShortcutKeys.Trim(), StringComparison.OrdinalIgnoreCase);
+        return !_loadedFavoriteDirections.SetEquals(current)
+            || !string.Equals(_loadedDirectShortcutKeys, DirectShortcutKeys.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private string? BuildApplicationCandidate(out ApplicationSettings? candidate)
@@ -1497,7 +1628,10 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
 
     private static bool TryParseShortcutKeys(string text, out IReadOnlyList<char> keys, out string? problem)
     {
-        string[] parts = text.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string[] parts = text.Split(
+            [',', ';', ' '],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+        );
         var parsed = new List<char>();
 
         foreach (string part in parts)
@@ -1529,16 +1663,19 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         string.Equals(_targets.Resolve(reference)?.Key ?? reference, target, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSibling(HierarchyNodeViewModel one, HierarchyNodeViewModel other) =>
-        one.Level == other.Level &&
-        string.Equals(one.Address.SpaceId, other.Address.SpaceId, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(one.Address.ActivityId, other.Address.ActivityId, StringComparison.OrdinalIgnoreCase);
+        one.Level == other.Level
+        && string.Equals(one.Address.SpaceId, other.Address.SpaceId, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(one.Address.ActivityId, other.Address.ActivityId, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The Space, Activity and Source an address names, as far as it goes.</summary>
     private static (ConfiguredSpace Space, ConfiguredActivity? Activity, ConfiguredSource? Source)? Locate(
-        IReadOnlyList<ConfiguredSpace> spaces, NodeAddress address)
+        IReadOnlyList<ConfiguredSpace> spaces,
+        NodeAddress address
+    )
     {
         ConfiguredSpace? space = spaces.FirstOrDefault(candidate =>
-            string.Equals(candidate.Id, address.SpaceId, StringComparison.OrdinalIgnoreCase));
+            string.Equals(candidate.Id, address.SpaceId, StringComparison.OrdinalIgnoreCase)
+        );
 
         if (space is null)
         {
@@ -1548,24 +1685,29 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
         ConfiguredActivity? activity = address.ActivityId is null
             ? null
             : space.Activities.FirstOrDefault(candidate =>
-                string.Equals(candidate.Id, address.ActivityId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate.Id, address.ActivityId, StringComparison.OrdinalIgnoreCase)
+            );
 
         if (address.ActivityId is not null && activity is null)
         {
             return null;
         }
 
-        ConfiguredSource? source = address.SourceId is null || activity is null
-            ? null
-            : activity.Sources.FirstOrDefault(candidate =>
-                string.Equals(candidate.Id, address.SourceId, StringComparison.OrdinalIgnoreCase));
+        ConfiguredSource? source =
+            address.SourceId is null || activity is null
+                ? null
+                : activity.Sources.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, address.SourceId, StringComparison.OrdinalIgnoreCase)
+                );
 
         return address.SourceId is not null && source is null ? null : (space, activity, source);
     }
 
     /// <summary>What the addressed level itself says, and nothing it inherits.</summary>
     private static IReadOnlyList<ResourceAssignment> OwnResourcesOf(
-        IReadOnlyList<ConfiguredSpace> spaces, NodeAddress address) =>
+        IReadOnlyList<ConfiguredSpace> spaces,
+        NodeAddress address
+    ) =>
         Locate(spaces, address) switch
         {
             (_, _, ConfiguredSource source) => source.Resources,
@@ -1579,7 +1721,10 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
     /// of them decided it.
     /// </summary>
     private static Dictionary<string, (ConfiguredResource Resource, string From)> InheritedAt(
-        IReadOnlyList<ConfiguredSpace> spaces, NodeAddress address, ConfiguredSpace space)
+        IReadOnlyList<ConfiguredSpace> spaces,
+        NodeAddress address,
+        ConfiguredSpace space
+    )
     {
         var inherited = new Dictionary<string, (ConfiguredResource, string)>(StringComparer.OrdinalIgnoreCase);
 
@@ -1598,15 +1743,16 @@ public sealed class SpacesViewModel : ConfigurationPageViewModelBase
                     continue;
                 }
 
-                inherited[assignment.Key] =
-                    (new ConfiguredResource(assignment.Key, assignment.Value!, assignment.Optional), from);
+                inherited[assignment.Key] = (
+                    new ConfiguredResource(assignment.Key, assignment.Value!, assignment.Optional),
+                    from
+                );
             }
         }
 
         Apply(space.Resources, space.Name);
 
-        if (address.SourceId is not null &&
-            Locate(spaces, address) is (_, ConfiguredActivity activity, _))
+        if (address.SourceId is not null && Locate(spaces, address) is (_, ConfiguredActivity activity, _))
         {
             Apply(activity.Resources, activity.Name);
         }

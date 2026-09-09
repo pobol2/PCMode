@@ -16,8 +16,9 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 internal sealed class UnreachableAudioHostClient : IAudioHostClient
 {
-    private static InvalidOperationException NotExpected([System.Runtime.CompilerServices.CallerMemberName] string member = "") =>
-        new($"{member} was called, but the audio Host is not installed and must never be contacted.");
+    private static InvalidOperationException NotExpected(
+        [System.Runtime.CompilerServices.CallerMemberName] string member = ""
+    ) => new($"{member} was called, but the audio Host is not installed and must never be contacted.");
 
     public Task ApplyTargetAsync(AudioTarget target, CancellationToken cancellationToken = default) =>
         throw NotExpected();
@@ -28,15 +29,16 @@ internal sealed class UnreachableAudioHostClient : IAudioHostClient
         bool muted,
         TimeSpan delay,
         AudioProcessingProfile processing,
-        CancellationToken cancellationToken = default) =>
-        throw NotExpected();
+        CancellationToken cancellationToken = default
+    ) => throw NotExpected();
 
     public Task StopAsync(CancellationToken cancellationToken = default) => throw NotExpected();
 
-    public Task<AudioHostStatus> GetStatusAsync(CancellationToken cancellationToken = default) =>
-        throw NotExpected();
+    public Task<AudioHostStatus> GetStatusAsync(CancellationToken cancellationToken = default) => throw NotExpected();
 
-    public Task<AudioEngineHealth> GetHealthAsync(CancellationToken cancellationToken = default) =>
+    public Task<AudioEngineHealth> GetHealthAsync(CancellationToken cancellationToken = default) => throw NotExpected();
+
+    public Task<IReadOnlyList<AudioRouteWaveform>> GetWaveformAsync(CancellationToken cancellationToken = default) =>
         throw NotExpected();
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default) => throw NotExpected();
@@ -51,7 +53,8 @@ public sealed class AudioHostLinkTests
         new(
             new UnreachableAudioHostClient(),
             canLaunch ? () => throw new InvalidOperationException("Should not launch in this test.") : null,
-            installed: () => false);
+            installed: () => false
+        );
 
     [Fact]
     public void Reports_unreachable_without_touching_the_client()
@@ -88,13 +91,11 @@ public sealed class AudioHostLinkTests
     {
         using AudioHostLink link = NotInstalled();
 
-        var target = new AudioTarget(
-            "target",
-            "Target",
-            [new AudioRoute(new AudioEndpointId("endpoint"))]);
+        var target = new AudioTarget("target", "Target", [new AudioRoute(new AudioEndpointId("endpoint"))]);
 
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
-            () => link.Apply(target, CancellationToken.None));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            link.Apply(target, CancellationToken.None)
+        );
 
         Assert.Contains("not installed", failure.Message, StringComparison.OrdinalIgnoreCase);
     }

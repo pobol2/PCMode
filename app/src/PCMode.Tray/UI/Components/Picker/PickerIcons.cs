@@ -33,7 +33,8 @@ public static class PickerIcons
         Point center,
         double size,
         double strokeWidth,
-        Brush brush)
+        Brush brush
+    )
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(brush);
@@ -43,11 +44,7 @@ public static class PickerIcons
             return;
         }
 
-        var pen = new Pen(brush, strokeWidth)
-        {
-            StartLineCap = PenLineCap.Round,
-            EndLineCap = PenLineCap.Round,
-        };
+        var pen = new Pen(brush, strokeWidth) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
 
         pen.Freeze();
 
@@ -84,15 +81,13 @@ public static class PickerIcons
         context.DrawRectangle(null, pen, new Rect(screenX, screenY, screenWidth, screenHeight));
 
         // Stand: a stem down from the panel, then a foot.
-        context.DrawLine(
-            pen,
-            new Point(center.X, screenY + screenHeight),
-            new Point(center.X, y + (size * 0.82)));
+        context.DrawLine(pen, new Point(center.X, screenY + screenHeight), new Point(center.X, y + (size * 0.82)));
 
         context.DrawLine(
             pen,
             new Point(x + (size * 0.31), y + (size * 0.83)),
-            new Point(x + (size * 0.69), y + (size * 0.83)));
+            new Point(x + (size * 0.69), y + (size * 0.83))
+        );
     }
 
     private static void DrawPlayTile(DrawingContext context, Pen pen, Brush brush, Point center, double size)
@@ -106,7 +101,8 @@ public static class PickerIcons
             pen,
             new Rect(center.X - (width / 2), center.Y - (height / 2), width, height),
             radius,
-            radius);
+            radius
+        );
 
         // The triangle is nudged right of centre so it LOOKS centred: a
         // triangle balanced on its bounding box reads as sitting too far left.
@@ -114,8 +110,16 @@ public static class PickerIcons
 
         using (StreamGeometryContext figure = play.Open())
         {
-            figure.BeginFigure(new Point(center.X - (size * 0.08), center.Y - (size * 0.13)), isFilled: true, isClosed: true);
-            figure.LineTo(new Point(center.X - (size * 0.08), center.Y + (size * 0.13)), isStroked: false, isSmoothJoin: false);
+            figure.BeginFigure(
+                new Point(center.X - (size * 0.08), center.Y - (size * 0.13)),
+                isFilled: true,
+                isClosed: true
+            );
+            figure.LineTo(
+                new Point(center.X - (size * 0.08), center.Y + (size * 0.13)),
+                isStroked: false,
+                isSmoothJoin: false
+            );
             figure.LineTo(new Point(center.X + (size * 0.13), center.Y), isStroked: false, isSmoothJoin: false);
         }
 
@@ -131,7 +135,8 @@ public static class PickerIcons
         Point center,
         double x,
         double y,
-        double size)
+        double size
+    )
     {
         double bodyWidth = size * 0.90;
         double bodyHeight = size * 0.54;
@@ -141,7 +146,8 @@ public static class PickerIcons
             pen,
             new Point(x + (size * 0.05) + (bodyWidth / 2), y + (size * 0.23) + (bodyHeight / 2)),
             bodyWidth / 2,
-            bodyHeight / 2);
+            bodyHeight / 2
+        );
 
         double crossX = x + (size * 0.31);
         double arm = size * 0.10;
@@ -156,14 +162,16 @@ public static class PickerIcons
             null,
             new Point(x + (size * 0.68), center.Y - (size * 0.07)),
             buttonRadius,
-            buttonRadius);
+            buttonRadius
+        );
 
         context.DrawEllipse(
             brush,
             null,
             new Point(x + (size * 0.79), center.Y + (size * 0.06)),
             buttonRadius,
-            buttonRadius);
+            buttonRadius
+        );
     }
 
     private static void DrawFilmStrip(DrawingContext context, Pen pen, double x, double y, double size)

@@ -10,51 +10,37 @@ public sealed record AudioFailure
 
     public DateTimeOffset TimestampUtc { get; }
 
-    public AudioFailure(
-        string type,
-        string message,
-        int hResult,
-        DateTimeOffset timestampUtc)
+    public AudioFailure(string type, string message, int hResult, DateTimeOffset timestampUtc)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            type);
+        ArgumentException.ThrowIfNullOrWhiteSpace(type);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
 
-        Type =
-            type;
+        Type = type;
 
-        Message =
-            message;
+        Message = message;
 
-        HResult =
-            hResult;
+        HResult = hResult;
 
-        TimestampUtc =
-            timestampUtc;
+        TimestampUtc = timestampUtc;
     }
 
-    public static AudioFailure FromException(
-        Exception exception)
+    public static AudioFailure FromException(Exception exception)
     {
-        ArgumentNullException.ThrowIfNull(
-            exception);
+        ArgumentNullException.ThrowIfNull(exception);
 
-        Exception effective =
-            exception;
+        Exception effective = exception;
 
         while (effective.InnerException is not null)
         {
-            effective =
-                effective.InnerException;
+            effective = effective.InnerException;
         }
 
         return new AudioFailure(
-            effective.GetType().FullName ??
-                effective.GetType().Name,
+            effective.GetType().FullName ?? effective.GetType().Name,
             effective.Message,
             effective.HResult,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow
+        );
     }
 }

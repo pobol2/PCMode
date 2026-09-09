@@ -29,7 +29,8 @@ public sealed class HomeTargetGroup(
     string name,
     IReadOnlyList<HomeTargetCard> targets,
     bool isFavorite,
-    bool isExpanded) : INotifyPropertyChanged
+    bool isExpanded
+) : INotifyPropertyChanged
 {
     private bool _isExpanded = isExpanded;
 

@@ -48,10 +48,12 @@ internal static class DdcMonitorCatalog
         {
             using JsonDocument document = JsonDocument.Parse(json, ReadOptions);
 
-            if (!document.RootElement.TryGetProperty("providers", out JsonElement providers) ||
-                providers.ValueKind != JsonValueKind.Object ||
-                !TryFindSection(providers, out JsonElement section) ||
-                section.ValueKind != JsonValueKind.Object)
+            if (
+                !document.RootElement.TryGetProperty("providers", out JsonElement providers)
+                || providers.ValueKind != JsonValueKind.Object
+                || !TryFindSection(providers, out JsonElement section)
+                || section.ValueKind != JsonValueKind.Object
+            )
             {
                 return [];
             }
@@ -78,7 +80,8 @@ internal static class DdcMonitorCatalog
     public static bool TryRead(
         JsonElement? settings,
         out IReadOnlyDictionary<string, string> monitors,
-        out string? problem)
+        out string? problem
+    )
     {
         monitors = Empty;
 
@@ -110,15 +113,14 @@ internal static class DdcMonitorCatalog
 
             string alias = monitor.Name.Trim();
 
-            if (monitor.Value.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(monitor.Value.GetString()))
+            if (monitor.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(monitor.Value.GetString()))
             {
                 // An empty mapping is worse than a missing one: the alias
                 // exists, so every mode using it validates, and the failure
                 // waits until a transition is already under way.
                 problem =
-                    $"'{SettingsPath}.{alias}' is empty. It needs the exact device path of a monitor, " +
-                    $"which '{DisplayProvider.MonitorsPath}' and the display Health line both report.";
+                    $"'{SettingsPath}.{alias}' is empty. It needs the exact device path of a monitor, "
+                    + $"which '{DisplayProvider.MonitorsPath}' and the display Health line both report.";
 
                 return false;
             }
@@ -138,8 +140,9 @@ internal static class DdcMonitorCatalog
         return true;
     }
 
-    private static readonly IReadOnlyDictionary<string, string> Empty =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private static readonly IReadOnlyDictionary<string, string> Empty = new Dictionary<string, string>(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     private static readonly JsonDocumentOptions ReadOptions = new()
     {

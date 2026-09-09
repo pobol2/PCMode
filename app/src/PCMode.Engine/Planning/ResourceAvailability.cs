@@ -66,13 +66,15 @@ public sealed record ResourceAvailability(AvailabilityState State, string? Detai
     public bool IsDefinitelyOut => State is AvailabilityState.Unavailable or AvailabilityState.Disabled;
 
     /// <summary>The reason, in a form that can be put in a sentence.</summary>
-    public string Explain() => Detail ?? State switch
-    {
-        AvailabilityState.Unavailable => "it is not available.",
-        AvailabilityState.Disabled => "it is switched off.",
-        AvailabilityState.Unknown => "it could not be checked.",
-        _ => "it is available.",
-    };
+    public string Explain() =>
+        Detail
+        ?? State switch
+        {
+            AvailabilityState.Unavailable => "it is not available.",
+            AvailabilityState.Disabled => "it is switched off.",
+            AvailabilityState.Unknown => "it could not be checked.",
+            _ => "it is available.",
+        };
 }
 
 /// <summary>

@@ -15,8 +15,7 @@ public sealed class CursorProviderTests
 {
     private static readonly DisplayRect Screen = new(0, 0, 1920, 1080);
 
-    private const string TwoPositions =
-        """
+    private const string TwoPositions = """
         {
           "positions": {
             "Center": { "xPercent": 50, "yPercent": 50 },
@@ -92,8 +91,10 @@ public sealed class CursorProviderTests
         // becomes zero, which is the left edge, which looks exactly like
         // somebody meaning it. It can sit in a configuration being wrong for
         // months without ever looking wrong.
-        string? problem = Configure(new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
-            $$"""{ "positions": { "Half": {{rules}} } }""");
+        string? problem = Configure(
+            new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
+            $$"""{ "positions": { "Half": {{rules}} } }"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains(expected, problem, StringComparison.Ordinal);
@@ -108,8 +109,10 @@ public sealed class CursorProviderTests
         // One of the two is being ignored and nothing says which. Picking a
         // winner silently is how a configuration comes to mean something other
         // than what it says.
-        string? problem = Configure(new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
-            $$"""{ "positions": { "Both": {{rules}} } }""");
+        string? problem = Configure(
+            new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
+            $$"""{ "positions": { "Both": {{rules}} } }"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains(expected, problem, StringComparison.Ordinal);
@@ -125,8 +128,10 @@ public sealed class CursorProviderTests
     {
         // A misspelled rule is the interesting one: without this it is simply
         // absent, and the position it belonged to silently becomes an edge.
-        string? problem = Configure(new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
-            $$"""{ "positions": { "Odd": {{rules}} } }""");
+        string? problem = Configure(
+            new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
+            $$"""{ "positions": { "Odd": {{rules}} } }"""
+        );
 
         Assert.NotNull(problem);
         Assert.Contains(expected, problem, StringComparison.Ordinal);
@@ -165,7 +170,8 @@ public sealed class CursorProviderTests
     {
         // A mode looks a position up case-insensitively, so one of these could
         // never be selected.
-        string? problem = Configure(new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
+        string? problem = Configure(
+            new CursorProvider(new FakeCursor(), new FakeDisplay(Screen)),
             """
             {
               "positions": {
@@ -173,7 +179,8 @@ public sealed class CursorProviderTests
                 "corner": { "xPercent": 9, "yPercent": 9 }
               }
             }
-            """);
+            """
+        );
 
         Assert.NotNull(problem);
         Assert.Contains("more than once", problem, StringComparison.Ordinal);
@@ -228,9 +235,7 @@ public sealed class CursorProviderTests
 
         TransitionOutcome outcome = await engine.ApplyAsync("Movie");
 
-        TransitionStep step = Assert.Single(
-            outcome.Steps,
-            step => step.Resource == CursorProvider.ResourceKey);
+        TransitionStep step = Assert.Single(outcome.Steps, step => step.Resource == CursorProvider.ResourceKey);
 
         Assert.Equal(TransitionStepStatus.Applied, step.Status);
         Assert.Equal("Corner", step.Target);
@@ -280,8 +285,7 @@ public sealed class CursorProviderTests
 
     // ---- helpers ------------------------------------------------------------
 
-    private const string Document =
-        """
+    private const string Document = """
         {
           "schemaVersion": 1,
           "providers": {
@@ -303,19 +307,20 @@ public sealed class CursorProviderTests
         root.Write(Document);
 
         IReadOnlyList<IModeResourceProvider> providers =
-            [new FakeProvider("theme", "Light") { DisplayName = "Windows theme" }, provider];
+        [
+            new FakeProvider("theme", "Light") { DisplayName = "Windows theme" },
+            provider,
+        ];
 
         return new ModeEngine(
             ModeConfiguration.LoadOrCreate(root.Path, providers),
             new ModeStateStore(root.StateFile),
             providers,
-            new FakeTime());
+            new FakeTime()
+        );
     }
 
-    private static CursorProvider Provider(
-        string settings,
-        FakeCursor? cursor = null,
-        DisplayRect? bounds = null)
+    private static CursorProvider Provider(string settings, FakeCursor? cursor = null, DisplayRect? bounds = null)
     {
         var provider = new CursorProvider(cursor ?? new FakeCursor(), new FakeDisplay(bounds ?? Screen));
 

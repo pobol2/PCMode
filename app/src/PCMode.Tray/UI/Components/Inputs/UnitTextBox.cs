@@ -14,24 +14,23 @@ public sealed class UnitTextBox : System.Windows.Controls.Control
     {
         DefaultStyleKeyProperty.OverrideMetadata(
             typeof(UnitTextBox),
-            new FrameworkPropertyMetadata(typeof(UnitTextBox)));
+            new FrameworkPropertyMetadata(typeof(UnitTextBox))
+        );
     }
 
-    public static readonly DependencyProperty TextProperty =
-        DependencyProperty.Register(
-            nameof(Text),
-            typeof(string),
-            typeof(UnitTextBox),
-            new FrameworkPropertyMetadata(
-                string.Empty,
-                FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
+        nameof(Text),
+        typeof(string),
+        typeof(UnitTextBox),
+        new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+    );
 
-    public static readonly DependencyProperty UnitProperty =
-        DependencyProperty.Register(
-            nameof(Unit),
-            typeof(string),
-            typeof(UnitTextBox),
-            new PropertyMetadata(string.Empty));
+    public static readonly DependencyProperty UnitProperty = DependencyProperty.Register(
+        nameof(Unit),
+        typeof(string),
+        typeof(UnitTextBox),
+        new PropertyMetadata(string.Empty)
+    );
 
     public string Text
     {

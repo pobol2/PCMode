@@ -1,30 +1,87 @@
-<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:diagnostics="clr-namespace:PCMode.Tray.Elements.Diagnostics"
-    xmlns:home="clr-namespace:PCMode.Tray.Elements.Home"
-    xmlns:migration="clr-namespace:PCMode.Tray.UI.Components.Migration"
-    xmlns:settings="clr-namespace:PCMode.Tray.Elements.Settings"
-    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
-
-    <!--
-        Element-to-tree bindings belong with the Elements: they select a
-        legal structural kind and supply its inputs, but do not define that
-        kind's title/header/content/footer arrangement. ListPageBlock owns
-        that structure and terminates each supplied value at its declared
-        FinalUiComponent boundary.
-
-        The small bodies below are deliberately opaque migration content.
-        They keep the three pages reachable while UI/Components is completed;
-        replacing them must not change the ListPageBlock selection.
-    -->
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:diagnostics="clr-namespace:PCMode.Tray.Elements.Diagnostics"
+                    xmlns:home="clr-namespace:PCMode.Tray.Elements.Home"
+                    xmlns:content="clr-namespace:PCMode.Tray.UI.Components.Content"
+                    xmlns:settings="clr-namespace:PCMode.Tray.Elements.Settings"
+                    xmlns:tree="clr-namespace:PCMode.Tray.UI.Tree">
     <DataTemplate DataType="{x:Type home:HomeViewModel}">
         <tree:ListPageBlock Title="Home">
             <tree:ListPageBlock.Content>
-                <migration:MigrationContent
-                    Description="Home terminal components are ready to migrate."
-                    Source="{Binding}" />
+                <StackPanel>
+                    <TextBlock Text="Choose a target to apply its complete workspace configuration."
+                               Style="{StaticResource MutedTextStyle}"
+                               Margin="0,0,0,12" />
+                    <TextBlock Text="No running engine is available in this session."
+                               Foreground="{DynamicResource WarningBrush}"
+                               Visibility="{Binding HasRuntime, Converter={StaticResource InverseBoolToVisibility}}"
+                               Margin="0,0,0,10" />
+                    <TextBlock Text="{Binding StatusMessage}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibility}}"
+                               Margin="0,0,0,10" />
+                    <ItemsControl ItemsSource="{Binding TargetGroups}" IsEnabled="{Binding IsIdle}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                                    <Expander IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
+                                        <Expander.Header>
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       Style="{StaticResource SectionTitleStyle}"
+                                                       Margin="0" />
+                                        </Expander.Header>
+                                        <ItemsControl ItemsSource="{Binding Targets}" Margin="0,12,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <ToggleButton Style="{StaticResource ActionCardToggleButtonStyle}"
+                                                                  IsChecked="{Binding IsCurrent, Mode=OneWay}"
+                                                                  IsEnabled="{Binding Enabled}"
+                                                                  Command="{Binding DataContext.ApplyTargetCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ListPageBlock}}}"
+                                                                  CommandParameter="{Binding}">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontSize="17"
+                                                                       FontWeight="SemiBold"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="Current"
+                                                                       Foreground="{DynamicResource SuccessBrush}"
+                                                                       FontSize="11"
+                                                                       FontWeight="SemiBold"
+                                                                       Margin="8,2,0,0"
+                                                                       Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibility}}" />
+                                                            <TextBlock Grid.Row="1"
+                                                                       Grid.ColumnSpan="2"
+                                                                       Text="{Binding Context}"
+                                                                       Style="{StaticResource MutedTextStyle}"
+                                                                       FontSize="11"
+                                                                       Margin="0,2,0,0"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Visibility="{Binding Context, Converter={StaticResource StringToVisibility}}" />
+                                                        </Grid>
+                                                    </ToggleButton>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </tree:ListPageBlock.Content>
         </tree:ListPageBlock>
     </DataTemplate>
@@ -32,9 +89,118 @@
     <DataTemplate DataType="{x:Type settings:SettingsViewModel}">
         <tree:ListPageBlock Title="Settings">
             <tree:ListPageBlock.Content>
-                <migration:MigrationContent
-                    Description="Settings terminal components are ready to migrate."
-                    Source="{Binding}" />
+                <StackPanel IsEnabled="{Binding CanEdit}">
+                    <TextBlock Text="{Binding StatusMessage}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"
+                               Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibility}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StatusIsError}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Appearance and picker" Style="{StaticResource SectionTitleStyle}" />
+                            <content:InputContent Label="Theme">
+                                <ComboBox ItemsSource="{Binding ThemeOptions}"
+                                          DisplayMemberPath="Name"
+                                          SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" />
+                            </content:InputContent>
+                            <content:InputContent Label="Picker display">
+                                <ComboBox ItemsSource="{Binding MonitorOptions}"
+                                          DisplayMemberPath="Name"
+                                          SelectedItem="{Binding SelectedMonitor, Mode=TwoWay}" />
+                            </content:InputContent>
+                        </content:EditorBoxContent>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Startup" Style="{StaticResource SectionTitleStyle}" />
+                            <CheckBox Content="Start with Windows" IsChecked="{Binding StartWithWindows, Mode=TwoWay}" />
+                            <CheckBox Content="Start minimized to the tray"
+                                      IsEnabled="{Binding StartWithWindows}"
+                                      IsChecked="{Binding StartMinimizedToTray, Mode=TwoWay}" />
+                            <content:InputContent Label="When PCMode starts">
+                                <ComboBox ItemsSource="{Binding LaunchBehaviorOptions}"
+                                          DisplayMemberPath="Name"
+                                          SelectedItem="{Binding SelectedLaunchBehavior, Mode=TwoWay}" />
+                            </content:InputContent>
+                            <content:InputContent Label="Startup target">
+                                <ComboBox ItemsSource="{Binding Targets}"
+                                          DisplayMemberPath="DisplayPath"
+                                          SelectedValuePath="Key"
+                                          SelectedValue="{Binding StartupTarget, Mode=TwoWay}" />
+                            </content:InputContent>
+                        </content:EditorBoxContent>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Controller input" Style="{StaticResource SectionTitleStyle}" />
+                            <CheckBox Content="Enable controller input" IsChecked="{Binding ControllerEnabled, Mode=TwoWay}" />
+                            <Grid DataContext="{Binding ControllerDiscovery}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           Style="{StaticResource MutedTextStyle}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1"
+                                        Content="Rescan"
+                                        Style="{StaticResource CompactSecondaryButtonStyle}"
+                                        Command="{Binding DataContext.RescanControllersCommand, RelativeSource={RelativeSource AncestorType={x:Type tree:ListPageBlock}}}" />
+                            </Grid>
+                            <TextBlock Text="{Binding ControllerDiscovery.Problem}"
+                                       Foreground="{DynamicResource ErrorBrush}"
+                                       Visibility="{Binding ControllerDiscovery.HasProblem, Converter={StaticResource BooleanToVisibility}}" />
+                            <ItemsControl ItemsSource="{Binding ControllerDiscovery.Controllers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Summary}" Style="{StaticResource MutedTextStyle}" />
+                                                <ItemsControl ItemsSource="{Binding Details}" Visibility="{Binding HasDetails, Converter={StaticResource BooleanToVisibility}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="160" />
+                                                                    <ColumnDefinition Width="*" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Text="{Binding Label}" Style="{StaticResource MutedTextStyle}" />
+                                                                <TextBlock Grid.Column="1" Text="{Binding Value}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </content:EditorBoxContent>
+                    </Border>
+                    <content:ActionContent>
+                        <Button Content="Discard changes"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding DiscardCommand}" />
+                        <Button Content="Save"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding SaveCommand}" />
+                        <Button Content="Guided setup"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding OpenGuidedSetupCommand}"
+                                Visibility="{Binding ShowGuidedSetup, Converter={StaticResource BooleanToVisibility}}" />
+                    </content:ActionContent>
+                </StackPanel>
             </tree:ListPageBlock.Content>
         </tree:ListPageBlock>
     </DataTemplate>
@@ -42,11 +208,117 @@
     <DataTemplate DataType="{x:Type diagnostics:DiagnosticsViewModel}">
         <tree:ListPageBlock Title="Diagnostics">
             <tree:ListPageBlock.Content>
-                <migration:MigrationContent
-                    Description="Diagnostics terminal components are ready to migrate."
-                    Source="{Binding}" />
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center" />
+                        <content:HorizontalSpacingPanel Grid.Column="1" Spacing="8">
+                            <Button Content="Open log folder"
+                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                    Command="{Binding OpenLogFolderCommand}" />
+                            <Button Content="Refresh"
+                                    Style="{StaticResource CompactSecondaryButtonStyle}"
+                                    Command="{Binding RefreshCommand}" />
+                        </content:HorizontalSpacingPanel>
+                    </Grid>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Engine" Style="{StaticResource SectionTitleStyle}" />
+                            <content:InformationContent Label="Current target">
+                                <TextBlock Text="{Binding CurrentTargetKey, TargetNullValue=None}" />
+                            </content:InformationContent>
+                            <content:InformationContent Label="Status">
+                                <TextBlock Text="{Binding EngineStatusText}" />
+                            </content:InformationContent>
+                            <content:InputContent Label="Dry-run target">
+                                <ComboBox ItemsSource="{Binding Targets}"
+                                          DisplayMemberPath="DisplayPath"
+                                          SelectedValuePath="Key"
+                                          SelectedValue="{Binding SelectedDryRunTargetKey, Mode=TwoWay}" />
+                                <content:InputContent.Trailing>
+                                    <Button Content="Run dry run"
+                                            Style="{StaticResource CompactSecondaryButtonStyle}"
+                                            Command="{Binding DryRunCommand}" />
+                                </content:InputContent.Trailing>
+                            </content:InputContent>
+                            <StackPanel Visibility="{Binding HasHealth, Converter={StaticResource BooleanToVisibility}}">
+                                <TextBlock Text="{Binding LastHealth.Summary}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding LastHealth.Resources}" Margin="0,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="160" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding ResourceName}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Detail}"
+                                                           Style="{StaticResource MutedTextStyle}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <TextBlock Text="No dry run has been performed yet."
+                                       Style="{StaticResource MutedTextStyle}"
+                                       Visibility="{Binding ShowEmptyHealthMessage, Converter={StaticResource BooleanToVisibility}}" />
+                        </content:EditorBoxContent>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Loaded providers" Style="{StaticResource SectionTitleStyle}" />
+                            <ItemsControl ItemsSource="{Binding Providers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Display}" Margin="0,2" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </content:EditorBoxContent>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Files" Style="{StaticResource SectionTitleStyle}" />
+                            <content:InformationContent Label="Version">
+                                <TextBlock Text="{Binding ApplicationVersion}" />
+                            </content:InformationContent>
+                            <content:InformationContent Label="Data root">
+                                <TextBlock Text="{Binding DataRoot}" TextWrapping="Wrap" />
+                            </content:InformationContent>
+                            <content:InformationContent Label="Configuration">
+                                <TextBlock Text="{Binding ConfigurationPath}" TextWrapping="Wrap" />
+                            </content:InformationContent>
+                            <content:InformationContent Label="State">
+                                <TextBlock Text="{Binding StatePath}" TextWrapping="Wrap" />
+                            </content:InformationContent>
+                            <content:InformationContent Label="Logs">
+                                <TextBlock Text="{Binding LogFolder}" TextWrapping="Wrap" />
+                            </content:InformationContent>
+                        </content:EditorBoxContent>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}">
+                        <content:EditorBoxContent>
+                            <TextBlock Text="Recent log" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBox Text="{Binding RecentLogText, Mode=OneWay}"
+                                     IsReadOnly="True"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     MinHeight="220"
+                                     FontFamily="Consolas"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto" />
+                        </content:EditorBoxContent>
+                    </Border>
+                </StackPanel>
             </tree:ListPageBlock.Content>
         </tree:ListPageBlock>
     </DataTemplate>
-
 </ResourceDictionary>

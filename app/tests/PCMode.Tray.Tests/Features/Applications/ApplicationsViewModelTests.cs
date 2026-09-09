@@ -1,7 +1,7 @@
-using PCMode.Engine;
-using PCMode.Tray.Elements.Applications;
 using System.IO;
 using System.Text.Json.Nodes;
+using PCMode.Engine;
+using PCMode.Tray.Elements.Applications;
 using PCMode.Tray.Tests;
 
 namespace PCMode.Tray.Tests.Features.Applications;
@@ -81,7 +81,8 @@ public sealed class ApplicationsViewModelTests
         Assert.Contains("Big Picture", ReadApplicationNames(root.Path));
         Assert.Contains(
             configuration.Find("Gaming")!.Resources,
-            resource => resource.Key == "Big Picture" && resource.Value == ApplicationProvider.Running);
+            resource => resource.Key == "Big Picture" && resource.Value == ApplicationProvider.Running
+        );
     }
 
     [Fact]
@@ -102,9 +103,13 @@ public sealed class ApplicationsViewModelTests
         Assert.False(viewModel.IsLaunchOnly);
         Assert.True(viewModel.TrySaveChanges());
 
-        string savedCopy = JsonNode.Parse(File.ReadAllText(root.ConfigurationFile))!["providers"]!["applications"]!["Steam copy"]!.ToJsonString();
+        string savedCopy = JsonNode.Parse(File.ReadAllText(root.ConfigurationFile))!["providers"]!["applications"]![
+            "Steam copy"
+        ]!.ToJsonString();
         Assert.Contains("\"stop\"", savedCopy, StringComparison.Ordinal);
-        ApplicationDefinition copy = ReadApplications(root.Path).Single(provider => provider.Key == "Steam copy").Definition;
+        ApplicationDefinition copy = ReadApplications(root.Path)
+            .Single(provider => provider.Key == "Steam copy")
+            .Definition;
         Assert.Equal("steam://exit", copy.Stop!.Uri);
         Assert.True(copy.Reactivate);
         Assert.Equal([new ResourceRequirement("theme", "Dark")], copy.Requires);
@@ -113,8 +118,8 @@ public sealed class ApplicationsViewModelTests
         Assert.Equal("f", copy.Ready.Keys);
     }
 
-    private static IReadOnlyList<string> ReadApplicationNames(string root)
-        => [.. ReadApplications(root).Select(provider => provider.Key)];
+    private static IReadOnlyList<string> ReadApplicationNames(string root) =>
+        [.. ReadApplications(root).Select(provider => provider.Key)];
 
     private static IReadOnlyList<ApplicationProvider> ReadApplications(string root)
     {

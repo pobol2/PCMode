@@ -14,8 +14,7 @@ namespace PCMode.Engine.Tests;
 /// </remarks>
 public sealed class HierarchyStoreTests
 {
-    private const string Document =
-        """
+    private const string Document = """
         {
           "schemaVersion": 1,
           "application": {
@@ -61,8 +60,11 @@ public sealed class HierarchyStoreTests
 
         Assert.True(HierarchyStore.CreateSpace(root.Path, "Sim Rig").Success);
         Assert.True(HierarchyStore.CreateActivity(root.Path, "sim-rig", "Racing").Success);
-        Assert.True(HierarchyStore
-            .CreateSource(root.Path, "sim-rig", "racing", "Assetto Corsa", SourceKind.PcApplication).Success);
+        Assert.True(
+            HierarchyStore
+                .CreateSource(root.Path, "sim-rig", "racing", "Assetto Corsa", SourceKind.PcApplication)
+                .Success
+        );
 
         Assert.Contains("sim-rig/racing/assetto-corsa", Read(root).Targets.Keys);
     }
@@ -102,7 +104,9 @@ public sealed class HierarchyStoreTests
         Assert.True(HierarchyStore.CreateActivity(root.Path, "desk", "Gaming copy", duplicateOf: "gaming").Success);
 
         ModeConfiguration configuration = Read(root);
-        ConfiguredActivity copy = configuration.Spaces.Single().Activities.Single(activity => activity.Id == "gaming-copy");
+        ConfiguredActivity copy = configuration
+            .Spaces.Single()
+            .Activities.Single(activity => activity.Id == "gaming-copy");
 
         Assert.Equal("Dark", copy.Resources.Single().Value!);
         Assert.Equal("Steam", copy.Sources.Single().Name);
@@ -117,10 +121,15 @@ public sealed class HierarchyStoreTests
         var source = new NodeAddress("desk", "gaming", "steam");
 
         Assert.True(HierarchyStore.SetSourceKind(root.Path, source, SourceKind.ExternalDevice).Success);
-        Assert.True(HierarchyStore.SaveResources(
-            root.Path,
-            source,
-            new Dictionary<string, ResourceEdit> { ["theme"] = ResourceEdit.Cleared }).Success);
+        Assert.True(
+            HierarchyStore
+                .SaveResources(
+                    root.Path,
+                    source,
+                    new Dictionary<string, ResourceEdit> { ["theme"] = ResourceEdit.Cleared }
+                )
+                .Success
+        );
 
         Assert.True(HierarchyStore.Duplicate(root.Path, new NodeAddress("desk"), "Desk copy").Success);
         Assert.True(HierarchyStore.Duplicate(root.Path, new NodeAddress("desk", "gaming"), "Gaming copy").Success);
@@ -128,16 +137,20 @@ public sealed class HierarchyStoreTests
 
         ModeConfiguration configuration = Read(root);
         ConfiguredSpace spaceCopy = configuration.Spaces.Single(space => space.Id == "desk-copy");
-        ConfiguredActivity activityCopy = configuration.Spaces.Single(space => space.Id == "desk")
+        ConfiguredActivity activityCopy = configuration
+            .Spaces.Single(space => space.Id == "desk")
             .Activities.Single(activity => activity.Id == "gaming-copy");
-        ConfiguredSource sourceCopy = configuration.Spaces.Single(space => space.Id == "desk")
+        ConfiguredSource sourceCopy = configuration
+            .Spaces.Single(space => space.Id == "desk")
             .Activities.Single(activity => activity.Id == "gaming")
             .Sources.Single(candidate => candidate.Id == "steam-copy");
 
         Assert.Equal("Light", spaceCopy.Resources.Single(resource => resource.Key == "theme").Value);
         Assert.Equal(["Work", "Gaming"], spaceCopy.Activities.Select(activity => activity.Name));
-        Assert.Equal(SourceKind.ExternalDevice, spaceCopy.Activities.Single(activity => activity.Name == "Gaming")
-            .Sources.Single().Kind);
+        Assert.Equal(
+            SourceKind.ExternalDevice,
+            spaceCopy.Activities.Single(activity => activity.Name == "Gaming").Sources.Single().Kind
+        );
 
         Assert.Equal("Dark", activityCopy.Resources.Single(resource => resource.Key == "theme").Value);
         Assert.Equal(SourceKind.ExternalDevice, activityCopy.Sources.Single().Kind);
@@ -161,7 +174,9 @@ public sealed class HierarchyStoreTests
     {
         using TemporaryRoot root = Root();
 
-        Assert.True(HierarchyStore.Rename(root.Path, new NodeAddress("desk", "gaming", "steam"), "Big Picture").Success);
+        Assert.True(
+            HierarchyStore.Rename(root.Path, new NodeAddress("desk", "gaming", "steam"), "Big Picture").Success
+        );
         Assert.True(HierarchyStore.Rename(root.Path, new NodeAddress("desk"), "Study").Success);
 
         ModeConfiguration configuration = Read(root);
@@ -171,13 +186,12 @@ public sealed class HierarchyStoreTests
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(root.ConfigurationFile));
         JsonElement application = document.RootElement.GetProperty("application");
 
-        Assert.Equal(
-            "desk/gaming/steam",
-            application.GetProperty("startup").GetProperty("target").GetString());
+        Assert.Equal("desk/gaming/steam", application.GetProperty("startup").GetProperty("target").GetString());
 
         Assert.Contains(
             application.GetProperty("picker").GetProperty("favorites").EnumerateArray(),
-            favorite => favorite.GetProperty("target").GetString() == "desk/gaming/steam");
+            favorite => favorite.GetProperty("target").GetString() == "desk/gaming/steam"
+        );
     }
 
     [Fact]
@@ -213,7 +227,8 @@ public sealed class HierarchyStoreTests
             JsonElement application = document.RootElement.GetProperty("application");
             Assert.Contains(
                 application.GetProperty("picker").GetProperty("favorites").EnumerateArray(),
-                favorite => favorite.GetProperty("target").GetString() == target.Key);
+                favorite => favorite.GetProperty("target").GetString() == target.Key
+            );
         }
 
         Assert.True(HierarchyStore.SetEnabled(root.Path, address, enabled: true).Success);
@@ -250,7 +265,8 @@ public sealed class HierarchyStoreTests
             root.Path,
             new NodeAddress("desk", "gaming", "steam"),
             new Dictionary<string, string> { ["Down"] = "desk/work" },
-            startupReplacement: "desk/work");
+            startupReplacement: "desk/work"
+        );
 
         Assert.True(accepted.Success, accepted.Problem);
         Assert.DoesNotContain("desk/gaming/steam", Read(root).Targets.Keys);
@@ -258,7 +274,8 @@ public sealed class HierarchyStoreTests
         using JsonDocument saved = JsonDocument.Parse(File.ReadAllText(root.ConfigurationFile));
         Assert.DoesNotContain(
             saved.RootElement.GetProperty("application").GetProperty("shortcuts").EnumerateArray(),
-            shortcut => shortcut.GetProperty("target").GetString() == "desk/gaming/steam");
+            shortcut => shortcut.GetProperty("target").GetString() == "desk/gaming/steam"
+        );
     }
 
     [Fact]
@@ -276,7 +293,8 @@ public sealed class HierarchyStoreTests
                 ["Down"] = "desk/work",
                 ["Left"] = "desk/work",
             },
-            startupReplacement: null);
+            startupReplacement: null
+        );
 
         // Every replacement offered is itself about to be deleted, so the
         // candidate cannot be validated and nothing is written.
@@ -291,11 +309,16 @@ public sealed class HierarchyStoreTests
         var state = new ModeStateStore(root.StateFile);
         Assert.True(state.TryWrite("desk/gaming/steam", DateTimeOffset.UnixEpoch, out _));
 
-        Assert.True(HierarchyStore.Delete(
-            root.Path,
-            new NodeAddress("desk", "gaming", "steam"),
-            new Dictionary<string, string> { ["Down"] = "desk/work" },
-            startupReplacement: "desk/work").Success);
+        Assert.True(
+            HierarchyStore
+                .Delete(
+                    root.Path,
+                    new NodeAddress("desk", "gaming", "steam"),
+                    new Dictionary<string, string> { ["Down"] = "desk/work" },
+                    startupReplacement: "desk/work"
+                )
+                .Success
+        );
 
         Assert.Null(state.Read(out _));
     }
@@ -323,14 +346,19 @@ public sealed class HierarchyStoreTests
     {
         using TemporaryRoot root = Root();
 
-        Assert.True(HierarchyStore.SaveResources(
-            root.Path,
-            new NodeAddress("desk", "gaming", "steam"),
-            new Dictionary<string, ResourceEdit>
-            {
-                ["doNotDisturb"] = ResourceEdit.Of("On", optional: true),
-                ["theme"] = ResourceEdit.Cleared,
-            }).Success);
+        Assert.True(
+            HierarchyStore
+                .SaveResources(
+                    root.Path,
+                    new NodeAddress("desk", "gaming", "steam"),
+                    new Dictionary<string, ResourceEdit>
+                    {
+                        ["doNotDisturb"] = ResourceEdit.Of("On", optional: true),
+                        ["theme"] = ResourceEdit.Cleared,
+                    }
+                )
+                .Success
+        );
 
         ModeConfiguration configuration = Read(root);
         ConfiguredMode steam = configuration.Find("desk/gaming/steam")!;
@@ -343,13 +371,20 @@ public sealed class HierarchyStoreTests
         // decision about one target rather than about the branch.
         Assert.Equal("Dark", configuration.Find("desk/gaming")!.Resources.Single().Value);
 
-        Assert.True(HierarchyStore.SaveResources(
-            root.Path,
-            new NodeAddress("desk", "gaming", "steam"),
-            new Dictionary<string, ResourceEdit> { ["theme"] = ResourceEdit.Inherited }).Success);
+        Assert.True(
+            HierarchyStore
+                .SaveResources(
+                    root.Path,
+                    new NodeAddress("desk", "gaming", "steam"),
+                    new Dictionary<string, ResourceEdit> { ["theme"] = ResourceEdit.Inherited }
+                )
+                .Success
+        );
 
-        Assert.Equal("Dark", Read(root).Find("desk/gaming/steam")!.Resources
-            .Single(resource => resource.Key == "theme").Value);
+        Assert.Equal(
+            "Dark",
+            Read(root).Find("desk/gaming/steam")!.Resources.Single(resource => resource.Key == "theme").Value
+        );
     }
 
     [Fact]
@@ -361,7 +396,8 @@ public sealed class HierarchyStoreTests
         ModeSaveOutcome outcome = HierarchyStore.SaveResources(
             root.Path,
             new NodeAddress("desk"),
-            new Dictionary<string, ResourceEdit> { ["caseRgb"] = ResourceEdit.Of("NOPE00") });
+            new Dictionary<string, ResourceEdit> { ["caseRgb"] = ResourceEdit.Of("NOPE00") }
+        );
 
         Assert.False(outcome.Success);
         Assert.Equal(before, File.ReadAllText(root.ConfigurationFile));
@@ -374,8 +410,7 @@ public sealed class HierarchyStoreTests
 
         Assert.False(HierarchyStore.Rename(root.Path, new NodeAddress("lounge"), "Lounge").Success);
         Assert.False(HierarchyStore.Rename(root.Path, new NodeAddress("desk", "missing"), "Other").Success);
-        Assert.False(HierarchyStore
-            .Rename(root.Path, new NodeAddress("desk", "gaming", "missing"), "Other").Success);
+        Assert.False(HierarchyStore.Rename(root.Path, new NodeAddress("desk", "gaming", "missing"), "Other").Success);
     }
 
     /// <summary>

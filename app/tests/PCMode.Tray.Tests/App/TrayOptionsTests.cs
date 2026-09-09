@@ -1,6 +1,7 @@
 using PCMode.Picker;
 using PCMode.Tray;
 using PCMode.Tray.Elements.Settings;
+using PCMode.Tray.Platform.Picker;
 
 namespace PCMode.Tray.Tests.App;
 
@@ -34,7 +35,8 @@ public sealed class TrayOptionsTests
 
         Assert.Equal(
             ["Desktop", "YouTube", "Gaming", "Movie"],
-            options.Favorites.All.Select(favorite => favorite.ModeName));
+            options.Favorites.All.Select(favorite => favorite.ModeName)
+        );
 
         Assert.Equal(PickerMonitorChoice.Primary, options.MonitorChoice);
         Assert.True(options.PollController);

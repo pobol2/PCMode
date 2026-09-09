@@ -9,8 +9,7 @@ public sealed class HealthTests
     [Fact]
     public void A_correct_resource_reads_as_correct()
     {
-        TransitionOutcome outcome = Outcome(
-            Step("theme", TransitionStepStatus.AlreadyCorrect));
+        TransitionOutcome outcome = Outcome(Step("theme", TransitionStepStatus.AlreadyCorrect));
 
         ModeHealth health = ModeHealth.From(outcome, DateTimeOffset.UnixEpoch);
 
@@ -24,7 +23,8 @@ public sealed class HealthTests
     {
         TransitionOutcome outcome = Outcome(
             Step("theme", TransitionStepStatus.AlreadyCorrect),
-            Step("tv", TransitionStepStatus.Failed, problem: "no picture", optional: false));
+            Step("tv", TransitionStepStatus.Failed, problem: "no picture", optional: false)
+        );
 
         ModeHealth health = ModeHealth.From(outcome, DateTimeOffset.UnixEpoch);
 
@@ -40,7 +40,8 @@ public sealed class HealthTests
     {
         TransitionOutcome outcome = Outcome(
             Step("theme", TransitionStepStatus.AlreadyCorrect),
-            Step("rgb", TransitionStepStatus.Failed, problem: "unreachable", optional: true));
+            Step("rgb", TransitionStepStatus.Failed, problem: "unreachable", optional: true)
+        );
 
         ModeHealth health = ModeHealth.From(outcome, DateTimeOffset.UnixEpoch);
 
@@ -53,7 +54,8 @@ public sealed class HealthTests
     {
         TransitionOutcome outcome = Outcome(
             Step("theme", TransitionStepStatus.AlreadyCorrect),
-            Step("rgb", TransitionStepStatus.Omitted, problem: "OpenRGB is not installed.", optional: true));
+            Step("rgb", TransitionStepStatus.Omitted, problem: "OpenRGB is not installed.", optional: true)
+        );
 
         ModeHealth health = ModeHealth.From(outcome, DateTimeOffset.UnixEpoch);
 
@@ -66,7 +68,8 @@ public sealed class HealthTests
     {
         TransitionOutcome outcome = Outcome(
             Step("first", TransitionStepStatus.Failed, problem: "no", optional: false),
-            Step("second", TransitionStepStatus.NotReached));
+            Step("second", TransitionStepStatus.NotReached)
+        );
 
         ModeHealth health = ModeHealth.From(outcome, DateTimeOffset.UnixEpoch);
 
@@ -81,13 +84,15 @@ public sealed class HealthTests
     {
         TransitionOutcome outcome = Outcome(
             Step("a", TransitionStepStatus.NotReached),
-            Step("b", TransitionStepStatus.Failed, problem: "x", optional: true));
+            Step("b", TransitionStepStatus.Failed, problem: "x", optional: true)
+        );
 
         Assert.Equal(ResourceHealthState.Degraded, ModeHealth.From(outcome, DateTimeOffset.UnixEpoch).Overall);
 
         TransitionOutcome worse = Outcome(
             Step("a", TransitionStepStatus.Failed, problem: "x", optional: true),
-            Step("b", TransitionStepStatus.Failed, problem: "y", optional: false));
+            Step("b", TransitionStepStatus.Failed, problem: "y", optional: false)
+        );
 
         Assert.Equal(ResourceHealthState.Failed, ModeHealth.From(worse, DateTimeOffset.UnixEpoch).Overall);
     }
@@ -97,13 +102,13 @@ public sealed class HealthTests
     {
         var reporting = new ReportingProvider("audio");
 
-        TransitionOutcome outcome = Outcome(
-            Step("audio", TransitionStepStatus.AlreadyCorrect));
+        TransitionOutcome outcome = Outcome(Step("audio", TransitionStepStatus.AlreadyCorrect));
 
         ModeHealth health = ModeHealth.From(
             outcome,
             DateTimeOffset.UnixEpoch,
-            new Dictionary<string, IModeResourceProvider>(StringComparer.OrdinalIgnoreCase) { ["audio"] = reporting });
+            new Dictionary<string, IModeResourceProvider>(StringComparer.OrdinalIgnoreCase) { ["audio"] = reporting }
+        );
 
         Assert.Equal("extra detail", Assert.Single(health.Resources).Diagnostics);
     }
@@ -118,7 +123,8 @@ public sealed class HealthTests
         ModeHealth health = ModeHealth.From(
             outcome,
             DateTimeOffset.UnixEpoch,
-            new Dictionary<string, IModeResourceProvider>(StringComparer.OrdinalIgnoreCase) { ["audio"] = reporting });
+            new Dictionary<string, IModeResourceProvider>(StringComparer.OrdinalIgnoreCase) { ["audio"] = reporting }
+        );
 
         Assert.Contains("Diagnostics unavailable", Assert.Single(health.Resources).Diagnostics);
     }
@@ -130,8 +136,8 @@ public sealed class HealthTests
         string key,
         TransitionStepStatus status,
         string? problem = null,
-        bool optional = false) =>
-        new(key, key, "value", "value", status, problem, null, "value", 1, optional);
+        bool optional = false
+    ) => new(key, key, "value", "value", status, problem, null, "value", 1, optional);
 
     private sealed class ReportingProvider(string key) : IHealthReportingProvider
     {
@@ -149,9 +155,7 @@ public sealed class HealthTests
 
         public string? Read() => "value";
 
-        public void Apply(string value, CancellationToken cancellationToken)
-        {
-        }
+        public void Apply(string value, CancellationToken cancellationToken) { }
 
         public string? HealthDetail(string target) =>
             Throws ? throw new InvalidOperationException("boom") : "extra detail";

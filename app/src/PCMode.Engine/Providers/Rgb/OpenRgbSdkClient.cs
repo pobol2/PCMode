@@ -34,26 +34,25 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                 device.Vendor,
                 device.Serial,
                 device.Location,
-                [.. device.Modes.Select(mode => mode.Name)])
+                [.. device.Modes.Select(mode => mode.Name)]
+            )
             {
                 Leds =
                 [
                     .. device.Leds.Select(led => new OpenRgbLedInfo(
                         led.Index,
-                        string.IsNullOrWhiteSpace(led.Name) ? $"LED {led.Index + 1}" : led.Name)),
+                        string.IsNullOrWhiteSpace(led.Name) ? $"LED {led.Index + 1}" : led.Name
+                    )),
                 ],
                 PerLedModes = new HashSet<string>(
-                    device.Modes
-                        .Where(mode => mode.ColorMode == SdkColorMode.PerLed)
-                        .Select(mode => mode.Name),
-                    StringComparer.OrdinalIgnoreCase),
+                    device.Modes.Where(mode => mode.ColorMode == SdkColorMode.PerLed).Select(mode => mode.Name),
+                    StringComparer.OrdinalIgnoreCase
+                ),
             }),
         ];
     }
 
-    public IReadOnlyList<OpenRgbDeviceState>? ReadStates(
-        IReadOnlyList<int> deviceIndices,
-        TimeSpan within)
+    public IReadOnlyList<OpenRgbDeviceState>? ReadStates(IReadOnlyList<int> deviceIndices, TimeSpan within)
     {
         ArgumentNullException.ThrowIfNull(deviceIndices);
 
@@ -65,9 +64,7 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         {
             SdkDevice? device = controllers.FirstOrDefault(controller => controller.Index == deviceIndex);
 
-            if (device is null ||
-                device.ActiveModeIndex < 0 ||
-                device.ActiveModeIndex >= device.Modes.Length)
+            if (device is null || device.ActiveModeIndex < 0 || device.ActiveModeIndex >= device.Modes.Length)
             {
                 return null;
             }
@@ -97,10 +94,9 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                     string[] ledColors = [.. device.Colors.Select(ToRgb)];
                     string uniform = ReadUniformColor(device.Colors) ?? string.Empty;
 
-                    states.Add(new OpenRgbDeviceState(deviceIndex, device.ActiveMode.Name, uniform)
-                    {
-                        LedColors = ledColors,
-                    });
+                    states.Add(
+                        new OpenRgbDeviceState(deviceIndex, device.ActiveMode.Name, uniform) { LedColors = ledColors }
+                    );
                     break;
                 }
 
@@ -112,9 +108,7 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         return states;
     }
 
-    public string? ReadColor(
-        IReadOnlyList<KeyValuePair<int, string>> devices,
-        TimeSpan within)
+    public string? ReadColor(IReadOnlyList<KeyValuePair<int, string>> devices, TimeSpan within)
     {
         ArgumentNullException.ThrowIfNull(devices);
 
@@ -123,8 +117,7 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
             return null;
         }
 
-        IReadOnlyList<OpenRgbDeviceState>? states =
-            ReadStates([.. devices.Select(device => device.Key)], within);
+        IReadOnlyList<OpenRgbDeviceState>? states = ReadStates([.. devices.Select(device => device.Key)], within);
 
         if (states is null || states.Count != devices.Count)
         {
@@ -138,9 +131,11 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
             KeyValuePair<int, string> expected = devices[i];
             OpenRgbDeviceState current = states[i];
 
-            if (current.Index != expected.Key ||
-                !string.Equals(current.Mode, expected.Value, StringComparison.OrdinalIgnoreCase) ||
-                !IsRgb(current.Color))
+            if (
+                current.Index != expected.Key
+                || !string.Equals(current.Mode, expected.Value, StringComparison.OrdinalIgnoreCase)
+                || !IsRgb(current.Color)
+            )
             {
                 return null;
             }
@@ -162,7 +157,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         IReadOnlyList<KeyValuePair<int, string>> devices,
         string rgb,
         TimeSpan within,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(devices);
         ArgumentException.ThrowIfNullOrWhiteSpace(rgb);
@@ -170,13 +166,15 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         SetStatesCore(
             [.. devices.Select(device => new OpenRgbDeviceTarget(device.Key, device.Value, rgb))],
             within,
-            cancellationToken);
+            cancellationToken
+        );
     }
 
     public void SetStates(
         IReadOnlyList<OpenRgbDeviceTarget> devices,
         TimeSpan within,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         ArgumentNullException.ThrowIfNull(devices);
         SetStatesCore(devices, within, cancellationToken);
@@ -185,7 +183,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
     private static void SetStatesCore(
         IReadOnlyList<OpenRgbDeviceTarget> devices,
         TimeSpan within,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -199,19 +198,22 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
             if (requested.Index < 0 || requested.Index >= controllerCount)
             {
                 throw new InvalidOperationException(
-                    $"Configured OpenRGB device {requested.Index} does not exist. " +
-                    $"The SDK server currently reports {controllerCount} device(s).");
+                    $"Configured OpenRGB device {requested.Index} does not exist. "
+                        + $"The SDK server currently reports {controllerCount} device(s)."
+                );
             }
 
             SdkDevice device = client.GetControllerData(requested.Index);
             int modeIndex = Array.FindIndex(
                 device.Modes,
-                mode => string.Equals(mode.Name, requested.Mode, StringComparison.OrdinalIgnoreCase));
+                mode => string.Equals(mode.Name, requested.Mode, StringComparison.OrdinalIgnoreCase)
+            );
 
             if (modeIndex < 0)
             {
                 throw new InvalidOperationException(
-                    $"OpenRGB device {requested.Index} ('{device.Name}') does not have mode '{requested.Mode}'.");
+                    $"OpenRGB device {requested.Index} ('{device.Name}') does not have mode '{requested.Mode}'."
+                );
             }
 
             ApplyModeAndColor(
@@ -220,7 +222,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                 device,
                 modeIndex,
                 ParseColor(requested.Color),
-                requested.LedColors);
+                requested.LedColors
+            );
         }
     }
 
@@ -239,10 +242,9 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
             return $"location:{vendor}/{name}/{NormalizeIdentityPart(device.Location)}";
         }
 
-        return
-            $"metadata:{NormalizeIdentityPart(device.Type.ToString())}/" +
-            $"{vendor}/{name}/{NormalizeIdentityPart(device.Description)}/" +
-            $"{NormalizeIdentityPart(device.Version)}";
+        return $"metadata:{NormalizeIdentityPart(device.Type.ToString())}/"
+            + $"{vendor}/{name}/{NormalizeIdentityPart(device.Description)}/"
+            + $"{NormalizeIdentityPart(device.Version)}";
     }
 
     private static string NormalizeIdentityPart(string? value)
@@ -276,7 +278,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         SdkDevice device,
         int modeIndex,
         SdkColor color,
-        IReadOnlyList<string>? requestedLedColors)
+        IReadOnlyList<string>? requestedLedColors
+    )
     {
         SdkMode mode = device.Modes[modeIndex];
 
@@ -286,13 +289,15 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                 if (requestedLedColors is { Count: > 0 })
                 {
                     throw new InvalidOperationException(
-                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' does not support per-LED colours.");
+                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' does not support per-LED colours."
+                    );
                 }
 
                 if (mode.Colors.Length == 0)
                 {
                     throw new InvalidOperationException(
-                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' exposes no effect colours.");
+                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' exposes no effect colours."
+                    );
                 }
 
                 SdkColor[] modeColors = Enumerable.Repeat(color, mode.Colors.Length).ToArray();
@@ -303,7 +308,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                 if (device.Leds.Length == 0)
                 {
                     throw new InvalidOperationException(
-                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' exposes no LEDs.");
+                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' exposes no LEDs."
+                    );
                 }
 
                 SdkColor[] ledColors;
@@ -313,8 +319,9 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                     if (requestedLedColors.Count != device.Leds.Length)
                     {
                         throw new InvalidOperationException(
-                            $"OpenRGB device {deviceIndex} ('{device.Name}') exposes {device.Leds.Length} LED(s), " +
-                            $"but the scene contains {requestedLedColors.Count} LED colour(s).");
+                            $"OpenRGB device {deviceIndex} ('{device.Name}') exposes {device.Leds.Length} LED(s), "
+                                + $"but the scene contains {requestedLedColors.Count} LED colour(s)."
+                        );
                     }
 
                     ledColors = [.. requestedLedColors.Select(ParseColor)];
@@ -333,7 +340,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
                 if (requestedLedColors is { Count: > 0 })
                 {
                     throw new InvalidOperationException(
-                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' does not support per-LED colours.");
+                        $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' does not support per-LED colours."
+                    );
                 }
 
                 client.UpdateMode(deviceIndex, modeIndex);
@@ -341,7 +349,8 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
 
             default:
                 throw new InvalidOperationException(
-                    $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' has an unsupported colour mode.");
+                    $"OpenRGB device {deviceIndex} ('{device.Name}') mode '{mode.Name}' has an unsupported colour mode."
+                );
         }
     }
 
@@ -350,12 +359,7 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         int timeoutMs = checked((int)within.TotalMilliseconds);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var client = new SdkClient(
-            ip: Host,
-            port: Port,
-            name: ClientName,
-            autoConnect: false,
-            timeoutMs: timeoutMs);
+        var client = new SdkClient(ip: Host, port: Port, name: ClientName, autoConnect: false, timeoutMs: timeoutMs);
 
         try
         {
@@ -385,6 +389,5 @@ public sealed class OpenRgbSdkClient : IOpenRgbClient
         return new SdkColor(red, green, blue);
     }
 
-    private static bool IsRgb(string value) =>
-        value.Length == 6 && value.All(char.IsAsciiHexDigit);
+    private static bool IsRgb(string value) => value.Length == 6 && value.All(char.IsAsciiHexDigit);
 }

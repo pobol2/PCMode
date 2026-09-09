@@ -1,6 +1,10 @@
+using System.Windows.Controls;
 using PCMode.Tray.Elements.Audio;
-using PCMode.Tray.UI.Framework;
 using PCMode.Tray.Tests;
+using PCMode.Tray.UI.Components.Migration;
+using PCMode.Tray.UI.Framework;
+using PCMode.Tray.UI.Tree;
+using Button = System.Windows.Controls.Button;
 
 namespace PCMode.Tray.Tests.Features.Audio;
 
@@ -20,9 +24,9 @@ public sealed class AudioDeviceDiscoveryHardwareFactAttribute : FactAttribute
         if (!AudioDeviceDiscoveryHardwareTest.Requested)
         {
             Skip =
-                "Hardware check. Set PCMODE_TRAY_AUDIO_HARDWARE_TEST=1 to run it: it reads this " +
-                "machine's real Windows audio playback endpoints (no window is opened, nothing is " +
-                "clicked, and nothing is changed).";
+                "Hardware check. Set PCMODE_TRAY_AUDIO_HARDWARE_TEST=1 to run it: it reads this "
+                + "machine's real Windows audio playback endpoints (no window is opened, nothing is "
+                + "clicked, and nothing is changed).";
         }
     }
 }
@@ -83,5 +87,27 @@ public sealed class AudioDeviceDiscoveryHardwareTest
         Assert.False(viewModel.Inventory.HasProblem, viewModel.Inventory.Problem);
         Assert.NotEmpty(viewModel.Inventory.Rows);
         Assert.Contains(viewModel.Inventory.Rows, row => !string.IsNullOrWhiteSpace(row.FriendlyName));
+    }
+
+    [AudioDeviceDiscoveryHardwareFact]
+    public async Task Restored_audio_page_realizes_with_this_machine_s_playback_endpoints()
+    {
+        using var root = new TemporaryConfigurationRoot(ConfigurationWithTarget);
+        var viewModel = new AudioViewModel(Workspaces.At(root.Path));
+
+        viewModel.Refresh();
+        await viewModel.DeviceDiscovery.Inventory.ScanAsync();
+
+        Wpf.Run(() =>
+        {
+            var host = new ContentControl { Content = viewModel };
+
+            Wpf.Realize(host);
+
+            ConfigurationPageBlock page = Assert.Single(Wpf.Descendants<ConfigurationPageBlock>(host));
+            Assert.NotEmpty(Wpf.Descendants<FinalUiComponent>(page));
+            Assert.Empty(Wpf.Descendants<MigrationContent>(page));
+            Assert.NotEmpty(Wpf.Descendants<Button>(page));
+        });
     }
 }

@@ -14,13 +14,9 @@ namespace PCMode.Tray.UI.Tree;
 /// The divider between them is layout chrome rather than another region.
 /// </remarks>
 [Region(NavigationRegion, typeof(PageNavigationBlock))]
-
 [Region(MainContentRegion, typeof(ListPageBlock), typeof(ConfigurationPageBlock))]
-
-[DependencyProperty<object>("Navigation",
-    Description = "The generic page-navigation block.")]
-[DependencyProperty<object>("MainContent",
-    Description = "The active generic page-kind block.")]
+[DependencyProperty<object>("Navigation", Description = "The generic page-navigation block.")]
+[DependencyProperty<object>("MainContent", Description = "The active generic page-kind block.")]
 public partial class AppShellBlock : FunctionalBlock
 {
     public const string NavigationRegion = "PART_NavigationRegion";

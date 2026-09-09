@@ -47,7 +47,8 @@ public sealed record DisplayPlacement(
     DisplayDirection Direction,
     string Anchor,
     DisplayAlignment Alignment = DisplayAlignment.Start,
-    int Offset = 0);
+    int Offset = 0
+);
 
 /// <summary>
 /// One named arrangement of monitors: which are on, which is primary, and where
@@ -90,7 +91,8 @@ public sealed class DisplayLayout
         IReadOnlyDictionary<string, DisplayPlacement> placements,
         IReadOnlyDictionary<string, double> refresh,
         IReadOnlyList<string> order,
-        IReadOnlyList<ResourceRequirement> requires)
+        IReadOnlyList<ResourceRequirement> requires
+    )
     {
         Name = name;
         Monitors = monitors;
@@ -160,14 +162,12 @@ public sealed class DisplayLayout
     /// does not move with a resized anchor.
     /// </remarks>
     public IReadOnlyDictionary<string, (int X, int Y)> Positions(
-        IReadOnlyDictionary<string, (int Width, int Height)> sizes)
+        IReadOnlyDictionary<string, (int Width, int Height)> sizes
+    )
     {
         ArgumentNullException.ThrowIfNull(sizes);
 
-        var positions = new Dictionary<string, (int X, int Y)>(StringComparer.OrdinalIgnoreCase)
-        {
-            [Primary] = (0, 0),
-        };
+        var positions = new Dictionary<string, (int X, int Y)>(StringComparer.OrdinalIgnoreCase) { [Primary] = (0, 0) };
 
         foreach (string monitor in Order.Skip(1))
         {
@@ -177,12 +177,13 @@ public sealed class DisplayLayout
             (int anchorWidth, int anchorHeight) = sizes[placement.Anchor];
             (int width, int height) = sizes[monitor];
 
-            int along(int anchorSize, int monitorSize) => placement.Alignment switch
-            {
-                DisplayAlignment.Center => (anchorSize - monitorSize) / 2,
-                DisplayAlignment.End => anchorSize - monitorSize,
-                _ => 0,
-            } + placement.Offset;
+            int along(int anchorSize, int monitorSize) =>
+                placement.Alignment switch
+                {
+                    DisplayAlignment.Center => (anchorSize - monitorSize) / 2,
+                    DisplayAlignment.End => anchorSize - monitorSize,
+                    _ => 0,
+                } + placement.Offset;
 
             positions[monitor] = placement.Direction switch
             {
@@ -206,11 +207,7 @@ public sealed class DisplayLayout
     /// layout is applied, because a monitor that is switched off must not make
     /// the configuration invalid.
     /// </remarks>
-    public static bool TryParse(
-        string name,
-        JsonElement element,
-        out DisplayLayout? layout,
-        out string? problem)
+    public static bool TryParse(string name, JsonElement element, out DisplayLayout? layout, out string? problem)
     {
         layout = null;
 
@@ -239,8 +236,10 @@ public sealed class DisplayLayout
             }
             else if (property.NameEquals("primary"))
             {
-                if (property.Value.ValueKind != JsonValueKind.String ||
-                    string.IsNullOrWhiteSpace(property.Value.GetString()))
+                if (
+                    property.Value.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(property.Value.GetString())
+                )
                 {
                     problem = $"{where} has a 'primary' that does not name a monitor.";
                     return false;
@@ -268,18 +267,24 @@ public sealed class DisplayLayout
             }
             else if (property.NameEquals(TargetRequirements.FieldName))
             {
-                if (!TargetRequirements.TryParse(
+                if (
+                    !TargetRequirements.TryParse(
                         where,
                         DisplayProvider.ResourceKey,
                         property.Value,
                         out IReadOnlyList<ResourceRequirement>? declared,
-                        out problem))
+                        out problem
+                    )
+                )
                 {
                     return false;
                 }
 
-                if (declared!.Any(requirement =>
-                    string.Equals(requirement.Key, CursorProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)))
+                if (
+                    declared!.Any(requirement =>
+                        string.Equals(requirement.Key, CursorProvider.ResourceKey, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
                 {
                     // CursorProvider.RunsAfter always names the display: the
                     // pointer is placed once the desktop has finished changing
@@ -290,9 +295,9 @@ public sealed class DisplayLayout
                     // Activity or Source sets this layout, the same place a
                     // mode already sets 'cursor' directly.
                     problem =
-                        $"{where} requires 'cursor', but the cursor always runs after the display layout, " +
-                        "so a layout can never require it. Set 'cursor' on the Space, Activity or Source " +
-                        "that uses this layout instead.";
+                        $"{where} requires 'cursor', but the cursor always runs after the display layout, "
+                        + "so a layout can never require it. Set 'cursor' on the Space, Activity or Source "
+                        + "that uses this layout instead.";
 
                     return false;
                 }
@@ -302,8 +307,8 @@ public sealed class DisplayLayout
             else
             {
                 problem =
-                    $"{where} does not understand '{property.Name}'. " +
-                    "It takes 'monitors', 'primary', 'placement', 'refresh' and 'requires'.";
+                    $"{where} does not understand '{property.Name}'. "
+                    + "It takes 'monitors', 'primary', 'placement', 'refresh' and 'requires'.";
 
                 return false;
             }
@@ -332,15 +337,29 @@ public sealed class DisplayLayout
         if (!known.Contains(primary))
         {
             problem =
-                $"{where} makes '{primary}' primary, which is not one of its monitors " +
-                $"({string.Join(", ", monitors)}).";
+                $"{where} makes '{primary}' primary, which is not one of its monitors "
+                + $"({string.Join(", ", monitors)}).";
 
             return false;
         }
 
-        if (!TryReadPlacements(where, placementEntries, out Dictionary<string, DisplayPlacement>? placements, out problem) ||
-            !TryReadRefresh(where, refreshEntries, monitors, known, out Dictionary<string, double>? refresh, out problem) ||
-            !TryOrder(where, monitors, known, primary, placements!, out List<string>? order, out problem))
+        if (
+            !TryReadPlacements(
+                where,
+                placementEntries,
+                out Dictionary<string, DisplayPlacement>? placements,
+                out problem
+            )
+            || !TryReadRefresh(
+                where,
+                refreshEntries,
+                monitors,
+                known,
+                out Dictionary<string, double>? refresh,
+                out problem
+            )
+            || !TryOrder(where, monitors, known, primary, placements!, out List<string>? order, out problem)
+        )
         {
             return false;
         }
@@ -364,7 +383,8 @@ public sealed class DisplayLayout
         string where,
         JsonProperty property,
         out List<string>? values,
-        out string? problem)
+        out string? problem
+    )
     {
         values = null;
 
@@ -412,7 +432,8 @@ public sealed class DisplayLayout
         string where,
         List<string> entries,
         out Dictionary<string, DisplayPlacement>? placements,
-        out string? problem)
+        out string? problem
+    )
     {
         placements = null;
 
@@ -428,7 +449,8 @@ public sealed class DisplayLayout
             {
                 int found = Array.FindIndex(
                     Directions,
-                    direction => string.Equals(direction, tokens[position], StringComparison.OrdinalIgnoreCase));
+                    direction => string.Equals(direction, tokens[position], StringComparison.OrdinalIgnoreCase)
+                );
 
                 if (found >= 0)
                 {
@@ -440,20 +462,21 @@ public sealed class DisplayLayout
             if (index < 0)
             {
                 problem =
-                    $"{where} placement '{entry}' contains none of " +
-                    $"{string.Join("/", Directions)}. Write it as 'ThisMonitor RightOf ThatMonitor'.";
+                    $"{where} placement '{entry}' contains none of "
+                    + $"{string.Join("/", Directions)}. Write it as 'ThisMonitor RightOf ThatMonitor'.";
 
                 return false;
             }
 
             string direction = Directions.First(candidate =>
-                string.Equals(candidate, tokens[index], StringComparison.OrdinalIgnoreCase));
+                string.Equals(candidate, tokens[index], StringComparison.OrdinalIgnoreCase)
+            );
 
             if (index == 0)
             {
                 problem =
-                    $"{where} placement '{entry}' does not say which monitor is {direction} " +
-                    "the other. Write it as 'ThisMonitor RightOf ThatMonitor'.";
+                    $"{where} placement '{entry}' does not say which monitor is {direction} "
+                    + "the other. Write it as 'ThisMonitor RightOf ThatMonitor'.";
 
                 return false;
             }
@@ -461,8 +484,8 @@ public sealed class DisplayLayout
             if (index == tokens.Length - 1)
             {
                 problem =
-                    $"{where} placement '{entry}' puts a monitor {direction} nothing -- " +
-                    "name the monitor it sits next to.";
+                    $"{where} placement '{entry}' puts a monitor {direction} nothing -- "
+                    + "name the monitor it sits next to.";
 
                 return false;
             }
@@ -489,9 +512,12 @@ public sealed class DisplayLayout
 
             string anchor = string.Join(' ', rest[..anchorEnd]);
 
-            if (!parsed.TryAdd(
-                monitor,
-                new DisplayPlacement(Enum.Parse<DisplayDirection>(direction), anchor, alignment, offset)))
+            if (
+                !parsed.TryAdd(
+                    monitor,
+                    new DisplayPlacement(Enum.Parse<DisplayDirection>(direction), anchor, alignment, offset)
+                )
+            )
             {
                 problem = $"{where} places '{monitor}' more than once. Each monitor gets one placement.";
                 return false;
@@ -526,8 +552,11 @@ public sealed class DisplayLayout
     /// </summary>
     private static bool TryParseOffset(string token, out int offset)
     {
-        if (token.Length > 1 && (token[0] == '+' || token[0] == '-') &&
-            int.TryParse(token, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int parsed))
+        if (
+            token.Length > 1
+            && (token[0] == '+' || token[0] == '-')
+            && int.TryParse(token, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int parsed)
+        )
         {
             offset = parsed;
             return true;
@@ -544,7 +573,8 @@ public sealed class DisplayLayout
         List<string> monitors,
         HashSet<string> known,
         out Dictionary<string, double>? refresh,
-        out string? problem)
+        out string? problem
+    )
     {
         refresh = null;
 
@@ -557,15 +587,17 @@ public sealed class DisplayLayout
             if (tokens.Length < 2)
             {
                 problem =
-                    $"{where} refresh entry '{entry}' does not name both a monitor and a rate. " +
-                    "Write it as 'SomeMonitor 144'.";
+                    $"{where} refresh entry '{entry}' does not name both a monitor and a rate. "
+                    + "Write it as 'SomeMonitor 144'.";
 
                 return false;
             }
 
-            if (!double.TryParse(tokens[^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double hz) ||
-                double.IsNaN(hz) ||
-                hz <= 0)
+            if (
+                !double.TryParse(tokens[^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double hz)
+                || double.IsNaN(hz)
+                || hz <= 0
+            )
             {
                 problem = $"{where} refresh entry '{entry}' does not end with a positive number of Hz.";
                 return false;
@@ -576,8 +608,8 @@ public sealed class DisplayLayout
             if (!known.Contains(monitor))
             {
                 problem =
-                    $"{where} asks for a refresh rate for '{monitor}', which is not one of its " +
-                    $"monitors ({string.Join(", ", monitors)}).";
+                    $"{where} asks for a refresh rate for '{monitor}', which is not one of its "
+                    + $"monitors ({string.Join(", ", monitors)}).";
 
                 return false;
             }
@@ -613,7 +645,8 @@ public sealed class DisplayLayout
         string primary,
         Dictionary<string, DisplayPlacement> placements,
         out List<string>? order,
-        out string? problem)
+        out string? problem
+    )
     {
         order = null;
 
@@ -622,8 +655,8 @@ public sealed class DisplayLayout
             if (!known.Contains(monitor))
             {
                 problem =
-                    $"{where} places '{monitor}', which is not one of its monitors " +
-                    $"({string.Join(", ", monitors)}).";
+                    $"{where} places '{monitor}', which is not one of its monitors "
+                    + $"({string.Join(", ", monitors)}).";
 
                 return false;
             }
@@ -637,8 +670,8 @@ public sealed class DisplayLayout
             if (!known.Contains(placement.Anchor))
             {
                 problem =
-                    $"{where} places '{monitor}' {placement.Direction} '{placement.Anchor}', which is " +
-                    $"not one of its monitors ({string.Join(", ", monitors)}).";
+                    $"{where} places '{monitor}' {placement.Direction} '{placement.Anchor}', which is "
+                    + $"not one of its monitors ({string.Join(", ", monitors)}).";
 
                 return false;
             }
@@ -647,8 +680,8 @@ public sealed class DisplayLayout
         if (placements.ContainsKey(primary))
         {
             problem =
-                $"{where} places '{primary}', but that is its primary and always sits at the " +
-                "origin. Remove the placement, or make a different monitor primary.";
+                $"{where} places '{primary}', but that is its primary and always sits at the "
+                + "origin. Remove the placement, or make a different monitor primary.";
 
             return false;
         }
@@ -656,8 +689,10 @@ public sealed class DisplayLayout
         List<string> placed = [primary];
         var settled = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { primary };
 
-        List<string> remaining = [.. monitors.Where(monitor =>
-            !string.Equals(monitor, primary, StringComparison.OrdinalIgnoreCase))];
+        List<string> remaining =
+        [
+            .. monitors.Where(monitor => !string.Equals(monitor, primary, StringComparison.OrdinalIgnoreCase)),
+        ];
 
         while (remaining.Count > 0)
         {
@@ -668,8 +703,8 @@ public sealed class DisplayLayout
                 if (!placements.TryGetValue(monitor, out DisplayPlacement? placement))
                 {
                     problem =
-                        $"{where} has no placement for '{monitor}'. Every monitor except the primary " +
-                        $"('{primary}') needs one, for example '{monitor} RightOf {primary}'.";
+                        $"{where} has no placement for '{monitor}'. Every monitor except the primary "
+                        + $"('{primary}') needs one, for example '{monitor} RightOf {primary}'.";
 
                     return false;
                 }
@@ -690,8 +725,8 @@ public sealed class DisplayLayout
             if (!progressed)
             {
                 problem =
-                    $"{where} cannot place {string.Join(", ", remaining)} -- their placements form a " +
-                    $"loop, or a chain that never reaches the primary ('{primary}').";
+                    $"{where} cannot place {string.Join(", ", remaining)} -- their placements form a "
+                    + $"loop, or a chain that never reaches the primary ('{primary}').";
 
                 return false;
             }

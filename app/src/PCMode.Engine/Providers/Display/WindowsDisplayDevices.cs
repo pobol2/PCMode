@@ -117,14 +117,7 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
                 }
             }
 
-            displays.Add(new ActiveDisplay(
-                devicePath,
-                friendlyName ?? string.Empty,
-                x,
-                y,
-                width,
-                height,
-                refreshHz));
+            displays.Add(new ActiveDisplay(devicePath, friendlyName ?? string.Empty, x, y, width, height, refreshHz));
         }
 
         return displays;
@@ -180,10 +173,12 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
 
             for (uint index = 0; EnumDisplaySettingsEx(request.ViewGdiDeviceName, index, ref mode, 0); index++)
             {
-                if (mode.BitsPerPixel >= 32 &&
-                    mode.PelsWidth == width &&
-                    mode.PelsHeight == height &&
-                    mode.DisplayFrequency > 0)
+                if (
+                    mode.BitsPerPixel >= 32
+                    && mode.PelsWidth == width
+                    && mode.PelsHeight == height
+                    && mode.DisplayFrequency > 0
+                )
                 {
                     found.Add((int)mode.DisplayFrequency);
                 }
@@ -209,7 +204,9 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
 
         if (refreshHz.Count != devicePaths.Count)
         {
-            throw new InvalidOperationException("Every monitor needs a refresh rate, or 0 for whichever Windows picks.");
+            throw new InvalidOperationException(
+                "Every monitor needs a refresh rate, or 0 for whichever Windows picks."
+            );
         }
 
         PathInfo[] all = QueryPaths(QdcAllPaths);
@@ -218,8 +215,9 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         if (!TrySelect(devicePaths, refreshHz, all, 0, selected))
         {
             throw new InvalidOperationException(
-                "Windows could not build a valid arrangement from those monitors. " +
-                "One or more of them may not be connected or awake.");
+                "Windows could not build a valid arrangement from those monitors. "
+                    + "One or more of them may not be connected or awake."
+            );
         }
 
         PathInfo[] request = [.. selected];
@@ -228,11 +226,13 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         // not blank the screens on its way to being refused.
         Check(
             SetDisplayConfig((uint)request.Length, request, 0, nint.Zero, SdcValidate | CommonFlags),
-            "accept that arrangement of monitors");
+            "accept that arrangement of monitors"
+        );
 
         Check(
             SetDisplayConfig((uint)request.Length, request, 0, nint.Zero, SdcApply | CommonFlags),
-            "switch to that arrangement of monitors");
+            "switch to that arrangement of monitors"
+        );
     }
 
     public void Arrange(IReadOnlyList<string> devicePaths, IReadOnlyList<int> x, IReadOnlyList<int> y)
@@ -264,8 +264,10 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
             {
                 string? devicePath = TargetName(path, out _);
 
-                if (string.IsNullOrEmpty(devicePath) ||
-                    !string.Equals(devicePath, devicePaths[index], StringComparison.OrdinalIgnoreCase))
+                if (
+                    string.IsNullOrEmpty(devicePath)
+                    || !string.Equals(devicePath, devicePaths[index], StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     continue;
                 }
@@ -275,7 +277,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
                 if (source < 0)
                 {
                     throw new InvalidOperationException(
-                        "A monitor that is showing a picture reports no mode, so it cannot be moved.");
+                        "A monitor that is showing a picture reports no mode, so it cannot be moved."
+                    );
                 }
 
                 modes[source].Mode.SourceMode.Position.X = x[index];
@@ -286,20 +289,19 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
 
             if (!found)
             {
-                throw new InvalidOperationException(
-                    "A monitor that was meant to be moved is not showing a picture.");
+                throw new InvalidOperationException("A monitor that was meant to be moved is not showing a picture.");
             }
         }
 
         Check(
-            SetDisplayConfigWithModes(
-                (uint)paths.Length, paths, (uint)modes.Length, modes, SdcValidate | CommonFlags),
-            "accept that arrangement of the monitors");
+            SetDisplayConfigWithModes((uint)paths.Length, paths, (uint)modes.Length, modes, SdcValidate | CommonFlags),
+            "accept that arrangement of the monitors"
+        );
 
         Check(
-            SetDisplayConfigWithModes(
-                (uint)paths.Length, paths, (uint)modes.Length, modes, SdcApply | CommonFlags),
-            "move the monitors into place");
+            SetDisplayConfigWithModes((uint)paths.Length, paths, (uint)modes.Length, modes, SdcApply | CommonFlags),
+            "move the monitors into place"
+        );
     }
 
     /// <summary>
@@ -318,7 +320,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         IReadOnlyList<int> refreshHz,
         PathInfo[] all,
         int index,
-        List<PathInfo> selected)
+        List<PathInfo> selected
+    )
     {
         if (index >= devicePaths.Count)
         {
@@ -331,8 +334,10 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
             {
                 string? devicePath = TargetName(candidate, out _);
 
-                if (string.IsNullOrEmpty(devicePath) ||
-                    !string.Equals(devicePath, devicePaths[index], StringComparison.OrdinalIgnoreCase))
+                if (
+                    string.IsNullOrEmpty(devicePath)
+                    || !string.Equals(devicePath, devicePaths[index], StringComparison.OrdinalIgnoreCase)
+                )
                 {
                     continue;
                 }
@@ -388,9 +393,9 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
     }
 
     private static bool SameSource(PathInfo left, PathInfo right) =>
-        left.SourceInfo.AdapterId.LowPart == right.SourceInfo.AdapterId.LowPart &&
-        left.SourceInfo.AdapterId.HighPart == right.SourceInfo.AdapterId.HighPart &&
-        left.SourceInfo.Id == right.SourceInfo.Id;
+        left.SourceInfo.AdapterId.LowPart == right.SourceInfo.AdapterId.LowPart
+        && left.SourceInfo.AdapterId.HighPart == right.SourceInfo.AdapterId.HighPart
+        && left.SourceInfo.Id == right.SourceInfo.Id;
 
     /// <summary>
     /// Matched on adapter and source identity rather than by following
@@ -406,10 +411,12 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
     {
         for (int index = 0; index < modes.Length; index++)
         {
-            if (modes[index].InfoType == ModeInfoTypeSource &&
-                modes[index].AdapterId.LowPart == path.SourceInfo.AdapterId.LowPart &&
-                modes[index].AdapterId.HighPart == path.SourceInfo.AdapterId.HighPart &&
-                modes[index].Id == path.SourceInfo.Id)
+            if (
+                modes[index].InfoType == ModeInfoTypeSource
+                && modes[index].AdapterId.LowPart == path.SourceInfo.AdapterId.LowPart
+                && modes[index].AdapterId.HighPart == path.SourceInfo.AdapterId.HighPart
+                && modes[index].Id == path.SourceInfo.Id
+            )
             {
                 return index;
             }
@@ -423,10 +430,12 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
     {
         for (int index = 0; index < modes.Length; index++)
         {
-            if (modes[index].InfoType == ModeInfoTypeTarget &&
-                modes[index].AdapterId.LowPart == path.TargetInfo.AdapterId.LowPart &&
-                modes[index].AdapterId.HighPart == path.TargetInfo.AdapterId.HighPart &&
-                modes[index].Id == path.TargetInfo.Id)
+            if (
+                modes[index].InfoType == ModeInfoTypeTarget
+                && modes[index].AdapterId.LowPart == path.TargetInfo.AdapterId.LowPart
+                && modes[index].AdapterId.HighPart == path.TargetInfo.AdapterId.HighPart
+                && modes[index].Id == path.TargetInfo.Id
+            )
             {
                 return index;
             }
@@ -472,9 +481,7 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         // here. Size again and retry rather than fail.
         for (int attempt = 0; attempt < 5; attempt++)
         {
-            Check(
-                GetDisplayConfigBufferSizes(flags, out uint pathCount, out uint modeCount),
-                "count the monitors");
+            Check(GetDisplayConfigBufferSizes(flags, out uint pathCount, out uint modeCount), "count the monitors");
 
             var paths = new PathInfo[pathCount];
             var modes = new ModeInfo[modeCount];
@@ -498,7 +505,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         }
 
         throw new InvalidOperationException(
-            "Windows kept reporting a different number of monitors than it then returned.");
+            "Windows kept reporting a different number of monitors than it then returned."
+        );
     }
 
     private static void Check(int result, string attempted)
@@ -506,8 +514,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         if (result != 0)
         {
             throw new InvalidOperationException(
-                $"Windows could not {attempted} " +
-                $"(error {result.ToString(CultureInfo.InvariantCulture)}).");
+                $"Windows could not {attempted} " + $"(error {result.ToString(CultureInfo.InvariantCulture)})."
+            );
         }
     }
 
@@ -538,7 +546,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         [Out] PathInfo[] paths,
         ref uint modeCount,
         [Out] ModeInfo[] modes,
-        nint topologyId);
+        nint topologyId
+    );
 
     [DllImport("user32.dll")]
     private static extern int SetDisplayConfig(
@@ -546,7 +555,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         [In] PathInfo[] paths,
         uint modeCount,
         nint modes,
-        uint flags);
+        uint flags
+    );
 
     [DllImport("user32.dll", EntryPoint = "SetDisplayConfig")]
     private static extern int SetDisplayConfigWithModes(
@@ -554,7 +564,8 @@ public sealed class WindowsDisplayDevices : IDisplayDevices
         [In] PathInfo[] paths,
         uint modeCount,
         [In] ModeInfo[] modes,
-        uint flags);
+        uint flags
+    );
 
     [DllImport("user32.dll", EntryPoint = "DisplayConfigGetDeviceInfo")]
     private static extern int GetSourceDeviceInfo(ref SourceDeviceName request);

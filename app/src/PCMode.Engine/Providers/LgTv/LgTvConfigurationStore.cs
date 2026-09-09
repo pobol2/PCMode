@@ -21,7 +21,8 @@ public sealed record LgTvProfileEdit(
     string PictureMode,
     string? Input,
     IReadOnlyList<LgTvSettingEdit> Signal,
-    IReadOnlyList<LgTvSettingEdit> Settings);
+    IReadOnlyList<LgTvSettingEdit> Settings
+);
 
 /// <summary>One television body, as a settings screen has it.</summary>
 public sealed record LgTvEdit(
@@ -31,7 +32,8 @@ public sealed record LgTvEdit(
     string? SafeDisplayTarget,
     IReadOnlyList<LgTvInputEdit> Inputs,
     IReadOnlyList<LgTvProfileEdit> Profiles,
-    string? DisplayMonitor = null);
+    string? DisplayMonitor = null
+);
 
 /// <summary>
 /// Creates and edits the named televisions stored under <c>providers.lgTv</c>.
@@ -83,8 +85,10 @@ public static class LgTvConfigurationStore
 
         JsonElement? section = null;
 
-        if (HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers &&
-            HardwareConfigurationStore.FindProperty(providers, LgTvSettings.SectionKey) is JsonNode televisionNode)
+        if (
+            HardwareConfigurationStore.FindProperty(document, "providers") is JsonObject providers
+            && HardwareConfigurationStore.FindProperty(providers, LgTvSettings.SectionKey) is JsonNode televisionNode
+        )
         {
             using JsonDocument televisionDocument = JsonDocument.Parse(televisionNode.ToJsonString());
             section = televisionDocument.RootElement.Clone();
@@ -111,37 +115,39 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(problem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                string name = ResolveDefaultName(section!, televisions!);
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(televisions!, name);
+                televisions!.Add(name, body!.DeepClone());
+
+                WriteDefault(section!, name);
+                return null;
             }
-
-            string name = ResolveDefaultName(section!, televisions!);
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(televisions!, name);
-            televisions!.Add(name, body!.DeepClone());
-
-            WriteDefault(section!, name);
-            return null;
-        });
+        );
     }
 
     /// <summary>
     /// Creates one named television without replacing an existing entry.
     /// </summary>
-    public static ModeSaveOutcome Create(
-        string? root,
-        string name,
-        LgTvEdit edit,
-        bool makeDefault = false)
+    public static ModeSaveOutcome Create(string? root, string name, LgTvEdit edit, bool makeDefault = false)
     {
         ArgumentNullException.ThrowIfNull(edit);
 
@@ -155,42 +161,51 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(problem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                if (FindNamed(televisions!, normalized!) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"A television named '{normalized}' already exists.");
+                }
+
+                televisions!.Add(normalized!, body!.DeepClone());
+
+                string currentDefault = ResolveDefaultName(section!, televisions);
+
+                if (
+                    makeDefault
+                    || televisions.Count == 1
+                    || !televisions.Any(pair =>
+                        string.Equals(pair.Key, currentDefault, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    WriteDefault(section!, normalized!);
+                }
+                else if (HardwareConfigurationStore.FindProperty(section!, LgTvCatalog.DefaultProperty) is null)
+                {
+                    WriteDefault(section!, currentDefault);
+                }
+
+                return null;
             }
-
-            if (FindNamed(televisions!, normalized!) is not null)
-            {
-                return ModeSaveOutcome.Failed($"A television named '{normalized}' already exists.");
-            }
-
-            televisions!.Add(normalized!, body!.DeepClone());
-
-            string currentDefault = ResolveDefaultName(section!, televisions);
-
-            if (makeDefault ||
-                televisions.Count == 1 ||
-                !televisions.Any(pair =>
-                    string.Equals(pair.Key, currentDefault, StringComparison.OrdinalIgnoreCase)))
-            {
-                WriteDefault(section!, normalized!);
-            }
-            else if (HardwareConfigurationStore.FindProperty(section!, LgTvCatalog.DefaultProperty) is null)
-            {
-                WriteDefault(section!, currentDefault);
-            }
-
-            return null;
-        });
+        );
     }
 
     /// <summary>
@@ -198,11 +213,7 @@ public static class LgTvConfigurationStore
     /// unchanged unless <paramref name="makeDefault"/> is true or no valid default
     /// exists yet.
     /// </summary>
-    public static ModeSaveOutcome Save(
-        string? root,
-        string name,
-        LgTvEdit edit,
-        bool makeDefault = false)
+    public static ModeSaveOutcome Save(string? root, string name, LgTvEdit edit, bool makeDefault = false)
     {
         ArgumentNullException.ThrowIfNull(edit);
 
@@ -216,36 +227,46 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(problem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                HardwareConfigurationStore.RemoveCaseInsensitive(televisions!, normalized!);
+                televisions!.Add(normalized!, body!.DeepClone());
+
+                string currentDefault = ResolveDefaultName(section!, televisions!);
+
+                if (
+                    makeDefault
+                    || !televisions!.Any(pair =>
+                        string.Equals(pair.Key, currentDefault, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    WriteDefault(section!, normalized!);
+                }
+                else if (HardwareConfigurationStore.FindProperty(section!, LgTvCatalog.DefaultProperty) is null)
+                {
+                    WriteDefault(section!, currentDefault);
+                }
+
+                return null;
             }
-
-            HardwareConfigurationStore.RemoveCaseInsensitive(televisions!, normalized!);
-            televisions!.Add(normalized!, body!.DeepClone());
-
-            string currentDefault = ResolveDefaultName(section!, televisions!);
-
-            if (makeDefault ||
-                !televisions!.Any(pair => string.Equals(pair.Key, currentDefault, StringComparison.OrdinalIgnoreCase)))
-            {
-                WriteDefault(section!, normalized!);
-            }
-            else if (HardwareConfigurationStore.FindProperty(section!, LgTvCatalog.DefaultProperty) is null)
-            {
-                WriteDefault(section!, currentDefault);
-            }
-
-            return null;
-        });
+        );
     }
 
     /// <summary>Duplicates one named television without changing the default.</summary>
@@ -261,35 +282,41 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(targetProblem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                if (FindNamed(televisions!, target!) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"A television named '{target}' already exists.");
+                }
+
+                KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, source!);
+
+                if (found is null || found.Value.Value is not JsonObject sourceBody)
+                {
+                    return ModeSaveOutcome.Failed($"Television '{source}' does not exist.");
+                }
+
+                televisions!.Add(target!, sourceBody.DeepClone());
+                WriteDefault(section!, ResolveDefaultName(section!, televisions!));
+                return null;
             }
-
-            if (FindNamed(televisions!, target!) is not null)
-            {
-                return ModeSaveOutcome.Failed($"A television named '{target}' already exists.");
-            }
-
-            KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, source!);
-
-            if (found is null || found.Value.Value is not JsonObject sourceBody)
-            {
-                return ModeSaveOutcome.Failed($"Television '{source}' does not exist.");
-            }
-
-            televisions!.Add(target!, sourceBody.DeepClone());
-            WriteDefault(section!, ResolveDefaultName(section!, televisions!));
-            return null;
-        });
+        );
     }
 
     /// <summary>Renames one television and preserves default selection.</summary>
@@ -310,40 +337,50 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Ok;
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                if (FindNamed(televisions!, target!) is not null)
+                {
+                    return ModeSaveOutcome.Failed($"A television named '{target}' already exists.");
+                }
+
+                KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, source!);
+
+                if (found is null || found.Value.Value is not JsonObject body)
+                {
+                    return ModeSaveOutcome.Failed($"Television '{source}' does not exist.");
+                }
+
+                string currentDefault = ResolveDefaultName(section!, televisions!);
+                bool renamedDefault = string.Equals(
+                    currentDefault,
+                    found.Value.Key,
+                    StringComparison.OrdinalIgnoreCase
+                );
+
+                televisions!.Remove(found.Value.Key);
+                televisions.Add(target!, body.DeepClone());
+
+                WriteDefault(section!, renamedDefault ? target! : ResolveDefaultName(section!, televisions));
+                return null;
             }
-
-            if (FindNamed(televisions!, target!) is not null)
-            {
-                return ModeSaveOutcome.Failed($"A television named '{target}' already exists.");
-            }
-
-            KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, source!);
-
-            if (found is null || found.Value.Value is not JsonObject body)
-            {
-                return ModeSaveOutcome.Failed($"Television '{source}' does not exist.");
-            }
-
-            string currentDefault = ResolveDefaultName(section!, televisions!);
-            bool renamedDefault = string.Equals(currentDefault, found.Value.Key, StringComparison.OrdinalIgnoreCase);
-
-            televisions!.Remove(found.Value.Key);
-            televisions.Add(target!, body.DeepClone());
-
-            WriteDefault(section!, renamedDefault ? target! : ResolveDefaultName(section!, televisions));
-            return null;
-        });
+        );
     }
 
     /// <summary>Removes one named television and selects another default if necessary.</summary>
@@ -354,46 +391,53 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(problem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
-            }
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
 
-            KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, normalized!);
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
 
-            if (found is null)
-            {
-                return ModeSaveOutcome.Failed($"Television '{normalized}' does not exist.");
-            }
+                KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, normalized!);
 
-            string currentDefault = ResolveDefaultName(section!, televisions!);
-            televisions!.Remove(found.Value.Key);
+                if (found is null)
+                {
+                    return ModeSaveOutcome.Failed($"Television '{normalized}' does not exist.");
+                }
 
-            if (televisions.Count == 0)
-            {
-                HardwareConfigurationStore.RemoveCaseInsensitive(section!, LgTvCatalog.DefaultProperty);
-            }
-            else if (string.Equals(currentDefault, found.Value.Key, StringComparison.OrdinalIgnoreCase))
-            {
-                WriteDefault(
-                    section!,
-                    televisions.Select(pair => pair.Key).Order(StringComparer.OrdinalIgnoreCase).First());
-            }
-            else
-            {
-                WriteDefault(section!, ResolveDefaultName(section!, televisions));
-            }
+                string currentDefault = ResolveDefaultName(section!, televisions!);
+                televisions!.Remove(found.Value.Key);
 
-            return null;
-        });
+                if (televisions.Count == 0)
+                {
+                    HardwareConfigurationStore.RemoveCaseInsensitive(section!, LgTvCatalog.DefaultProperty);
+                }
+                else if (string.Equals(currentDefault, found.Value.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteDefault(
+                        section!,
+                        televisions.Select(pair => pair.Key).Order(StringComparer.OrdinalIgnoreCase).First()
+                    );
+                }
+                else
+                {
+                    WriteDefault(section!, ResolveDefaultName(section!, televisions));
+                }
+
+                return null;
+            }
+        );
     }
 
     /// <summary>Selects which named television is projected through the legacy/default provider keys.</summary>
@@ -404,29 +448,35 @@ public static class LgTvConfigurationStore
             return ModeSaveOutcome.Failed(problem!);
         }
 
-        return ConfigurationDocumentEditor.Edit(root, document =>
-        {
-            JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
-
-            if (!TryEnsureNamedSection(
-                    providers,
-                    out JsonObject? section,
-                    out JsonObject? televisions,
-                    out ModeSaveOutcome? refused))
+        return ConfigurationDocumentEditor.Edit(
+            root,
+            document =>
             {
-                return refused;
+                JsonObject providers = HardwareConfigurationStore.AsObject(document, "providers");
+
+                if (
+                    !TryEnsureNamedSection(
+                        providers,
+                        out JsonObject? section,
+                        out JsonObject? televisions,
+                        out ModeSaveOutcome? refused
+                    )
+                )
+                {
+                    return refused;
+                }
+
+                KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, normalized!);
+
+                if (found is null)
+                {
+                    return ModeSaveOutcome.Failed($"Television '{normalized}' does not exist.");
+                }
+
+                WriteDefault(section!, found.Value.Key);
+                return null;
             }
-
-            KeyValuePair<string, JsonNode?>? found = FindNamed(televisions!, normalized!);
-
-            if (found is null)
-            {
-                return ModeSaveOutcome.Failed($"Television '{normalized}' does not exist.");
-            }
-
-            WriteDefault(section!, found.Value.Key);
-            return null;
-        });
+        );
     }
 
     private static bool TryBuildBody(LgTvEdit edit, out JsonObject? body, out string? problem)
@@ -444,8 +494,7 @@ public static class LgTvConfigurationStore
 
         if (edit.Enabled && mac.Length == 0)
         {
-            problem =
-                "Give the television's MAC address -- switching it on needs it -- or turn the television off.";
+            problem = "Give the television's MAC address -- switching it on needs it -- or turn the television off.";
             return false;
         }
 
@@ -587,7 +636,8 @@ public static class LgTvConfigurationStore
         JsonObject providers,
         out JsonObject? section,
         out JsonObject? televisions,
-        out ModeSaveOutcome? refused)
+        out ModeSaveOutcome? refused
+    )
     {
         section = null;
         televisions = null;
@@ -613,8 +663,8 @@ public static class LgTvConfigurationStore
         }
 
         bool alreadyNamed =
-            HardwareConfigurationStore.FindProperty(existingObject, LgTvCatalog.TelevisionsProperty) is not null ||
-            HardwareConfigurationStore.FindProperty(existingObject, LgTvCatalog.DefaultProperty) is not null;
+            HardwareConfigurationStore.FindProperty(existingObject, LgTvCatalog.TelevisionsProperty) is not null
+            || HardwareConfigurationStore.FindProperty(existingObject, LgTvCatalog.DefaultProperty) is not null;
 
         if (!alreadyNamed)
         {
@@ -637,8 +687,10 @@ public static class LgTvConfigurationStore
             return true;
         }
 
-        JsonNode? declaredTelevisions =
-            HardwareConfigurationStore.FindProperty(existingObject, LgTvCatalog.TelevisionsProperty);
+        JsonNode? declaredTelevisions = HardwareConfigurationStore.FindProperty(
+            existingObject,
+            LgTvCatalog.TelevisionsProperty
+        );
 
         if (declaredTelevisions is null)
         {
@@ -652,7 +704,8 @@ public static class LgTvConfigurationStore
         else
         {
             refused = ModeSaveOutcome.Failed(
-                $"'{LgTvSettings.SettingsPath}.{LgTvCatalog.TelevisionsProperty}' is not an object.");
+                $"'{LgTvSettings.SettingsPath}.{LgTvCatalog.TelevisionsProperty}' is not an object."
+            );
             return false;
         }
 
@@ -664,16 +717,19 @@ public static class LgTvConfigurationStore
     {
         string? requested = null;
 
-        if (HardwareConfigurationStore.FindProperty(section, LgTvCatalog.DefaultProperty) is JsonValue defaultValue &&
-            defaultValue.TryGetValue(out string? written) &&
-            !string.IsNullOrWhiteSpace(written))
+        if (
+            HardwareConfigurationStore.FindProperty(section, LgTvCatalog.DefaultProperty) is JsonValue defaultValue
+            && defaultValue.TryGetValue(out string? written)
+            && !string.IsNullOrWhiteSpace(written)
+        )
         {
             requested = written.Trim();
         }
 
         if (requested is not null)
         {
-            string? exact = televisions.Select(pair => pair.Key)
+            string? exact = televisions
+                .Select(pair => pair.Key)
                 .FirstOrDefault(name => string.Equals(name, requested, StringComparison.OrdinalIgnoreCase));
 
             if (exact is not null)
@@ -682,9 +738,8 @@ public static class LgTvConfigurationStore
             }
         }
 
-        return televisions.Select(pair => pair.Key)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault() ?? LgTvCatalog.DefaultTelevisionName;
+        return televisions.Select(pair => pair.Key).Order(StringComparer.OrdinalIgnoreCase).FirstOrDefault()
+            ?? LgTvCatalog.DefaultTelevisionName;
     }
 
     private static void WriteDefault(JsonObject section, string name)

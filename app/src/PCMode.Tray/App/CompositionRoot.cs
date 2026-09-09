@@ -2,21 +2,21 @@ using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
 using PCMode.Engine;
-using PCMode.Tray.Platform.Startup;
-using PCMode.Tray.Platform.Themes;
-using PCMode.Tray.Platform.Logging;
-using PCMode.Tray.Elements.Settings;
-using PCMode.Tray.Picker;
-using PCMode.Tray.Platform.TrayIcon;
-using PCMode.Tray.Elements.Navigation;
 using PCMode.Tray.Elements.Applications;
 using PCMode.Tray.Elements.Audio;
 using PCMode.Tray.Elements.Configuration;
 using PCMode.Tray.Elements.Diagnostics;
 using PCMode.Tray.Elements.Displays;
 using PCMode.Tray.Elements.Home;
+using PCMode.Tray.Elements.Navigation;
 using PCMode.Tray.Elements.Rgb;
+using PCMode.Tray.Elements.Settings;
 using PCMode.Tray.Elements.Spaces;
+using PCMode.Tray.Picker;
+using PCMode.Tray.Platform.Logging;
+using PCMode.Tray.Platform.Startup;
+using PCMode.Tray.Platform.Themes;
+using PCMode.Tray.Platform.TrayIcon;
 
 namespace PCMode.Tray;
 
@@ -65,7 +65,8 @@ public sealed class CompositionRoot : IDisposable
         bool firstRun,
         LocalLog log,
         ResourceDictionary resources,
-        Action<int> shutdown)
+        Action<int> shutdown
+    )
     {
         _log = log;
         _resources = resources;
@@ -80,13 +81,15 @@ public sealed class CompositionRoot : IDisposable
             _audio = new AudioHostLink();
             engine = EngineBootstrap.Create(options.DataRoot, _audio);
 
-            string executable = Environment.ProcessPath
+            string executable =
+                Environment.ProcessPath
                 ?? throw new InvalidOperationException("Windows did not report the PCMode executable path.");
 
             _settingsStore = new ApplicationSettingsStore(
                 options.DataRoot,
                 new WindowsAutoStartRegistration(),
-                AutoStartCommand.Build(executable, options.DataRoot));
+                AutoStartCommand.Build(executable, options.DataRoot)
+            );
 
             persistedSettings = _settingsStore.Load(engine.Catalog);
         }
@@ -111,71 +114,50 @@ public sealed class CompositionRoot : IDisposable
         EventManager.RegisterClassHandler(
             typeof(Window),
             FrameworkElement.LoadedEvent,
-            new RoutedEventHandler(OnWindowLoaded));
+            new RoutedEventHandler(OnWindowLoaded)
+        );
 
-        IConfigurationWorkspace workspace = ConfigurationWorkspace.For(
-            options.DataRoot,
-            log,
-            _audio,
-            ActivateRuntime);
+        IConfigurationWorkspace workspace = ConfigurationWorkspace.For(options.DataRoot, log, _audio, ActivateRuntime);
 
         // Modal prompt UI is connected with the dialog surface in migration
         // step 6. Until then the safe unattended implementation refuses any
         // operation that would require an answer.
         IConfigurationPrompts prompts = NoConfigurationPrompts.Instance;
 
-        var elements = new ElementCatalog(
-        [
-            KeyValuePair.Create<PageId, object>(
-                PageId.Home,
-                new HomeViewModel(_runtime, _settingsStore)),
-            KeyValuePair.Create<PageId, object>(
-                PageId.Applications,
-                new ApplicationsViewModel(workspace, prompts)),
-            KeyValuePair.Create<PageId, object>(
-                PageId.Audio,
-                new AudioViewModel(workspace, prompts)),
-            KeyValuePair.Create<PageId, object>(
-                PageId.Rgb,
-                new RgbViewModel(workspace, prompts)),
+        var elements = new ElementCatalog([
+            KeyValuePair.Create<PageId, object>(PageId.Home, new HomeViewModel(_runtime, _settingsStore)),
+            KeyValuePair.Create<PageId, object>(PageId.Applications, new ApplicationsViewModel(workspace, prompts)),
+            KeyValuePair.Create<PageId, object>(PageId.Audio, new AudioViewModel(workspace, prompts)),
+            KeyValuePair.Create<PageId, object>(PageId.Rgb, new RgbViewModel(workspace, prompts)),
             KeyValuePair.Create<PageId, object>(
                 PageId.Displays,
                 new DisplaysViewModel(
                     workspace,
-                    name => _runtime.Engine.Providers
-                        .OfType<TvPowerProvider>()
-                        .FirstOrDefault(provider =>
-                            string.Equals(
-                                provider.TelevisionName,
-                                name,
-                                StringComparison.OrdinalIgnoreCase)),
-                    prompts)),
+                    name =>
+                        _runtime
+                            .Engine.Providers.OfType<TvPowerProvider>()
+                            .FirstOrDefault(provider =>
+                                string.Equals(provider.TelevisionName, name, StringComparison.OrdinalIgnoreCase)
+                            ),
+                    prompts
+                )
+            ),
             KeyValuePair.Create<PageId, object>(
                 PageId.Spaces,
-                new SpacesViewModel(
-                    workspace,
-                    _runtime,
-                    _settingsStore,
-                    OnApplicationSettingsChanged,
-                    prompts)),
+                new SpacesViewModel(workspace, _runtime, _settingsStore, OnApplicationSettingsChanged, prompts)
+            ),
             KeyValuePair.Create<PageId, object>(
                 PageId.Settings,
-                new SettingsViewModel(
-                    workspace,
-                    _settingsStore,
-                    OnApplicationSettingsChanged)),
-            KeyValuePair.Create<PageId, object>(
-                PageId.Diagnostics,
-                new DiagnosticsViewModel(workspace, _runtime, log)),
+                new SettingsViewModel(workspace, _settingsStore, OnApplicationSettingsChanged)
+            ),
+            KeyValuePair.Create<PageId, object>(PageId.Diagnostics, new DiagnosticsViewModel(workspace, _runtime, log)),
         ]);
 
         elements.Validate(NavigationRegistry.Items);
 
         var navigation = new NavigationState();
 
-        var appViewModel = new AppViewModel(
-            navigation,
-            elements);
+        var appViewModel = new AppViewModel(navigation, elements);
 
         Window = new MainWindow(appViewModel);
         _theme.ApplyTo(Window);
@@ -233,8 +215,8 @@ public sealed class CompositionRoot : IDisposable
         bool firstRun,
         LocalLog log,
         ResourceDictionary resources,
-        Action<int> shutdown) =>
-        new(options, firstRun, log, resources, shutdown);
+        Action<int> shutdown
+    ) => new(options, firstRun, log, resources, shutdown);
 
     /// <summary>Brings the window to the foreground, restoring it first if minimized or hidden.</summary>
     public void ShowWindow() => Window.ShowAndActivate();
@@ -269,20 +251,21 @@ public sealed class CompositionRoot : IDisposable
         _applicationIcon.Dispose();
     }
 
-     /// <summary>Puts the exit question to the user, in the terms that matter.</summary>
+    /// <summary>Puts the exit question to the user, in the terms that matter.</summary>
     private static ExitChoice AskAboutExit()
     {
         MessageBoxResult answer = System.Windows.MessageBox.Show(
-            "PCMode is applying a target.\n\n" +
-            "Exiting now leaves PCMode running: it will finish on its own, but this window will not " +
-            "be here to show how it turned out.\n\n" +
-            "Yes\twait for it to finish, then exit\n" +
-            "No\texit now and leave it running\n" +
-            "Cancel\tstay open",
+            "PCMode is applying a target.\n\n"
+                + "Exiting now leaves PCMode running: it will finish on its own, but this window will not "
+                + "be here to show how it turned out.\n\n"
+                + "Yes\twait for it to finish, then exit\n"
+                + "No\texit now and leave it running\n"
+                + "Cancel\tstay open",
             "PCMode is still working",
             MessageBoxButton.YesNoCancel,
             MessageBoxImage.Question,
-            MessageBoxResult.Yes);
+            MessageBoxResult.Yes
+        );
 
         return answer switch
         {
@@ -307,7 +290,6 @@ public sealed class CompositionRoot : IDisposable
         _shutdown(0);
     }
 
-
     private void RebuildTrayMenu()
     {
         if (_trayIcon.ContextMenuStrip is null)
@@ -321,8 +303,15 @@ public sealed class CompositionRoot : IDisposable
 
         TrayMenu.Rebuild(
             _trayIcon.ContextMenuStrip,
-            new TrayMenuState(engine.Targets, currentKey, currentLabel, IsIdle: !engine.IsBusy, CanShowPicker: _picker is not null),
-            new TrayMenuActions(ApplyTargetFromTray, () => _picker?.ShowPicker(), ShowWindow, RequestExitAsync));
+            new TrayMenuState(
+                engine.Targets,
+                currentKey,
+                currentLabel,
+                IsIdle: !engine.IsBusy,
+                CanShowPicker: _picker is not null
+            ),
+            new TrayMenuActions(ApplyTargetFromTray, () => _picker?.ShowPicker(), ShowWindow, RequestExitAsync)
+        );
 
         _trayIcon.Text = TrayMenu.StatusText(currentLabel);
     }
@@ -338,9 +327,7 @@ public sealed class CompositionRoot : IDisposable
     /// </remarks>
     private void StartPicker(ApplicationSettings settings)
     {
-        var actions = new PickerHostActions(
-            () => _runtime.Engine.ReadCurrentTargetKey(out _),
-            ApplyTargetFromTray);
+        var actions = new PickerHostActions(() => _runtime.Engine.ReadCurrentTargetKey(out _), ApplyTargetFromTray);
 
         _picker = PickerHost.TryStart(
             actions,
@@ -348,7 +335,8 @@ public sealed class CompositionRoot : IDisposable
             settings.DirectShortcuts,
             settings.PickerMonitor,
             settings.ControllerEnabled,
-            out string? refusal);
+            out string? refusal
+        );
 
         if (_picker is null)
         {
@@ -358,8 +346,9 @@ public sealed class CompositionRoot : IDisposable
         {
             _log.Information(
                 "Input",
-                $"Picker started with {_picker.Hotkeys.Count} hotkey(s); controller " +
-                $"{(settings.ControllerEnabled ? _picker.ControllerLibrary ?? "not available" : "disabled")}.");
+                $"Picker started with {_picker.Hotkeys.Count} hotkey(s); controller "
+                    + $"{(settings.ControllerEnabled ? _picker.ControllerLibrary ?? "not available" : "disabled")}."
+            );
         }
     }
 

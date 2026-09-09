@@ -1,10 +1,8 @@
-﻿<ResourceDictionary
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures"
-    xmlns:framework="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
-    xmlns:system="clr-namespace:System;assembly=mscorlib">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:fixtures="clr-namespace:PCMode.Tray.Tests.UI.Construction.Fixtures"
+                    xmlns:framework="clr-namespace:PCMode.Tray.UI.Framework;assembly=PCMode.Tray"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
     <!--
         The recursion under test, mirroring how a real host merges its own
         view-model-to-block templates at application scope (see
@@ -13,16 +11,13 @@
     -->
 
     <DataTemplate DataType="{x:Type fixtures:FixtureRootViewModel}">
-        <fixtures:FixtureRootBlock
-            Header="{Binding Header}"
-            Items="{Binding Items}"
-            Detail="{Binding Detail}" />
+        <fixtures:FixtureRootBlock Header="{Binding Header}"
+                                   Items="{Binding Items}"
+                                   Detail="{Binding Detail}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type fixtures:FixtureDetailViewModel}">
-        <fixtures:FixtureDetailBlock
-            Primary="{Binding Primary}"
-            Secondary="{Binding Secondary}" />
+        <fixtures:FixtureDetailBlock Primary="{Binding Primary}" Secondary="{Binding Secondary}" />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type fixtures:FixtureItemViewModel}">
@@ -37,10 +32,11 @@
         </framework:FinalUiComponent>
     </DataTemplate>
 
-    <!-- Used only by the tests that check a region refuses what it does not
-         admit: FixtureStrictBlock takes a detail block, never a root one. -->
+    <!--
+        Used only by the tests that check a region refuses what it does not
+        admit: FixtureStrictBlock takes a detail block, never a root one.
+    -->
     <DataTemplate DataType="{x:Type fixtures:FixtureStrictViewModel}">
         <fixtures:FixtureStrictBlock Only="{Binding Only}" />
     </DataTemplate>
-
 </ResourceDictionary>

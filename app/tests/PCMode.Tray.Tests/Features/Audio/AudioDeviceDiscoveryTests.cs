@@ -26,12 +26,14 @@ public sealed class AudioDeviceDiscoveryTests
             "Default playback device.",
             [new HardwareDetail("Default", "Yes")],
             Identifier: "Windows Speakers",
-            Category: AudioOutputDiscoverer.CategoryName);
+            Category: AudioOutputDiscoverer.CategoryName
+        );
 
         var section = new AudioDeviceDiscoveryViewModel(
             Workspaces.At(root.Path),
             () => reloads++,
-            () => new HardwareCategoryResult(AudioOutputDiscoverer.CategoryName, [endpoint], null));
+            () => new HardwareCategoryResult(AudioOutputDiscoverer.CategoryName, [endpoint], null)
+        );
 
         await section.Inventory.ScanAsync();
 
@@ -45,9 +47,7 @@ public sealed class AudioDeviceDiscoveryTests
         (string json, _) = ModeConfiguration.ReadOrCreate(root.Path);
         IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(root.Path, json);
         _ = ModeConfiguration.Parse(json, providers);
-        AudioProvider provider = providers
-            .OfType<AudioProvider>()
-            .Single();
+        AudioProvider provider = providers.OfType<AudioProvider>().Single();
 
         Assert.Contains("Desk speakers", provider.DeviceNames);
     }
@@ -58,36 +58,45 @@ public sealed class AudioDeviceDiscoveryTests
         // The Audio outputs section's own direct-switching controls -- Switch
         // needs an alias to hand AudioProvider.Apply, and there is nothing to
         // switch to once Windows is already playing into that output.
-        var notCurrent = new DiscoveredAudioOutputRow(new HardwareItem(
-            "Speakers (Realtek Audio)",
-            HardwareItemStatus.Ok,
-            "Available.",
-            [new HardwareDetail("Default", "No")],
-            Identifier: "Speakers (Realtek Audio)",
-            Alias: "Speakers"));
+        var notCurrent = new DiscoveredAudioOutputRow(
+            new HardwareItem(
+                "Speakers (Realtek Audio)",
+                HardwareItemStatus.Ok,
+                "Available.",
+                [new HardwareDetail("Default", "No")],
+                Identifier: "Speakers (Realtek Audio)",
+                Alias: "Speakers"
+            )
+        );
 
         Assert.Equal("Speakers", notCurrent.FriendlyName);
         Assert.True(notCurrent.ShowUnderlyingDevice);
         Assert.True(notCurrent.CanSwitch);
         Assert.False(notCurrent.ShowCurrentState);
 
-        var current = new DiscoveredAudioOutputRow(new HardwareItem(
-            "Realtek HD Audio 2nd output",
-            HardwareItemStatus.Ok,
-            "Default Windows output.",
-            [new HardwareDetail("Default", "Yes")],
-            Identifier: "Realtek HD Audio 2nd output",
-            Alias: "Headphones"));
+        var current = new DiscoveredAudioOutputRow(
+            new HardwareItem(
+                "Realtek HD Audio 2nd output",
+                HardwareItemStatus.Ok,
+                "Default Windows output.",
+                [new HardwareDetail("Default", "Yes")],
+                Identifier: "Realtek HD Audio 2nd output",
+                Alias: "Headphones"
+            )
+        );
 
         Assert.False(current.CanSwitch);
         Assert.True(current.ShowCurrentState);
 
-        var unconfigured = new DiscoveredAudioOutputRow(new HardwareItem(
-            "LG Soundbar (Intel Display Audio)",
-            HardwareItemStatus.Ok,
-            "Available.",
-            [new HardwareDetail("Default", "No")],
-            Identifier: "LG Soundbar (Intel Display Audio)"));
+        var unconfigured = new DiscoveredAudioOutputRow(
+            new HardwareItem(
+                "LG Soundbar (Intel Display Audio)",
+                HardwareItemStatus.Ok,
+                "Available.",
+                [new HardwareDetail("Default", "No")],
+                Identifier: "LG Soundbar (Intel Display Audio)"
+            )
+        );
 
         Assert.Equal("LG Soundbar (Intel Display Audio)", unconfigured.FriendlyName);
         Assert.False(unconfigured.ShowUnderlyingDevice);
@@ -98,11 +107,14 @@ public sealed class AudioDeviceDiscoveryTests
         // The PCMode virtual endpoint is never aliasable, so it never offers
         // Switch, even while it happens to be the current default (an audio
         // target is playing).
-        var virtualEndpoint = new DiscoveredAudioOutputRow(new HardwareItem(
-            "PCMode Virtual Audio Endpoint",
-            HardwareItemStatus.Ok,
-            "PCMode's own audio endpoint. Audio targets play into this one.",
-            [new HardwareDetail("Default", "Yes"), new HardwareDetail("PCMode virtual endpoint", "Yes")]));
+        var virtualEndpoint = new DiscoveredAudioOutputRow(
+            new HardwareItem(
+                "PCMode Virtual Audio Endpoint",
+                HardwareItemStatus.Ok,
+                "PCMode's own audio endpoint. Audio targets play into this one.",
+                [new HardwareDetail("Default", "Yes"), new HardwareDetail("PCMode virtual endpoint", "Yes")]
+            )
+        );
 
         Assert.False(virtualEndpoint.SupportsAlias);
         Assert.False(virtualEndpoint.CanSwitch);

@@ -39,7 +39,8 @@ internal static class ResourceAssignments
     public static List<ResourceAssignment> Read(
         string where,
         JsonElement? declared,
-        Dictionary<string, IModeResourceProvider> known)
+        Dictionary<string, IModeResourceProvider> known
+    )
     {
         var resources = new List<ResourceAssignment>();
 
@@ -60,8 +61,9 @@ internal static class ResourceAssignments
             if (!known.TryGetValue(resource.Name, out IModeResourceProvider? provider))
             {
                 throw new ModeConfigurationException(
-                    $"{where} sets '{resource.Name}', which nothing here knows how to apply. " +
-                    $"Known: {string.Join(", ", known.Keys.Order(StringComparer.OrdinalIgnoreCase))}.");
+                    $"{where} sets '{resource.Name}', which nothing here knows how to apply. "
+                        + $"Known: {string.Join(", ", known.Keys.Order(StringComparer.OrdinalIgnoreCase))}."
+                );
             }
 
             if (!seen.Add(provider.Key))
@@ -106,8 +108,9 @@ internal static class ResourceAssignments
         if (written.ValueKind != JsonValueKind.Object)
         {
             throw new ModeConfigurationException(
-                $"{where} sets '{key}' to something that is neither a value nor a " +
-                $"{{ \"value\": ..., \"optional\": ... }} object.");
+                $"{where} sets '{key}' to something that is neither a value nor a "
+                    + $"{{ \"value\": ..., \"optional\": ... }} object."
+            );
         }
 
         string? value = null;
@@ -121,7 +124,8 @@ internal static class ResourceAssignments
                 if (field.Value.ValueKind == JsonValueKind.Null)
                 {
                     throw new ModeConfigurationException(
-                        $"{where}: '{key}.value' is empty. Write the whole resource as null to clear it.");
+                        $"{where}: '{key}.value' is empty. Write the whole resource as null to clear it."
+                    );
                 }
 
                 if (field.Value.ValueKind != JsonValueKind.String)
@@ -138,8 +142,7 @@ internal static class ResourceAssignments
                 {
                     JsonValueKind.True => true,
                     JsonValueKind.False => false,
-                    _ => throw new ModeConfigurationException(
-                        $"{where}: '{key}.optional' must be true or false."),
+                    _ => throw new ModeConfigurationException($"{where}: '{key}.optional' must be true or false."),
                 };
             }
             else
@@ -148,7 +151,8 @@ internal static class ResourceAssignments
                 // dropped one is a setting the user believes they have written
                 // and has not.
                 throw new ModeConfigurationException(
-                    $"{where}: '{key}' does not understand '{field.Name}'. It takes 'value' and 'optional'.");
+                    $"{where}: '{key}' does not understand '{field.Name}'. It takes 'value' and 'optional'."
+                );
             }
         }
 

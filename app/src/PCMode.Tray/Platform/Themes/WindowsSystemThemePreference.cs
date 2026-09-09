@@ -40,7 +40,8 @@ public sealed class WindowsSystemThemePreference : ISystemThemePreference, ISyst
                 ? EffectiveTheme.Dark
                 : EffectiveTheme.Light;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        catch (Exception exception)
+            when (exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
             // Windows' default when the value is absent or unreadable is light.
             return EffectiveTheme.Light;

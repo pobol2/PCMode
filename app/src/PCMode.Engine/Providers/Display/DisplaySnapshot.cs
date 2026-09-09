@@ -41,13 +41,11 @@ public sealed record DisplayMonitorInfo(
     int Height,
     double RefreshHz,
     IReadOnlyList<int> SupportedRefreshHz,
-    string? LogicalName);
+    string? LogicalName
+);
 
 /// <summary>One configured logical monitor, and whether it resolves.</summary>
-public sealed record DisplayMonitorMapping(
-    string LogicalName,
-    string DevicePath,
-    DisplayMappingState State);
+public sealed record DisplayMonitorMapping(string LogicalName, string DevicePath, DisplayMappingState State);
 
 /// <summary>
 /// What the display provider can see: the smallest thing a settings UI needs.
@@ -68,7 +66,8 @@ public sealed record DisplaySnapshot(
     IReadOnlyList<DisplayMonitorInfo> Monitors,
     IReadOnlyList<DisplayMonitorMapping> Mappings,
     IReadOnlyList<string> Layouts,
-    string? CurrentLayout)
+    string? CurrentLayout
+)
 {
     /// <summary>
     /// Whether any logical monitor has been defined. Being unconfigured is not a

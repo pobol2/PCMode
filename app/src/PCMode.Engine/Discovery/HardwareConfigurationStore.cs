@@ -65,7 +65,13 @@ public static class HardwareConfigurationStore
         SetAlias(root, "audio", "devices", endpointName, alias, "audio device");
 
     private static HardwareAliasOutcome SetAlias(
-        string? root, string providerKey, string mapKey, string identifier, string alias, string noun)
+        string? root,
+        string providerKey,
+        string mapKey,
+        string identifier,
+        string alias,
+        string noun
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
 
@@ -113,18 +119,22 @@ public static class HardwareConfigurationStore
 
             JsonNode? existingForAlias = FindProperty(map, alias);
 
-            if (existingForAlias is not null &&
-                !string.Equals(IdentifierOf(existingForAlias), identifier, StringComparison.OrdinalIgnoreCase))
+            if (
+                existingForAlias is not null
+                && !string.Equals(IdentifierOf(existingForAlias), identifier, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 return HardwareAliasOutcome.Failed(
-                    $"'{alias}' already names a different {noun}. Choose another name, or rename that one first.");
+                    $"'{alias}' already names a different {noun}. Choose another name, or rename that one first."
+                );
             }
 
             // Moves rather than duplicates: a device that already has a
             // different alias loses it here, so there is never more than one
             // name for one piece of hardware.
             string? previousKey = FindKeyFor(map, identifier);
-            bool renamed = previousKey is not null && !string.Equals(previousKey, alias, StringComparison.OrdinalIgnoreCase);
+            bool renamed =
+                previousKey is not null && !string.Equals(previousKey, alias, StringComparison.OrdinalIgnoreCase);
 
             if (renamed)
             {
@@ -165,7 +175,10 @@ public static class HardwareConfigurationStore
             // The same validation a real startup runs, against the same
             // production provider list -- not a second, hand-rolled check that
             // could disagree with it.
-            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(resolvedRoot, candidate);
+            IReadOnlyList<IModeResourceProvider> providers = EngineBootstrap.ProductionProviders(
+                resolvedRoot,
+                candidate
+            );
             ModeConfiguration.Parse(candidate, providers, path);
         }
         catch (ModeConfigurationException exception)
@@ -217,16 +230,22 @@ public static class HardwareConfigurationStore
             {
                 for (int index = 0; index < monitors.Count; index++)
                 {
-                    if (monitors[index] is JsonValue value && value.TryGetValue(out string? name) &&
-                        string.Equals(name, oldName, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        monitors[index] is JsonValue value
+                        && value.TryGetValue(out string? name)
+                        && string.Equals(name, oldName, StringComparison.OrdinalIgnoreCase)
+                    )
                     {
                         monitors[index] = JsonValue.Create(newName);
                     }
                 }
             }
 
-            if (FindProperty(layout, "primary") is JsonValue primary && primary.TryGetValue(out string? primaryName) &&
-                string.Equals(primaryName, oldName, StringComparison.OrdinalIgnoreCase))
+            if (
+                FindProperty(layout, "primary") is JsonValue primary
+                && primary.TryGetValue(out string? primaryName)
+                && string.Equals(primaryName, oldName, StringComparison.OrdinalIgnoreCase)
+            )
             {
                 layout["primary"] = JsonValue.Create(newName);
             }
@@ -254,7 +273,12 @@ public static class HardwareConfigurationStore
             string[] tokens = entry.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
             int directionIndex = Array.FindIndex(
-                tokens, token => LayoutDirections.Any(direction => string.Equals(direction, token, StringComparison.OrdinalIgnoreCase)));
+                tokens,
+                token =>
+                    LayoutDirections.Any(direction =>
+                        string.Equals(direction, token, StringComparison.OrdinalIgnoreCase)
+                    )
+            );
 
             if (directionIndex <= 0 || directionIndex >= tokens.Length - 1)
             {
@@ -400,11 +424,13 @@ public static class HardwareConfigurationStore
     /// the longer <c>{ "device": "...", "requires": ... }</c> form audio devices
     /// may also be written in.
     /// </summary>
-    private static string IdentifierOf(JsonNode? value) => value switch
-    {
-        JsonValue scalar when scalar.TryGetValue(out string? text) => text ?? string.Empty,
-        JsonObject detailed when detailed["device"] is JsonValue deviceValue &&
-            deviceValue.TryGetValue(out string? device) => device ?? string.Empty,
-        _ => string.Empty,
-    };
+    private static string IdentifierOf(JsonNode? value) =>
+        value switch
+        {
+            JsonValue scalar when scalar.TryGetValue(out string? text) => text ?? string.Empty,
+            JsonObject detailed
+                when detailed["device"] is JsonValue deviceValue && deviceValue.TryGetValue(out string? device) =>
+                device ?? string.Empty,
+            _ => string.Empty,
+        };
 }

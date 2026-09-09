@@ -35,11 +35,15 @@ public sealed class LgTvTests
     [InlineData("""{"lgTv":{"enabled":true,"host":"192.0.2.31"}}""", "macAddress")]
     [InlineData("""{"lgTv":{"enabled":true,"host":"not a host","macAddress":"00:00:5E:00:53:31"}}""", "host")]
     [InlineData("""{"lgTv":{"enabled":true,"host":"192.0.2.31","macAddress":"nonsense"}}""", "macAddress")]
-    [InlineData("""{"lgTv":{"enabled":true,"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","colour":"red"}}""", "colour")]
+    [InlineData(
+        """{"lgTv":{"enabled":true,"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","colour":"red"}}""",
+        "colour"
+    )]
     [InlineData("""{"lgTv":{"enabled":"yes","host":"192.0.2.31","macAddress":"00:00:5E:00:53:31"}}""", "enabled")]
     public void Refuses_a_television_that_says_it_is_enabled_and_is_not_reachable_as_written(
         string providers,
-        string mentions)
+        string mentions
+    )
     {
         // Enabled and incomplete is a mistake somebody made, and finding it when a
         // mode is applied instead of when the file is read means finding it in the
@@ -56,7 +60,8 @@ public sealed class LgTvTests
             """
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31",
              "inputs":{"PC":"HDMI_4","Desk":"hdmi4"}}}
-            """);
+            """
+        );
 
         Assert.Contains("HDMI_4", problem, StringComparison.Ordinal);
     }
@@ -70,7 +75,8 @@ public sealed class LgTvTests
             """
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31",
              "inputs":{"One":"HDMI_1","Two":"hdmi 2","Three":"3"}}}
-            """);
+            """
+        );
 
         Assert.True(input.IsValidValue("Two", out _));
         Assert.True(input.IsValidValue("Three", out _));
@@ -83,7 +89,8 @@ public sealed class LgTvTests
         // on, and the resource still exists so a mode can name it and be told why
         // it was left out rather than that nothing knows how to apply it.
         (TvPowerProvider power, _, _, _) = Television(
-            """{"lgTv":{"enabled":false,"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31"}}""");
+            """{"lgTv":{"enabled":false,"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31"}}"""
+        );
 
         Assert.True(power.IsValidValue("On", out _));
         Assert.Equal(AvailabilityState.Disabled, power.AvailabilityOf("On").State);
@@ -131,8 +138,9 @@ public sealed class LgTvTests
         // A registration without a key IS the prompt, so an unpaired television
         // cannot be looked at without asking its owner to accept something. The
         // answer is "not known", and the screen stays as it was.
-        (TvPowerProvider power, TvInputProvider input, FakeTelevision set, FakeCredentials keys) =
-            Television(Configured());
+        (TvPowerProvider power, TvInputProvider input, FakeTelevision set, FakeCredentials keys) = Television(
+            Configured()
+        );
 
         Assert.Null(power.Read());
         Assert.Null(input.Read());
@@ -148,8 +156,10 @@ public sealed class LgTvTests
     [Fact]
     public void Reads_a_paired_television_without_prompting_or_rewriting_anything()
     {
-        (TvPowerProvider power, TvInputProvider input, FakeTelevision set, FakeCredentials keys) =
-            Television(Configured(), paired: true);
+        (TvPowerProvider power, TvInputProvider input, FakeTelevision set, FakeCredentials keys) = Television(
+            Configured(),
+            paired: true
+        );
 
         Assert.Equal("On", power.Read());
         Assert.Equal("PC", input.Read());
@@ -169,9 +179,7 @@ public sealed class LgTvTests
         // The whole promise of a dry run, and the television is the resource where
         // breaking it would be most obvious: somebody's screen lighting up to ask
         // a question about a transition that was never going to happen.
-        using var world = new TelevisionWorld(
-            """{"tvPower":"On","tvInput":"PC"}""",
-            Configured());
+        using var world = new TelevisionWorld("""{"tvPower":"On","tvInput":"PC"}""", Configured());
 
         TransitionOutcome outcome = await world.Engine.ApplyAsync("Film", dryRun: true);
 
@@ -259,8 +267,11 @@ public sealed class LgTvTests
         // running behind it. Treating that as a fault made every return to the
         // desktop fail on the ordinary evening when the television was off
         // already.
-        (TvPowerProvider power, _, FakeTelevision set, _) =
-            Television(Configured(), paired: true, clock: new FakeTime());
+        (TvPowerProvider power, _, FakeTelevision set, _) = Television(
+            Configured(),
+            paired: true,
+            clock: new FakeTime()
+        );
 
         set.GoesQuiet = true;
 
@@ -322,7 +333,8 @@ public sealed class LgTvTests
         Assert.Contains(
             "HDMI_4",
             Assert.Throws<InvalidOperationException>(() => input.Apply("PC", CancellationToken.None)).Message,
-            StringComparison.Ordinal);
+            StringComparison.Ordinal
+        );
     }
 
     // ---- giving up, and being called off ------------------------------------
@@ -334,8 +346,11 @@ public sealed class LgTvTests
         // the commonest state a television is in. The read gives up on its own
         // deadline rather than waiting for the transition's. Silence is not an
         // observed Off answer: the status snapshot retains why there is no value.
-        (TvPowerProvider power, _, FakeTelevision set, _) =
-            Television(Configured(), paired: true, clock: new FakeTime());
+        (TvPowerProvider power, _, FakeTelevision set, _) = Television(
+            Configured(),
+            paired: true,
+            clock: new FakeTime()
+        );
 
         set.GoesQuiet = true;
 
@@ -369,8 +384,7 @@ public sealed class LgTvTests
         Assert.Null(unpaired.Read());
         Assert.Equal(0, never.Connections);
 
-        (TvPowerProvider waking, _, FakeTelevision starting, _) =
-            Television(Configured(), paired: true);
+        (TvPowerProvider waking, _, FakeTelevision starting, _) = Television(Configured(), paired: true);
 
         starting.Processing = "Request Power On";
 
@@ -384,8 +398,11 @@ public sealed class LgTvTests
         // The distinction matters to the engine: a cancellation stops the whole
         // transition and reports it uncertain, where a device that went quiet is
         // one step that failed and can be retried.
-        (_, TvInputProvider input, FakeTelevision set, _) =
-            Television(Configured(), paired: true, clock: new FakeTime());
+        (_, TvInputProvider input, FakeTelevision set, _) = Television(
+            Configured(),
+            paired: true,
+            clock: new FakeTime()
+        );
 
         set.GoesQuiet = true;
 
@@ -437,7 +454,8 @@ public sealed class LgTvTests
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"}},
              "display":{"monitors":{"TV":"\\\\?\\TV"},
               "layouts":{"TVOnly":{"monitors":["TV"],"requires":{"tvInput":"PC"}}}}}
-            """);
+            """
+        );
 
         Assert.Equal(["tvPower", "tvInput", "display"], plan.Steps.Select(step => step.Key));
     }
@@ -454,7 +472,8 @@ public sealed class LgTvTests
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","safeDisplayTarget":"DeskOnly"},
              "display":{"monitors":{"Desk":"\\\\?\\Desk"},
               "layouts":{"DeskOnly":{"monitors":["Desk"]}}}}
-            """);
+            """
+        );
 
         Assert.Equal(["display", "tvPower"], plan.Steps.Select(step => step.Key));
         Assert.Equal("DeskOnly", plan.Steps[0].Target);
@@ -467,7 +486,8 @@ public sealed class LgTvTests
         // The thing everything else about the television depends on. Giving it a
         // requirement is how a dependency graph acquires a loop.
         (TvPowerProvider power, _, _, _) = Television(
-            """{"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","safeDisplayTarget":"DeskOnly"}}""");
+            """{"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","safeDisplayTarget":"DeskOnly"}}"""
+        );
 
         Assert.Empty(power.RequirementsFor("On"));
         Assert.Single(power.RequirementsFor("Off"));
@@ -506,10 +526,12 @@ public sealed class LgTvTests
                     DisplayName = "Film",
                     DisplayPath = "Film",
                     Identity = new TargetIdentity("space", "film", null),
-                }),
+                }
+            ),
             Providers("""{"lgTv":{"enabled":false,"inputs":{"PC":"HDMI_4"}}}"""),
             out TransitionPlan? plan,
-            out string? problem);
+            out string? problem
+        );
 
         Assert.False(made);
         Assert.Null(plan);
@@ -564,8 +586,9 @@ public sealed class LgTvTests
 
         set.RefusesSettings = true;
 
-        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(
-            () => signal.Apply("Gaming", CancellationToken.None));
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() =>
+            signal.Apply("Gaming", CancellationToken.None)
+        );
 
         Assert.Contains("uhdDeepColorHDMI4", refused.Message, StringComparison.Ordinal);
     }
@@ -580,7 +603,8 @@ public sealed class LgTvTests
             """
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"},
              "profiles":{"Movie":{"pictureMode":"hdrFilmMaker","settings":{"brightness":"50"}}}}}
-            """);
+            """
+        );
 
         picture.Apply("Movie", CancellationToken.None);
 
@@ -626,7 +650,8 @@ public sealed class LgTvTests
             """
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"},
              "profiles":{"Movie":{"pictureMode":"hdrFilmMaker"},"YouTube":{"pictureMode":"hdrFilmMaker"}}}}
-            """);
+            """
+        );
 
         Assert.Contains("hdrFilmMaker", problem, StringComparison.Ordinal);
     }
@@ -647,8 +672,9 @@ public sealed class LgTvTests
         // that changes every time the JSON does.
         string problem = Refused(
             """{"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"},"profiles":"""
-            + profiles
-            + "}}");
+                + profiles
+                + "}}"
+        );
 
         Assert.Contains(mentions, problem, StringComparison.Ordinal);
     }
@@ -663,7 +689,8 @@ public sealed class LgTvTests
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31",
              "inputs":{"PC":"HDMI_4","Console":"HDMI_2"},
              "profiles":{"Gaming":{"pictureMode":"hdrGame","signal":{"freesyncoled_hdmi{n}":"on"}}}}}
-            """);
+            """
+        );
 
         Assert.Contains(".input", problem, StringComparison.Ordinal);
     }
@@ -681,7 +708,8 @@ public sealed class LgTvTests
              "profiles":{
                "PC Gaming":{"pictureMode":"hdrGame","input":"PC","signal":{"freesyncoled_hdmi{n}":"on"}},
                "Console Gaming":{"pictureMode":"game","input":"Console","signal":{"freesyncoled_hdmi{n}":"on"}}}}}
-            """);
+            """
+        );
 
         LgTvSettings settings = all.OfType<TvPowerProvider>().Single().Settings;
 
@@ -703,7 +731,8 @@ public sealed class LgTvTests
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31",
              "inputs":{"PC":"HDMI_4"},
              "profiles":{"Gaming":{"pictureMode":"hdrGame","input":"Console"}}}}
-            """);
+            """
+        );
 
         Assert.Contains("Console", problem, StringComparison.Ordinal);
     }
@@ -718,13 +747,13 @@ public sealed class LgTvTests
             {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31",
              "inputs":{"PC":"HDMI_4","Console":"HDMI_2"},"profileInput":"Console",
              "profiles":{"Gaming":{"pictureMode":"hdrGame","signal":{"freesyncoled_hdmi{n}":"on"}}}}}
-            """);
+            """
+        );
 
-        Assert.Equal(
-            ["tvPower", "tvInput"],
-            signal.RequirementsFor("Gaming").Select(requirement => requirement.Key));
+        Assert.Equal(["tvPower", "tvInput"], signal.RequirementsFor("Gaming").Select(requirement => requirement.Key));
 
-        ResourceRequirement inputRequirement = signal.RequirementsFor("Gaming")
+        ResourceRequirement inputRequirement = signal
+            .RequirementsFor("Gaming")
             .Single(requirement => requirement.Key == "tvInput");
 
         Assert.Equal("Console", inputRequirement.Target);
@@ -736,8 +765,10 @@ public sealed class LgTvTests
         // The same promise the rest of the television keeps, extended to the two
         // resources that were added last. A registration without a key IS the
         // pairing prompt.
-        (TvSignalProvider signal, TvProfileProvider picture, FakeTelevision set, FakeCredentials keys) =
-            Picture(WithProfiles(), paired: false);
+        (TvSignalProvider signal, TvProfileProvider picture, FakeTelevision set, FakeCredentials keys) = Picture(
+            WithProfiles(),
+            paired: false
+        );
 
         Assert.Null(signal.Read());
         Assert.Null(picture.Read());
@@ -763,11 +794,10 @@ public sealed class LgTvTests
              "profiles":{"Gaming":{"pictureMode":"hdrGame","signal":{"gamemode_hdmi{n}":"on"}}}},
              "display":{"monitors":{"TV":"\\\\?\\TV"},
               "layouts":{"TVOnly":{"monitors":["TV"],"requires":{"tvInput":"PC"}}}}}
-            """);
+            """
+        );
 
-        Assert.Equal(
-            ["tvPower", "tvInput", "tvSignal", "display", "tvProfile"],
-            plan.Steps.Select(step => step.Key));
+        Assert.Equal(["tvPower", "tvInput", "tvSignal", "display", "tvProfile"], plan.Steps.Select(step => step.Key));
     }
 
     [Fact]
@@ -808,18 +838,25 @@ public sealed class LgTvTests
                  "display":{"monitors":{"TV":"\\\\?\\TV"},
                   "layouts":{"TVOnly":{"monitors":["TV"],"requires":{"tvInput":"PC"}}}},
                  "audio":{"devices":{"TV":"LG TV"}}}
-                """),
-            all);
+                """
+            ),
+            all
+        );
 
-        Assert.True(TransitionPlan.TryCreate(
-            configuration.Modes[0],
-            all.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase),
-            out TransitionPlan? plan,
-            out string? problem), problem);
+        Assert.True(
+            TransitionPlan.TryCreate(
+                configuration.Modes[0],
+                all.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase),
+                out TransitionPlan? plan,
+                out string? problem
+            ),
+            problem
+        );
 
         Assert.Equal(
             ["tvPower", "tvInput", "tvSignal", "display", "tvProfile", "audio"],
-            plan!.Steps.Select(step => step.Key));
+            plan!.Steps.Select(step => step.Key)
+        );
     }
 
     // ---- helpers ------------------------------------------------------------
@@ -827,18 +864,17 @@ public sealed class LgTvTests
     /// <summary>The configured television, with the two profiles this machine has.</summary>
     private static string WithProfiles() =>
         """
-        {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"},
-         "profiles":{
-           "Gaming":{"pictureMode":"hdrGame","signal":{
-             "uhddeepcolor_hdmi{n}":"on","hdmipcmode_hdmi{n}":"on","gamemode_hdmi{n}":"on",
-             "gameoptimization_hdmi{n}":"on","gameoptimization":"on","freesyncoled_hdmi{n}":"on",
-             "freesync":"on","inputoptimization":"boost"},"settings":{}},
-           "Movie":{"pictureMode":"hdrFilmMaker","signal":{
-             "uhddeepcolor_hdmi{n}":"on","hdmipcmode_hdmi{n}":"on","gamemode_hdmi{n}":"off",
-             "gameoptimization_hdmi{n}":"off","gameoptimization":"off","freesyncoled_hdmi{n}":"on",
-             "freesync":"on","inputoptimization":"standard"},"settings":{}}}}}
-        """;
-
+            {"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"},
+             "profiles":{
+               "Gaming":{"pictureMode":"hdrGame","signal":{
+                 "uhddeepcolor_hdmi{n}":"on","hdmipcmode_hdmi{n}":"on","gamemode_hdmi{n}":"on",
+                 "gameoptimization_hdmi{n}":"on","gameoptimization":"on","freesyncoled_hdmi{n}":"on",
+                 "freesync":"on","inputoptimization":"boost"},"settings":{}},
+               "Movie":{"pictureMode":"hdrFilmMaker","signal":{
+                 "uhddeepcolor_hdmi{n}":"on","hdmipcmode_hdmi{n}":"on","gamemode_hdmi{n}":"off",
+                 "gameoptimization_hdmi{n}":"off","gameoptimization":"off","freesyncoled_hdmi{n}":"on",
+                 "freesync":"on","inputoptimization":"standard"},"settings":{}}}}}
+            """;
 
     /// <remarks>
     /// The address and MAC address are written out rather than interpolated. A raw
@@ -849,21 +885,34 @@ public sealed class LgTvTests
         """{"lgTv":{"host":"192.0.2.31","macAddress":"00:00:5E:00:53:31","inputs":{"PC":"HDMI_4"}}}""";
 
     /// <summary>A configured pair of television providers, and what they talk to.</summary>
-    private static (TvPowerProvider Power, TvInputProvider Input, FakeTelevision Set, FakeCredentials Keys)
-        Television(string providers, bool paired = false, TimeProvider? clock = null)
+    private static (TvPowerProvider Power, TvInputProvider Input, FakeTelevision Set, FakeCredentials Keys) Television(
+        string providers,
+        bool paired = false,
+        TimeProvider? clock = null
+    )
     {
-        (IReadOnlyList<IModeResourceProvider> all, FakeTelevision set, FakeCredentials keys) =
-            Built(providers, paired, clock);
+        (IReadOnlyList<IModeResourceProvider> all, FakeTelevision set, FakeCredentials keys) = Built(
+            providers,
+            paired,
+            clock
+        );
 
         return (all.OfType<TvPowerProvider>().Single(), all.OfType<TvInputProvider>().Single(), set, keys);
     }
 
     /// <summary>The two halves of a picture profile, and what they talk to.</summary>
-    private static (TvSignalProvider Signal, TvProfileProvider Picture, FakeTelevision Set, FakeCredentials Keys)
-        Picture(string providers, bool paired = true, TimeProvider? clock = null)
+    private static (
+        TvSignalProvider Signal,
+        TvProfileProvider Picture,
+        FakeTelevision Set,
+        FakeCredentials Keys
+    ) Picture(string providers, bool paired = true, TimeProvider? clock = null)
     {
-        (IReadOnlyList<IModeResourceProvider> all, FakeTelevision set, FakeCredentials keys) =
-            Built(providers, paired, clock);
+        (IReadOnlyList<IModeResourceProvider> all, FakeTelevision set, FakeCredentials keys) = Built(
+            providers,
+            paired,
+            clock
+        );
 
         return (all.OfType<TvSignalProvider>().Single(), all.OfType<TvProfileProvider>().Single(), set, keys);
     }
@@ -876,8 +925,11 @@ public sealed class LgTvTests
     /// shared-section wiring -- four providers reading one 'lgTv' section -- rather
     /// than a shortcut around it.
     /// </remarks>
-    private static (IReadOnlyList<IModeResourceProvider> All, FakeTelevision Set, FakeCredentials Keys)
-        Built(string providers, bool paired = false, TimeProvider? clock = null)
+    private static (IReadOnlyList<IModeResourceProvider> All, FakeTelevision Set, FakeCredentials Keys) Built(
+        string providers,
+        bool paired = false,
+        TimeProvider? clock = null
+    )
     {
         var set = new FakeTelevision();
         var keys = new FakeCredentials();
@@ -909,7 +961,8 @@ public sealed class LgTvTests
             configuration.Modes[0],
             all.ToDictionary(provider => provider.Key, StringComparer.OrdinalIgnoreCase),
             out TransitionPlan? plan,
-            out string? problem);
+            out string? problem
+        );
 
         Assert.True(made, problem);
 
@@ -922,35 +975,38 @@ public sealed class LgTvTests
     }
 
     private static string Refused(string providers) =>
-        Assert.Throws<ModeConfigurationException>(() => ModeConfiguration.Parse(
-            Document("""{"theme":"Dark"}""", providers),
-            All(new LgTvConnection(new FakeTelevision(), new FakeCredentials())))).Message;
+        Assert
+            .Throws<ModeConfigurationException>(() =>
+                ModeConfiguration.Parse(
+                    Document("""{"theme":"Dark"}""", providers),
+                    All(new LgTvConnection(new FakeTelevision(), new FakeCredentials()))
+                )
+            )
+            .Message;
 
     private static IReadOnlyList<IModeResourceProvider> All(LgTvConnection connection) =>
-    [
-        new WindowsThemeProvider(new NoTheme()),
-        new TvPowerProvider(connection),
-        new TvInputProvider(connection),
-        new TvSignalProvider(connection),
-        new DisplayProvider(new FakeDisplayDevices()),
-        new TvProfileProvider(connection),
-    ];
+        [
+            new WindowsThemeProvider(new NoTheme()),
+            new TvPowerProvider(connection),
+            new TvInputProvider(connection),
+            new TvSignalProvider(connection),
+            new DisplayProvider(new FakeDisplayDevices()),
+            new TvProfileProvider(connection),
+        ];
 
     private static string Document(string resources, string providers) =>
         $$"""
-        {"schemaVersion":1,"providers":{{providers}},
-         "spaces":[{"id":"space","name":"Space","activities":[
-           {"id":"film","name":"Film","resources":{{resources}}}]}]}
-        """;
+            {"schemaVersion":1,"providers":{{providers}},
+             "spaces":[{"id":"space","name":"Space","activities":[
+               {"id":"film","name":"Film","resources":{{resources}}}]}]}
+            """;
 
     /// <summary>A theme that is only here to make a document have two resources.</summary>
     private sealed class NoTheme : IThemeStore
     {
         public bool? ReadUsesLightTheme() => true;
 
-        public void WriteUsesLightTheme(bool light)
-        {
-        }
+        public void WriteUsesLightTheme(bool light) { }
     }
 
     /// <summary>A whole engine with a television in it.</summary>
@@ -970,7 +1026,8 @@ public sealed class LgTvTests
                 ModeConfiguration.LoadOrCreate(Root.Path, providerList),
                 new ModeStateStore(Root.StateFile),
                 providerList,
-                new FakeTime());
+                new FakeTime()
+            );
         }
 
         public TemporaryRoot Root { get; }

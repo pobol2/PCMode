@@ -69,9 +69,10 @@ public sealed class NavigationEntry : ObservableObject
 
         foreach (NavigationItem item in all)
         {
-            NavigationEntry? parent = item.Parent is PageId parentPage && byPage.TryGetValue(parentPage, out NavigationEntry? parentEntry)
-                ? parentEntry
-                : null;
+            NavigationEntry? parent =
+                item.Parent is PageId parentPage && byPage.TryGetValue(parentPage, out NavigationEntry? parentEntry)
+                    ? parentEntry
+                    : null;
 
             bool hasChildren = all.Any(other => other.Parent == item.Page);
 

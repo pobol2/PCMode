@@ -19,13 +19,14 @@ public sealed class ResourceHealthRow(ResourceHealth health)
 
     public bool Optional => health.Optional;
 
-    public StatusLevel StatusState => health.State switch
-    {
-        ResourceHealthState.Correct => StatusLevel.Ok,
-        ResourceHealthState.Degraded => StatusLevel.Warning,
-        ResourceHealthState.Failed => StatusLevel.Error,
-        _ => StatusLevel.Neutral,
-    };
+    public StatusLevel StatusState =>
+        health.State switch
+        {
+            ResourceHealthState.Correct => StatusLevel.Ok,
+            ResourceHealthState.Degraded => StatusLevel.Warning,
+            ResourceHealthState.Failed => StatusLevel.Error,
+            _ => StatusLevel.Neutral,
+        };
 }
 
 /// <summary>The last dry run's overall result, in terms the page can bind to directly.</summary>
@@ -35,16 +36,17 @@ public sealed class ModeHealthRow(ModeHealth health)
 
     public string Summary => health.Summary;
 
-    public StatusLevel StatusState => health.Overall switch
-    {
-        ResourceHealthState.Correct => StatusLevel.Ok,
-        ResourceHealthState.Degraded => StatusLevel.Warning,
-        ResourceHealthState.Failed => StatusLevel.Error,
-        _ => StatusLevel.Neutral,
-    };
+    public StatusLevel StatusState =>
+        health.Overall switch
+        {
+            ResourceHealthState.Correct => StatusLevel.Ok,
+            ResourceHealthState.Degraded => StatusLevel.Warning,
+            ResourceHealthState.Failed => StatusLevel.Error,
+            _ => StatusLevel.Neutral,
+        };
 
     public IReadOnlyList<ResourceHealthRow> Resources { get; } =
-        [.. health.Resources.Select(static resource => new ResourceHealthRow(resource))];
+    [.. health.Resources.Select(static resource => new ResourceHealthRow(resource))];
 }
 
 /// <summary>One loaded provider, in terms the page can bind to directly.</summary>

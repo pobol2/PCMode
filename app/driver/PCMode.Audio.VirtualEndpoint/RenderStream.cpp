@@ -9,16 +9,14 @@
 
 namespace
 {
-    constexpr ULONG PoolTag =
-        'APCP';
+    constexpr ULONG PoolTag = 'APCP';
 
     //
     // 100-nanosecond units per second. Not a WDK macro; KSCONVERT_PERFORMANCE_
     // TIME (ks.h) and this constant are the same pair Microsoft's ACX
     // StreamEngine sample uses for its HNS-based absolute scheduling math.
     //
-    constexpr ULONGLONG HnsPerSecond =
-        10'000'000ull;
+    constexpr ULONGLONG HnsPerSecond = 10'000'000ull;
 
     //
     // How many render-timer ticks make up one full pass through the ring
@@ -30,22 +28,13 @@ namespace
     // buffer" guidance from the ACX streaming docs without making the timer
     // needlessly chatty.
     //
-    constexpr ULONG RenderSliceCount =
-        16;
+    constexpr ULONG RenderSliceCount = 16;
 
-    VOID
-    NotifyTransportRunningStopped(
-        _In_ PCMODE_STREAM_CONTEXT* Context,
-        _In_ ACXSTREAM Stream)
+    VOID NotifyTransportRunningStopped(_In_ PCMODE_STREAM_CONTEXT* Context, _In_ ACXSTREAM Stream)
     {
-        if (InterlockedExchange(
-                &Context->TransportRunningRegistered,
-                FALSE))
+        if (InterlockedExchange(&Context->TransportRunningRegistered, FALSE))
         {
-            PCModeTransportStreamRunningStopped(
-                AcxCircuitGetWdfDevice(
-                    AcxStreamGetCircuit(
-                        Stream)));
+            PCModeTransportStreamRunningStopped(AcxCircuitGetWdfDevice(AcxStreamGetCircuit(Stream)));
         }
     }
 
@@ -68,20 +57,14 @@ namespace
     // genuinely become new since the previous tick.
     //
     ULONG
-    ComputeTickBytes(
-        _In_ ULONG PacketCount,
-        _In_ ULONG PacketSize,
-        _In_ ULONG RingSize,
-        _In_ ULONG BlockAlign)
+    ComputeTickBytes(_In_ ULONG PacketCount, _In_ ULONG PacketSize, _In_ ULONG RingSize, _In_ ULONG BlockAlign)
     {
         if (PacketCount != 1)
         {
             return PacketSize;
         }
 
-        ULONG sliceBytes =
-            RingSize /
-            RenderSliceCount;
+        ULONG sliceBytes = RingSize / RenderSliceCount;
 
         //
         // Rounded down to a whole number of frames -- an unaligned slice
@@ -91,15 +74,10 @@ namespace
         //
         if (BlockAlign != 0)
         {
-            sliceBytes -=
-                sliceBytes %
-                BlockAlign;
+            sliceBytes -= sliceBytes % BlockAlign;
         }
 
-        return
-            sliceBytes != 0
-                ? sliceBytes
-                : RingSize;
+        return sliceBytes != 0 ? sliceBytes : RingSize;
     }
 
     //
@@ -114,69 +92,35 @@ namespace
     // push as an independent chunk of PCM, so there is nothing to gain from
     // copying the wraparound into one buffer before forwarding it.
     //
-    VOID
-    RenderRingSlice(
-        _In_ PCMODE_STREAM_CONTEXT* Context,
-        _In_ ACXSTREAM Stream,
-        _In_ LONG Tick)
+    VOID RenderRingSlice(_In_ PCMODE_STREAM_CONTEXT* Context, _In_ ACXSTREAM Stream, _In_ LONG Tick)
     {
-        if (Context->RingMdl == nullptr ||
-            Context->RingSize == 0 ||
-            Context->TickBytes == 0)
+        if (Context->RingMdl == nullptr || Context->RingSize == 0 || Context->TickBytes == 0)
         {
             return;
         }
 
-        UCHAR* buffer =
-            static_cast<UCHAR*>(
-                MmGetSystemAddressForMdlSafe(
-                    Context->RingMdl,
-                    NormalPagePriority |
-                    MdlMappingNoExecute));
+        UCHAR* buffer = static_cast<UCHAR*>(
+            MmGetSystemAddressForMdlSafe(Context->RingMdl, NormalPagePriority | MdlMappingNoExecute));
 
         if (buffer == nullptr)
         {
             return;
         }
 
-        ULONG ringOffset =
-            static_cast<ULONG>(
-                (static_cast<ULONGLONG>(
-                     static_cast<ULONG>(Tick)) *
-                 Context->TickBytes) %
-                Context->RingSize);
+        ULONG ringOffset = static_cast<ULONG>((static_cast<ULONGLONG>(static_cast<ULONG>(Tick)) * Context->TickBytes) %
+                                              Context->RingSize);
 
-        ULONG remainingInRing =
-            Context->RingSize -
-            ringOffset;
+        ULONG remainingInRing = Context->RingSize - ringOffset;
 
-        ULONG firstChunk =
-            Context->TickBytes <
-                remainingInRing
-                ? Context->TickBytes
-                : remainingInRing;
+        ULONG firstChunk = Context->TickBytes < remainingInRing ? Context->TickBytes : remainingInRing;
 
-        WDFDEVICE device =
-            AcxCircuitGetWdfDevice(
-                AcxStreamGetCircuit(
-                    Stream));
+        WDFDEVICE device = AcxCircuitGetWdfDevice(AcxStreamGetCircuit(Stream));
 
-        PCModeTransportPushPcm(
-            device,
-            Context->Format,
-            buffer +
-                ringOffset,
-            firstChunk);
+        PCModeTransportPushPcm(device, Context->Format, buffer + ringOffset, firstChunk);
 
-        if (firstChunk <
-            Context->TickBytes)
+        if (firstChunk < Context->TickBytes)
         {
-            PCModeTransportPushPcm(
-                device,
-                Context->Format,
-                buffer,
-                Context->TickBytes -
-                    firstChunk);
+            PCModeTransportPushPcm(device, Context->Format, buffer, Context->TickBytes - firstChunk);
         }
     }
 
@@ -186,48 +130,31 @@ namespace
     // reference sample. Read at Pause() to save a resumable position, and
     // at EvtAcxStreamGetPresentationPosition.
     //
-    VOID
-    UpdatePosition(
-        _In_ PCMODE_STREAM_CONTEXT* Context)
+    VOID UpdatePosition(_In_ PCMODE_STREAM_CONTEXT* Context)
     {
-        if (Context->State !=
-            PCMODE_STREAM_STATE::Run)
+        if (Context->State != PCMODE_STREAM_STATE::Run)
         {
             return;
         }
 
-        ULONG bytesPerSecond =
-            AcxDataFormatGetAverageBytesPerSec(
-                Context->Format);
+        ULONG bytesPerSecond = AcxDataFormatGetAverageBytesPerSec(Context->Format);
 
         if (bytesPerSecond == 0)
         {
             return;
         }
 
-        LONGLONG currentTime =
-            KSCONVERT_PERFORMANCE_TIME(
-                Context->PerformanceCounterFrequency
-                    .QuadPart,
-                KeQueryPerformanceCounter(
-                    nullptr));
+        LONGLONG currentTime = KSCONVERT_PERFORMANCE_TIME(Context->PerformanceCounterFrequency.QuadPart,
+                                                          KeQueryPerformanceCounter(nullptr));
 
-        LONGLONG elapsed =
-            currentTime -
-            Context->StartTime;
+        LONGLONG elapsed = currentTime - Context->StartTime;
 
         if (elapsed < 0)
         {
-            elapsed =
-                0;
+            elapsed = 0;
         }
 
-        Context->Position =
-            Context->StartPosition +
-            static_cast<ULONGLONG>(
-                elapsed) *
-            bytesPerSecond /
-            HnsPerSecond;
+        Context->Position = Context->StartPosition + static_cast<ULONGLONG>(elapsed) * bytesPerSecond / HnsPerSecond;
     }
 
     //
@@ -258,72 +185,49 @@ namespace
     // caught-up tick) so a later, genuinely new stall still signals.
     //
     BOOLEAN
-    SkipMissedRenderSlices(
-        _In_ PCMODE_STREAM_CONTEXT* Context)
+    SkipMissedRenderSlices(_In_ PCMODE_STREAM_CONTEXT* Context)
     {
         if (Context->TickBytes == 0)
         {
             return FALSE;
         }
 
-        UpdatePosition(
-            Context);
+        UpdatePosition(Context);
 
-        ULONGLONG completedTicks =
-            Context->Position /
-            Context->TickBytes;
+        ULONGLONG completedTicks = Context->Position / Context->TickBytes;
 
         if (completedTicks == 0)
         {
-            Context->RenderBehind =
-                FALSE;
+            Context->RenderBehind = FALSE;
 
             return FALSE;
         }
 
-        LONG latestDueTick =
-            static_cast<LONG>(
-                completedTicks -
-                1);
+        LONG latestDueTick = static_cast<LONG>(completedTicks - 1);
 
-        LONG current =
-            InterlockedCompareExchange(
-                &Context->CurrentPacket,
-                0,
-                0);
+        LONG current = InterlockedCompareExchange(&Context->CurrentPacket, 0, 0);
 
-        if (latestDueTick <=
-            current)
+        if (latestDueTick <= current)
         {
-            Context->RenderBehind =
-                FALSE;
+            Context->RenderBehind = FALSE;
 
             return FALSE;
         }
 
-        BOOLEAN alreadyBehind =
-            Context->RenderBehind;
+        BOOLEAN alreadyBehind = Context->RenderBehind;
 
-        Context->RenderBehind =
-            TRUE;
+        Context->RenderBehind = TRUE;
 
-        while (latestDueTick >
-               current)
+        while (latestDueTick > current)
         {
-            LONG observed =
-                InterlockedCompareExchange(
-                    &Context->CurrentPacket,
-                    latestDueTick,
-                    current);
+            LONG observed = InterlockedCompareExchange(&Context->CurrentPacket, latestDueTick, current);
 
-            if (observed ==
-                current)
+            if (observed == current)
             {
                 break;
             }
 
-            current =
-                observed;
+            current = observed;
         }
 
         return !alreadyBehind;
@@ -344,35 +248,18 @@ namespace
     // that was just processed -- CurrentPacket has already moved on to the
     // next one by the time the notification goes out.
     //
-    VOID
-    RenderCurrentPacketAndAdvance(
-        _In_ PCMODE_STREAM_CONTEXT* Context,
-        _In_ ACXSTREAM Stream)
+    VOID RenderCurrentPacketAndAdvance(_In_ PCMODE_STREAM_CONTEXT* Context, _In_ ACXSTREAM Stream)
     {
-        LONG tickJustRendered =
-            InterlockedCompareExchange(
-                &Context->CurrentPacket,
-                0,
-                0);
+        LONG tickJustRendered = InterlockedCompareExchange(&Context->CurrentPacket, 0, 0);
 
-        RenderRingSlice(
-            Context,
-            Stream,
-            tickJustRendered);
+        RenderRingSlice(Context, Stream, tickJustRendered);
 
-        InterlockedIncrement(
-            &Context->CurrentPacket);
+        InterlockedIncrement(&Context->CurrentPacket);
 
-        LARGE_INTEGER qpc =
-            KeQueryPerformanceCounter(
-                nullptr);
+        LARGE_INTEGER qpc = KeQueryPerformanceCounter(nullptr);
 
         (void)AcxRtStreamNotifyPacketComplete(
-            Stream,
-            static_cast<ULONGLONG>(
-                tickJustRendered),
-            static_cast<ULONGLONG>(
-                qpc.QuadPart));
+            Stream, static_cast<ULONGLONG>(tickJustRendered), static_cast<ULONGLONG>(qpc.QuadPart));
     }
 
     //
@@ -391,226 +278,137 @@ namespace
     // callback advances past stale slices before it renders; it never emits
     // a burst of old PCM to catch up.
     //
-    VOID
-    ScheduleNextPass(
-        _In_ PCMODE_STREAM_CONTEXT* Context)
+    VOID ScheduleNextPass(_In_ PCMODE_STREAM_CONTEXT* Context)
     {
-        ULONG bytesPerSecond =
-            AcxDataFormatGetAverageBytesPerSec(
-                Context->Format);
+        ULONG bytesPerSecond = AcxDataFormatGetAverageBytesPerSec(Context->Format);
 
-        if (Context->TickBytes == 0 ||
-            bytesPerSecond == 0)
+        if (Context->TickBytes == 0 || bytesPerSecond == 0)
         {
             //
             // Not yet in a renderable state (packets not allocated, or an
             // unresolved format). Retry shortly rather than spin or divide
             // by zero.
             //
-            WdfTimerStart(
-                Context->PacketTimer,
-                WDF_REL_TIMEOUT_IN_MS(
-                    10));
+            WdfTimerStart(Context->PacketTimer, WDF_REL_TIMEOUT_IN_MS(10));
 
             return;
         }
 
-        LONG nextTick =
-            InterlockedCompareExchange(
-                &Context->CurrentPacket,
-                0,
-                0) +
-            1;
+        LONG nextTick = InterlockedCompareExchange(&Context->CurrentPacket, 0, 0) + 1;
 
-        ULONGLONG nextTickStartPosition =
-            static_cast<ULONGLONG>(
-                nextTick) *
-            Context->TickBytes;
+        ULONGLONG nextTickStartPosition = static_cast<ULONGLONG>(nextTick) * Context->TickBytes;
 
         LONGLONG nextTickPositionFromLastPause =
-            static_cast<LONGLONG>(
-                nextTickStartPosition) -
-            static_cast<LONGLONG>(
-                Context->StartPosition);
+            static_cast<LONGLONG>(nextTickStartPosition) - static_cast<LONGLONG>(Context->StartPosition);
 
         LONGLONG nextTickTimeFromLastPauseHns =
-            nextTickPositionFromLastPause *
-            static_cast<LONGLONG>(
-                HnsPerSecond) /
-            bytesPerSecond;
+            nextTickPositionFromLastPause * static_cast<LONGLONG>(HnsPerSecond) / bytesPerSecond;
 
-        LONGLONG nextTickTime =
-            Context->StartTime +
-            nextTickTimeFromLastPauseHns;
+        LONGLONG nextTickTime = Context->StartTime + nextTickTimeFromLastPauseHns;
 
-        LONGLONG currentTime =
-            KSCONVERT_PERFORMANCE_TIME(
-                Context->PerformanceCounterFrequency
-                    .QuadPart,
-                KeQueryPerformanceCounter(
-                    nullptr));
+        LONGLONG currentTime = KSCONVERT_PERFORMANCE_TIME(Context->PerformanceCounterFrequency.QuadPart,
+                                                          KeQueryPerformanceCounter(nullptr));
 
         //
         // Relative delay in HNS. Negative means "in the future" -- that
         // is what WdfTimerStart's DueTime expects for a relative wait.
         //
-        LONGLONG delay =
-            -(nextTickTime -
-              currentTime);
+        LONGLONG delay = -(nextTickTime - currentTime);
 
-        WdfTimerStart(
-            Context->PacketTimer,
-            delay < 0
-                ? delay
-                : -1);
+        WdfTimerStart(Context->PacketTimer, delay < 0 ? delay : -1);
     }
-}
+} // namespace
 
 NTSTATUS
-PCModeCreateRenderStream(
-    _In_ WDFDEVICE Device,
-    _In_ ACXCIRCUIT Circuit,
-    _Inout_ PACXSTREAM_INIT StreamInit,
-    _In_ ACXDATAFORMAT Format)
+PCModeCreateRenderStream(_In_ WDFDEVICE Device,
+                         _In_ ACXCIRCUIT Circuit,
+                         _Inout_ PACXSTREAM_INIT StreamInit,
+                         _In_ ACXDATAFORMAT Format)
 {
-    PCMODE_TRACE_INFO(
-        "CreateRenderStream: entered, format SampleRate=%lu Channels=%lu Bits=%lu BlockAlign=%lu",
-        AcxDataFormatGetSampleRate(Format),
-        AcxDataFormatGetChannelsCount(Format),
-        AcxDataFormatGetBitsPerSample(Format),
-        AcxDataFormatGetBlockAlign(Format));
+    PCMODE_TRACE_INFO("CreateRenderStream: entered, format SampleRate=%lu Channels=%lu Bits=%lu BlockAlign=%lu",
+                      AcxDataFormatGetSampleRate(Format),
+                      AcxDataFormatGetChannelsCount(Format),
+                      AcxDataFormatGetBitsPerSample(Format),
+                      AcxDataFormatGetBlockAlign(Format));
 
     ACX_STREAM_CALLBACKS
-        streamCallbacks;
+    streamCallbacks;
 
-    ACX_STREAM_CALLBACKS_INIT(
-        &streamCallbacks);
+    ACX_STREAM_CALLBACKS_INIT(&streamCallbacks);
 
-    streamCallbacks
-        .EvtAcxStreamPrepareHardware =
-            PCModeEvtStreamPrepareHardware;
+    streamCallbacks.EvtAcxStreamPrepareHardware = PCModeEvtStreamPrepareHardware;
 
-    streamCallbacks
-        .EvtAcxStreamReleaseHardware =
-            PCModeEvtStreamReleaseHardware;
+    streamCallbacks.EvtAcxStreamReleaseHardware = PCModeEvtStreamReleaseHardware;
 
-    streamCallbacks
-        .EvtAcxStreamRun =
-            PCModeEvtStreamRun;
+    streamCallbacks.EvtAcxStreamRun = PCModeEvtStreamRun;
 
-    streamCallbacks
-        .EvtAcxStreamPause =
-            PCModeEvtStreamPause;
+    streamCallbacks.EvtAcxStreamPause = PCModeEvtStreamPause;
 
-    NTSTATUS status =
-        AcxStreamInitAssignAcxStreamCallbacks(
-            StreamInit,
-            &streamCallbacks);
+    NTSTATUS status = AcxStreamInitAssignAcxStreamCallbacks(StreamInit, &streamCallbacks);
 
     if (!NT_SUCCESS(status))
     {
-        PCMODE_TRACE_ERROR(
-            "CreateRenderStream: AcxStreamInitAssignAcxStreamCallbacks failed 0x%08X",
-            status);
+        PCMODE_TRACE_ERROR("CreateRenderStream: AcxStreamInitAssignAcxStreamCallbacks failed 0x%08X", status);
 
         return status;
     }
 
     ACX_RT_STREAM_CALLBACKS
-        rtCallbacks;
+    rtCallbacks;
 
-    ACX_RT_STREAM_CALLBACKS_INIT(
-        &rtCallbacks);
+    ACX_RT_STREAM_CALLBACKS_INIT(&rtCallbacks);
 
-    rtCallbacks
-        .EvtAcxStreamGetHwLatency =
-            PCModeEvtStreamGetHwLatency;
+    rtCallbacks.EvtAcxStreamGetHwLatency = PCModeEvtStreamGetHwLatency;
 
-    rtCallbacks
-        .EvtAcxStreamAllocateRtPackets =
-            PCModeEvtStreamAllocateRtPackets;
+    rtCallbacks.EvtAcxStreamAllocateRtPackets = PCModeEvtStreamAllocateRtPackets;
 
-    rtCallbacks
-        .EvtAcxStreamFreeRtPackets =
-            PCModeEvtStreamFreeRtPackets;
+    rtCallbacks.EvtAcxStreamFreeRtPackets = PCModeEvtStreamFreeRtPackets;
 
-    rtCallbacks
-        .EvtAcxStreamSetRenderPacket =
-            PCModeEvtStreamSetRenderPacket;
+    rtCallbacks.EvtAcxStreamSetRenderPacket = PCModeEvtStreamSetRenderPacket;
 
-    rtCallbacks
-        .EvtAcxStreamGetCurrentPacket =
-            PCModeEvtStreamGetCurrentPacket;
+    rtCallbacks.EvtAcxStreamGetCurrentPacket = PCModeEvtStreamGetCurrentPacket;
 
-    rtCallbacks
-        .EvtAcxStreamGetPresentationPosition =
-            PCModeEvtStreamGetPresentationPosition;
+    rtCallbacks.EvtAcxStreamGetPresentationPosition = PCModeEvtStreamGetPresentationPosition;
 
-    status =
-        AcxStreamInitAssignAcxRtStreamCallbacks(
-            StreamInit,
-            &rtCallbacks);
+    status = AcxStreamInitAssignAcxRtStreamCallbacks(StreamInit, &rtCallbacks);
 
     if (!NT_SUCCESS(status))
     {
-        PCMODE_TRACE_ERROR(
-            "CreateRenderStream: AcxStreamInitAssignAcxRtStreamCallbacks failed 0x%08X",
-            status);
+        PCMODE_TRACE_ERROR("CreateRenderStream: AcxStreamInitAssignAcxRtStreamCallbacks failed 0x%08X", status);
 
         return status;
     }
 
-    AcxStreamInitSetAcxRtStreamSupportsNotifications(
-        StreamInit);
+    AcxStreamInitSetAcxRtStreamSupportsNotifications(StreamInit);
 
     WDF_OBJECT_ATTRIBUTES attributes;
 
-    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(
-        &attributes,
-        PCMODE_STREAM_CONTEXT);
+    WDF_OBJECT_ATTRIBUTES_INIT_CONTEXT_TYPE(&attributes, PCMODE_STREAM_CONTEXT);
 
-    attributes.EvtCleanupCallback =
-        PCModeEvtStreamContextCleanup;
+    attributes.EvtCleanupCallback = PCModeEvtStreamContextCleanup;
 
-    ACXSTREAM stream =
-        nullptr;
+    ACXSTREAM stream = nullptr;
 
-    status =
-        AcxRtStreamCreate(
-            Device,
-            Circuit,
-            &attributes,
-            &StreamInit,
-            &stream);
+    status = AcxRtStreamCreate(Device, Circuit, &attributes, &StreamInit, &stream);
 
     if (!NT_SUCCESS(status))
     {
-        PCMODE_TRACE_ERROR(
-            "CreateRenderStream: AcxRtStreamCreate failed 0x%08X",
-            status);
+        PCMODE_TRACE_ERROR("CreateRenderStream: AcxRtStreamCreate failed 0x%08X", status);
 
         return status;
     }
 
-    auto context =
-        PCModeGetStreamContext(
-            stream);
+    auto context = PCModeGetStreamContext(stream);
 
-    RtlZeroMemory(
-        context,
-        sizeof(*context));
+    RtlZeroMemory(context, sizeof(*context));
 
-    context->Stream =
-        stream;
+    context->Stream = stream;
 
-    context->Format =
-        Format;
+    context->Format = Format;
 
-    context->State =
-        PCMODE_STREAM_STATE::Stop;
+    context->State = PCMODE_STREAM_STATE::Stop;
 
-    KeQueryPerformanceCounter(
-        &context->PerformanceCounterFrequency);
+    KeQueryPerformanceCounter(&context->PerformanceCounterFrequency);
 
     //
     // High-resolution, one-shot: WDF_TIMER_CONFIG_INIT already configures a
@@ -621,68 +419,44 @@ PCModeCreateRenderStream(
     // resolution, which the deadline math depends on to stay accurate.
     //
     WDF_TIMER_CONFIG
-        timerConfig;
+    timerConfig;
 
-    WDF_TIMER_CONFIG_INIT(
-        &timerConfig,
-        PCModeEvtPacketTimer);
+    WDF_TIMER_CONFIG_INIT(&timerConfig, PCModeEvtPacketTimer);
 
-    timerConfig.UseHighResolutionTimer =
-        WdfTrue;
+    timerConfig.UseHighResolutionTimer = WdfTrue;
 
     WDF_OBJECT_ATTRIBUTES
-        timerAttributes;
+    timerAttributes;
 
-    WDF_OBJECT_ATTRIBUTES_INIT(
-        &timerAttributes);
+    WDF_OBJECT_ATTRIBUTES_INIT(&timerAttributes);
 
-    timerAttributes.ParentObject =
-        stream;
+    timerAttributes.ParentObject = stream;
 
-    timerAttributes.ExecutionLevel =
-        WdfExecutionLevelPassive;
+    timerAttributes.ExecutionLevel = WdfExecutionLevelPassive;
 
-    status =
-        WdfTimerCreate(
-            &timerConfig,
-            &timerAttributes,
-            &context->PacketTimer);
+    status = WdfTimerCreate(&timerConfig, &timerAttributes, &context->PacketTimer);
 
     if (!NT_SUCCESS(status))
     {
-        PCMODE_TRACE_ERROR(
-            "CreateRenderStream: WdfTimerCreate failed 0x%08X",
-            status);
+        PCMODE_TRACE_ERROR("CreateRenderStream: WdfTimerCreate failed 0x%08X", status);
 
         return status;
     }
 
-    PCMODE_TRACE_INFO(
-        "%s",
-        "CreateRenderStream: stream created successfully");
+    PCMODE_TRACE_INFO("%s", "CreateRenderStream: stream created successfully");
 
-    PCModeTransportStreamStarted(
-        Device,
-        Format);
+    PCModeTransportStreamStarted(Device, Format);
 
-    InterlockedExchange(
-        &context->TransportRegistered,
-        TRUE);
+    InterlockedExchange(&context->TransportRegistered, TRUE);
 
     return STATUS_SUCCESS;
 }
 
-VOID
-PCModeEvtStreamContextCleanup(
-    _In_ WDFOBJECT Object)
+VOID PCModeEvtStreamContextCleanup(_In_ WDFOBJECT Object)
 {
-    ACXSTREAM stream =
-        reinterpret_cast<ACXSTREAM>(
-            Object);
+    ACXSTREAM stream = reinterpret_cast<ACXSTREAM>(Object);
 
-    auto context =
-        PCModeGetStreamContext(
-            stream);
+    auto context = PCModeGetStreamContext(stream);
 
     //
     // Defensive: ACX is expected to always drive Run -> Pause -> Stop
@@ -692,49 +466,30 @@ PCModeEvtStreamContextCleanup(
     // latches independent of the state enum specifically so this can
     // unwind safely regardless of what state the stream was left in.
     //
-    NotifyTransportRunningStopped(
-        context,
-        stream);
+    NotifyTransportRunningStopped(context, stream);
 
-    if (InterlockedExchange(
-            &context->TransportRegistered,
-            FALSE))
+    if (InterlockedExchange(&context->TransportRegistered, FALSE))
     {
-        PCModeTransportStreamStopped(
-            AcxCircuitGetWdfDevice(
-                AcxStreamGetCircuit(
-                    stream)));
+        PCModeTransportStreamStopped(AcxCircuitGetWdfDevice(AcxStreamGetCircuit(stream)));
     }
 }
 
 NTSTATUS
-PCModeEvtStreamAllocateRtPackets(
-    _In_ ACXSTREAM Stream,
-    _In_ ULONG PacketCount,
-    _In_ ULONG PacketSize,
-    _Out_ PACX_RTPACKET* Packets)
+PCModeEvtStreamAllocateRtPackets(_In_ ACXSTREAM Stream,
+                                 _In_ ULONG PacketCount,
+                                 _In_ ULONG PacketSize,
+                                 _Out_ PACX_RTPACKET* Packets)
 {
-    PCMODE_TRACE_INFO(
-        "AllocateRtPackets: requested PacketCount=%lu PacketSize=%lu",
-        PacketCount,
-        PacketSize);
+    PCMODE_TRACE_INFO("AllocateRtPackets: requested PacketCount=%lu PacketSize=%lu", PacketCount, PacketSize);
 
-    if (Packets == nullptr ||
-        PacketCount == 0 ||
-        PacketCount > PCMODE_MAX_RENDER_PACKETS ||
-        PacketSize == 0)
+    if (Packets == nullptr || PacketCount == 0 || PacketCount > PCMODE_MAX_RENDER_PACKETS || PacketSize == 0)
     {
-        PCMODE_TRACE_ERROR(
-            "AllocateRtPackets: rejecting PacketCount=%lu PacketSize=%lu",
-            PacketCount,
-            PacketSize);
+        PCMODE_TRACE_ERROR("AllocateRtPackets: rejecting PacketCount=%lu PacketSize=%lu", PacketCount, PacketSize);
 
         return STATUS_INVALID_PARAMETER;
     }
 
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
     //
     // One shared buffer regardless of PacketCount, per the ACX allocation
@@ -749,11 +504,7 @@ PCModeEvtStreamAllocateRtPackets(
     //
     ULONG ringSize = 0;
 
-    NTSTATUS status =
-        RtlULongMult(
-            PacketSize,
-            PacketCount,
-            &ringSize);
+    NTSTATUS status = RtlULongMult(PacketSize, PacketCount, &ringSize);
 
     if (!NT_SUCCESS(status))
     {
@@ -762,264 +513,164 @@ PCModeEvtStreamAllocateRtPackets(
 
     ULONG allocationSizeInPages = 0;
 
-    status =
-        RtlULongAdd(
-            ringSize,
-            PAGE_SIZE - 1,
-            &allocationSizeInPages);
+    status = RtlULongAdd(ringSize, PAGE_SIZE - 1, &allocationSizeInPages);
 
     if (!NT_SUCCESS(status))
     {
         return status;
     }
 
-    allocationSizeInPages /=
-        PAGE_SIZE;
+    allocationSizeInPages /= PAGE_SIZE;
 
-    ULONG allocationSizeInBytes =
-        PAGE_SIZE *
-        allocationSizeInPages;
+    ULONG allocationSizeInBytes = PAGE_SIZE * allocationSizeInPages;
 
-    void* buffer =
-        ExAllocatePool2(
-            POOL_FLAG_NON_PAGED,
-            allocationSizeInBytes,
-            PoolTag);
+    void* buffer = ExAllocatePool2(POOL_FLAG_NON_PAGED, allocationSizeInBytes, PoolTag);
 
     if (buffer == nullptr)
     {
-        return
-            STATUS_INSUFFICIENT_RESOURCES;
+        return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    RtlZeroMemory(
-        buffer,
-        allocationSizeInBytes);
+    RtlZeroMemory(buffer, allocationSizeInBytes);
 
-    PMDL mdl =
-        IoAllocateMdl(
-            buffer,
-            allocationSizeInBytes,
-            FALSE,
-            TRUE,
-            nullptr);
+    PMDL mdl = IoAllocateMdl(buffer, allocationSizeInBytes, FALSE, TRUE, nullptr);
 
     if (mdl == nullptr)
     {
-        ExFreePoolWithTag(
-            buffer,
-            PoolTag);
+        ExFreePoolWithTag(buffer, PoolTag);
 
-        return
-            STATUS_INSUFFICIENT_RESOURCES;
+        return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    MmBuildMdlForNonPagedPool(
-        mdl);
+    MmBuildMdlForNonPagedPool(mdl);
 
     size_t packetsArraySize = 0;
 
-    status =
-        RtlSizeTMult(
-            PacketCount,
-            sizeof(ACX_RTPACKET),
-            &packetsArraySize);
+    status = RtlSizeTMult(PacketCount, sizeof(ACX_RTPACKET), &packetsArraySize);
 
     if (!NT_SUCCESS(status))
     {
-        IoFreeMdl(
-            mdl);
+        IoFreeMdl(mdl);
 
-        ExFreePoolWithTag(
-            buffer,
-            PoolTag);
+        ExFreePoolWithTag(buffer, PoolTag);
 
         return status;
     }
 
-    auto packets =
-        static_cast<PACX_RTPACKET>(
-            ExAllocatePool2(
-                POOL_FLAG_NON_PAGED,
-                packetsArraySize,
-                PoolTag));
+    auto packets = static_cast<PACX_RTPACKET>(ExAllocatePool2(POOL_FLAG_NON_PAGED, packetsArraySize, PoolTag));
 
     if (packets == nullptr)
     {
-        IoFreeMdl(
-            mdl);
+        IoFreeMdl(mdl);
 
-        ExFreePoolWithTag(
-            buffer,
-            PoolTag);
+        ExFreePoolWithTag(buffer, PoolTag);
 
-        return
-            STATUS_INSUFFICIENT_RESOURCES;
+        return STATUS_INSUFFICIENT_RESOURCES;
     }
 
-    RtlZeroMemory(
-        packets,
-        packetsArraySize);
+    RtlZeroMemory(packets, packetsArraySize);
 
-    ACX_RTPACKET_INIT(
-        &packets[0]);
+    ACX_RTPACKET_INIT(&packets[0]);
 
-    packets[0]
-        .RtPacketBuffer.Type =
-            WdfMemoryDescriptorTypeMdl;
+    packets[0].RtPacketBuffer.Type = WdfMemoryDescriptorTypeMdl;
 
-    packets[0]
-        .RtPacketBuffer
-        .u.MdlType.Mdl =
-            mdl;
+    packets[0].RtPacketBuffer.u.MdlType.Mdl = mdl;
 
-    packets[0]
-        .RtPacketBuffer
-        .u.MdlType.BufferLength =
-            allocationSizeInBytes;
+    packets[0].RtPacketBuffer.u.MdlType.BufferLength = allocationSizeInBytes;
 
-    packets[0].RtPacketOffset =
-        0;
+    packets[0].RtPacketOffset = 0;
 
-    packets[0].RtPacketSize =
-        PacketSize;
+    packets[0].RtPacketSize = PacketSize;
 
     if (PacketCount == 2)
     {
-        ACX_RTPACKET_INIT(
-            &packets[1]);
+        ACX_RTPACKET_INIT(&packets[1]);
 
-        packets[1]
-            .RtPacketBuffer.Type =
-                WdfMemoryDescriptorTypeInvalid;
+        packets[1].RtPacketBuffer.Type = WdfMemoryDescriptorTypeInvalid;
 
-        packets[1].RtPacketOffset =
-            PacketSize;
+        packets[1].RtPacketOffset = PacketSize;
 
-        packets[1].RtPacketSize =
-            PacketSize;
+        packets[1].RtPacketSize = PacketSize;
     }
 
-    context->RingMdl =
-        mdl;
+    context->RingMdl = mdl;
 
-    context->RingSize =
-        ringSize;
+    context->RingSize = ringSize;
 
-    context->PacketCount =
-        PacketCount;
+    context->PacketCount = PacketCount;
 
-    context->PacketSize =
-        PacketSize;
+    context->PacketSize = PacketSize;
 
     context->TickBytes =
-        ComputeTickBytes(
-            PacketCount,
-            PacketSize,
-            ringSize,
-            AcxDataFormatGetBlockAlign(
-                context->Format));
+        ComputeTickBytes(PacketCount, PacketSize, ringSize, AcxDataFormatGetBlockAlign(context->Format));
 
-    *Packets =
-        packets;
+    *Packets = packets;
 
     return STATUS_SUCCESS;
 }
 
-VOID
-PCModeEvtStreamFreeRtPackets(
-    _In_ ACXSTREAM Stream,
-    _In_ PACX_RTPACKET Packets,
-    _In_ ULONG PacketCount)
+VOID PCModeEvtStreamFreeRtPackets(_In_ ACXSTREAM Stream, _In_ PACX_RTPACKET Packets, _In_ ULONG PacketCount)
 {
-    UNREFERENCED_PARAMETER(
-        PacketCount);
+    UNREFERENCED_PARAMETER(PacketCount);
 
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
     if (context->RingMdl != nullptr)
     {
-        void* buffer =
-            MmGetMdlVirtualAddress(
-                context->RingMdl);
+        void* buffer = MmGetMdlVirtualAddress(context->RingMdl);
 
-        IoFreeMdl(
-            context->RingMdl);
+        IoFreeMdl(context->RingMdl);
 
         if (buffer != nullptr)
         {
-            ExFreePoolWithTag(
-                buffer,
-                PoolTag);
+            ExFreePoolWithTag(buffer, PoolTag);
         }
 
-        context->RingMdl =
-            nullptr;
+        context->RingMdl = nullptr;
     }
 
     if (Packets != nullptr)
     {
-        ExFreePoolWithTag(
-            Packets,
-            PoolTag);
+        ExFreePoolWithTag(Packets, PoolTag);
     }
 
-    context->RingSize =
-        0;
+    context->RingSize = 0;
 
-    context->PacketCount =
-        0;
+    context->PacketCount = 0;
 
-    context->PacketSize =
-        0;
+    context->PacketSize = 0;
 
-    context->TickBytes =
-        0;
+    context->TickBytes = 0;
 }
 
 NTSTATUS
-PCModeEvtStreamPrepareHardware(
-    _In_ ACXSTREAM Stream)
+PCModeEvtStreamPrepareHardware(_In_ ACXSTREAM Stream)
 {
-    PCMODE_TRACE_INFO(
-        "%s",
-        "PrepareHardware: invoked");
+    PCMODE_TRACE_INFO("%s", "PrepareHardware: invoked");
 
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    if (context->State ==
-        PCMODE_STREAM_STATE::Pause)
+    if (context->State == PCMODE_STREAM_STATE::Pause)
     {
         return STATUS_SUCCESS;
     }
 
-    if (context->State !=
-        PCMODE_STREAM_STATE::Stop)
+    if (context->State != PCMODE_STREAM_STATE::Stop)
     {
-        return
-            STATUS_INVALID_DEVICE_STATE;
+        return STATUS_INVALID_DEVICE_STATE;
     }
 
-    context->State =
-        PCMODE_STREAM_STATE::Pause;
+    context->State = PCMODE_STREAM_STATE::Pause;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamReleaseHardware(
-    _In_ ACXSTREAM Stream)
+PCModeEvtStreamReleaseHardware(_In_ ACXSTREAM Stream)
 {
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    if (context->State ==
-        PCMODE_STREAM_STATE::Stop)
+    if (context->State == PCMODE_STREAM_STATE::Stop)
     {
         return STATUS_SUCCESS;
     }
@@ -1030,16 +681,11 @@ PCModeEvtStreamReleaseHardware(
     // here directly, stop the timer and notify the transport before
     // proceeding instead of leaving either running.
     //
-    if (context->State ==
-        PCMODE_STREAM_STATE::Run)
+    if (context->State == PCMODE_STREAM_STATE::Run)
     {
-        WdfTimerStop(
-            context->PacketTimer,
-            TRUE);
+        WdfTimerStop(context->PacketTimer, TRUE);
 
-        NotifyTransportRunningStopped(
-            context,
-            Stream);
+        NotifyTransportRunningStopped(context, Stream);
     }
 
     //
@@ -1049,42 +695,30 @@ PCModeEvtStreamReleaseHardware(
     // that a Pause/Run cycle preserves timeline continuity and only a true
     // stop starts over from zero.
     //
-    context->Position =
-        0;
+    context->Position = 0;
 
-    InterlockedExchange(
-        &context->CurrentPacket,
-        0);
+    InterlockedExchange(&context->CurrentPacket, 0);
 
-    context->State =
-        PCMODE_STREAM_STATE::Stop;
+    context->State = PCMODE_STREAM_STATE::Stop;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamRun(
-    _In_ ACXSTREAM Stream)
+PCModeEvtStreamRun(_In_ ACXSTREAM Stream)
 {
-    PCMODE_TRACE_INFO(
-        "%s",
-        "Run: invoked");
+    PCMODE_TRACE_INFO("%s", "Run: invoked");
 
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    if (context->State ==
-        PCMODE_STREAM_STATE::Run)
+    if (context->State == PCMODE_STREAM_STATE::Run)
     {
         return STATUS_SUCCESS;
     }
 
-    if (context->State !=
-        PCMODE_STREAM_STATE::Pause)
+    if (context->State != PCMODE_STREAM_STATE::Pause)
     {
-        return
-            STATUS_INVALID_DEVICE_STATE;
+        return STATUS_INVALID_DEVICE_STATE;
     }
 
     //
@@ -1094,94 +728,61 @@ PCModeEvtStreamRun(
     // jumping back to zero.
     //
     context->StartTime =
-        KSCONVERT_PERFORMANCE_TIME(
-            context->PerformanceCounterFrequency
-                .QuadPart,
-            KeQueryPerformanceCounter(
-                nullptr));
+        KSCONVERT_PERFORMANCE_TIME(context->PerformanceCounterFrequency.QuadPart, KeQueryPerformanceCounter(nullptr));
 
-    context->StartPosition =
-        context->Position;
+    context->StartPosition = context->Position;
 
-    context->RenderBehind =
-        FALSE;
+    context->RenderBehind = FALSE;
 
-    context->State =
-        PCMODE_STREAM_STATE::Run;
+    context->State = PCMODE_STREAM_STATE::Run;
 
-    InterlockedExchange(
-        &context->TransportRunningRegistered,
-        TRUE);
+    InterlockedExchange(&context->TransportRunningRegistered, TRUE);
 
-    PCModeTransportStreamRunningStarted(
-        AcxCircuitGetWdfDevice(
-            AcxStreamGetCircuit(
-                Stream)));
+    PCModeTransportStreamRunningStarted(AcxCircuitGetWdfDevice(AcxStreamGetCircuit(Stream)));
 
-    ScheduleNextPass(
-        context);
+    ScheduleNextPass(context);
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamPause(
-    _In_ ACXSTREAM Stream)
+PCModeEvtStreamPause(_In_ ACXSTREAM Stream)
 {
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    if (context->State ==
-        PCMODE_STREAM_STATE::Pause)
+    if (context->State == PCMODE_STREAM_STATE::Pause)
     {
         return STATUS_SUCCESS;
     }
 
-    if (context->State !=
-        PCMODE_STREAM_STATE::Run)
+    if (context->State != PCMODE_STREAM_STATE::Run)
     {
-        return
-            STATUS_INVALID_DEVICE_STATE;
+        return STATUS_INVALID_DEVICE_STATE;
     }
 
-    WdfTimerStop(
-        context->PacketTimer,
-        TRUE);
+    WdfTimerStop(context->PacketTimer, TRUE);
 
     //
     // Save the position at the instant of pause so Run() can resume from
     // here instead of restarting the timeline.
     //
-    UpdatePosition(
-        context);
+    UpdatePosition(context);
 
-    NotifyTransportRunningStopped(
-        context,
-        Stream);
+    NotifyTransportRunningStopped(context, Stream);
 
-    context->State =
-        PCMODE_STREAM_STATE::Pause;
+    context->State = PCMODE_STREAM_STATE::Pause;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamSetRenderPacket(
-    _In_ ACXSTREAM Stream,
-    _In_ ULONG Packet,
-    _In_ ULONG Flags,
-    _In_ ULONG EosPacketLength)
+PCModeEvtStreamSetRenderPacket(_In_ ACXSTREAM Stream, _In_ ULONG Packet, _In_ ULONG Flags, _In_ ULONG EosPacketLength)
 {
-    UNREFERENCED_PARAMETER(
-        Flags);
+    UNREFERENCED_PARAMETER(Flags);
 
-    UNREFERENCED_PARAMETER(
-        EosPacketLength);
+    UNREFERENCED_PARAMETER(EosPacketLength);
 
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
     //
     // Only meaningful for PacketCount==2 (event-driven ping-pong), where
@@ -1199,143 +800,89 @@ PCModeEvtStreamSetRenderPacket(
     // current packet is, sees 0, and will not write until the driver moves
     // past it, while the driver was waiting for that very write.
     //
-    LONG current =
-        InterlockedCompareExchange(
-            &context->CurrentPacket,
-            0,
-            0);
+    LONG current = InterlockedCompareExchange(&context->CurrentPacket, 0, 0);
 
-    PCMODE_TRACE_INFO(
-        "SetRenderPacket: Packet=%lu Flags=0x%lX EosPacketLength=%lu CurrentPacket=%ld",
-        Packet,
-        Flags,
-        EosPacketLength,
-        current);
+    PCMODE_TRACE_INFO("SetRenderPacket: Packet=%lu Flags=0x%lX EosPacketLength=%lu CurrentPacket=%ld",
+                      Packet,
+                      Flags,
+                      EosPacketLength,
+                      current);
 
-    if (static_cast<LONG>(
-            Packet) <= current)
+    if (static_cast<LONG>(Packet) <= current)
     {
-        return
-            STATUS_DATA_LATE_ERROR;
+        return STATUS_DATA_LATE_ERROR;
     }
 
-    if (static_cast<LONG>(
-            Packet) >
-        current + 1)
+    if (static_cast<LONG>(Packet) > current + 1)
     {
-        return
-            STATUS_DATA_OVERRUN;
+        return STATUS_DATA_OVERRUN;
     }
 
     return STATUS_SUCCESS;
 }
 
-VOID
-PCModeEvtPacketTimer(
-    _In_ WDFTIMER Timer)
+VOID PCModeEvtPacketTimer(_In_ WDFTIMER Timer)
 {
-    ACXSTREAM stream =
-        reinterpret_cast<ACXSTREAM>(
-            WdfTimerGetParentObject(
-                Timer));
+    ACXSTREAM stream = reinterpret_cast<ACXSTREAM>(WdfTimerGetParentObject(Timer));
 
-    auto context =
-        PCModeGetStreamContext(
-            stream);
+    auto context = PCModeGetStreamContext(stream);
 
-    if (context->State !=
-        PCMODE_STREAM_STATE::Run)
+    if (context->State != PCMODE_STREAM_STATE::Run)
     {
         return;
     }
 
-    if (SkipMissedRenderSlices(
-            context))
+    if (SkipMissedRenderSlices(context))
     {
-        PCModeTransportSignalDiscontinuity(
-            AcxCircuitGetWdfDevice(
-                AcxStreamGetCircuit(
-                    stream)));
+        PCModeTransportSignalDiscontinuity(AcxCircuitGetWdfDevice(AcxStreamGetCircuit(stream)));
     }
 
-    RenderCurrentPacketAndAdvance(
-        context,
-        stream);
+    RenderCurrentPacketAndAdvance(context, stream);
 
-    if (context->State ==
-        PCMODE_STREAM_STATE::Run)
+    if (context->State == PCMODE_STREAM_STATE::Run)
     {
-        ScheduleNextPass(
-            context);
+        ScheduleNextPass(context);
     }
 }
 
 NTSTATUS
-PCModeEvtStreamGetCurrentPacket(
-    _In_ ACXSTREAM Stream,
-    _Out_ PULONG CurrentPacket)
+PCModeEvtStreamGetCurrentPacket(_In_ ACXSTREAM Stream, _Out_ PULONG CurrentPacket)
 {
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    *CurrentPacket =
-        static_cast<ULONG>(
-            InterlockedCompareExchange(
-                &context->CurrentPacket,
-                0,
-                0));
+    *CurrentPacket = static_cast<ULONG>(InterlockedCompareExchange(&context->CurrentPacket, 0, 0));
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamGetPresentationPosition(
-    _In_ ACXSTREAM Stream,
-    _Out_ PULONGLONG PositionInBlocks,
-    _Out_ PULONGLONG QPCPosition)
+PCModeEvtStreamGetPresentationPosition(_In_ ACXSTREAM Stream,
+                                       _Out_ PULONGLONG PositionInBlocks,
+                                       _Out_ PULONGLONG QPCPosition)
 {
-    auto context =
-        PCModeGetStreamContext(
-            Stream);
+    auto context = PCModeGetStreamContext(Stream);
 
-    UpdatePosition(
-        context);
+    UpdatePosition(context);
 
-    ULONG blockAlign =
-        AcxDataFormatGetBlockAlign(
-            context->Format);
+    ULONG blockAlign = AcxDataFormatGetBlockAlign(context->Format);
 
-    *PositionInBlocks =
-        blockAlign != 0
-            ? context->Position / blockAlign
-            : 0;
+    *PositionInBlocks = blockAlign != 0 ? context->Position / blockAlign : 0;
 
-    LARGE_INTEGER qpc =
-        KeQueryPerformanceCounter(
-            nullptr);
+    LARGE_INTEGER qpc = KeQueryPerformanceCounter(nullptr);
 
-    *QPCPosition =
-        static_cast<ULONGLONG>(
-            qpc.QuadPart);
+    *QPCPosition = static_cast<ULONGLONG>(qpc.QuadPart);
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-PCModeEvtStreamGetHwLatency(
-    _In_ ACXSTREAM Stream,
-    _Out_ PULONG FifoSize,
-    _Out_ PULONG Delay)
+PCModeEvtStreamGetHwLatency(_In_ ACXSTREAM Stream, _Out_ PULONG FifoSize, _Out_ PULONG Delay)
 {
-    UNREFERENCED_PARAMETER(
-        Stream);
+    UNREFERENCED_PARAMETER(Stream);
 
-    *FifoSize =
-        0;
+    *FifoSize = 0;
 
-    *Delay =
-        0;
+    *Delay = 0;
 
     return STATUS_SUCCESS;
 }

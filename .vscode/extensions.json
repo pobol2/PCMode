@@ -1,0 +1,15 @@
+{
+    // The formatters .vscode/settings.json selects. Without these installed the
+    // editor silently falls back to its own defaults, which do not match the
+    // repository policy.
+    "recommendations": [
+        "editorconfig.editorconfig",
+        "csharpier.csharpier-vscode",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.xaml",
+        "ms-vscode.cpptools",
+        "ms-vscode.powershell",
+        "davidanson.vscode-markdownlint",
+        "redhat.vscode-yaml"
+    ]
+}
